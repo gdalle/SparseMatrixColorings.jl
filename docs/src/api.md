@@ -15,5 +15,5 @@ Private = false
 
 ```@autodocs
 Modules = [SparseMatrixColorings]
-Private = false
+Public = false
 ```

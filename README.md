@@ -21,7 +21,9 @@ The algorithms implemented in this package are all taken from the following surv
 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 
+Some parts of the survey (like definitions and theorems) are also copied verbatim or referred to by their number in the documentation.
+
 ## Alternatives
 
-- [ColPack.jl](https://github.com/michel2323/ColPack.jl)
-- [SparseDiffTools.jl](https://github.com/JuliaDiff/SparseDiffTools.jl)
+- [ColPack.jl](https://github.com/michel2323/ColPack.jl): a Julia interface to the C++ library [ColPack](https://github.com/CSCsw/ColPack)
+- [SparseDiffTools.jl](https://github.com/JuliaDiff/SparseDiffTools.jl): contains Julia implementations of some coloring algorithms

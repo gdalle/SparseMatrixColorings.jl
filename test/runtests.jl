@@ -12,7 +12,7 @@ using Test
                 Aqua.test_all(SparseMatrixColorings)
             end
             @testset "JET" begin
-                JET.test_package(SparseMatrixColorings)
+                JET.test_package(SparseMatrixColorings; target_defined_modules=true)
             end
             @testset "JuliaFormatter" begin
                 @test JuliaFormatter.format(
@@ -23,5 +23,14 @@ using Test
     end
     @testset "Doctests" begin
         Documenter.doctest(SparseMatrixColorings)
+    end
+    @testset "Utils" begin
+        include("utils.jl")
+    end
+    @testset "Check" begin
+        include("check.jl")
+    end
+    @testset "ADTypes" begin
+        include("adtypes.jl")
     end
 end
