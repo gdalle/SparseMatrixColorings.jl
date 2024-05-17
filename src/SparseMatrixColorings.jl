@@ -12,12 +12,14 @@ Some parts of the survey (like definitions and theorems) are also copied verbati
 module SparseMatrixColorings
 
 using ADTypes: ADTypes, AbstractColoringAlgorithm
-using LinearAlgebra: Transpose, parent, transpose
+using LinearAlgebra: Diagonal, Transpose, checksquare, parent, transpose
 using Random: AbstractRNG
-using SparseArrays: SparseMatrixCSC, nzrange, rowvals
+using SparseArrays: SparseArrays, SparseMatrixCSC, nzrange, rowvals, spzeros
 
 include("utils.jl")
+include("graph.jl")
 
+#=
 include("bipartite_graph.jl")
 include("adjacency_graph.jl")
 
@@ -26,6 +28,7 @@ include("star_coloring.jl")
 
 include("adtypes.jl")
 include("check.jl")
+=#
 
 export GreedyColoringAlgorithm
 
