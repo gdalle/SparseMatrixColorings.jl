@@ -1,3 +1,4 @@
+using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings: Graph, adjacency_graph, bipartite_graph, neighbors
 using Test
