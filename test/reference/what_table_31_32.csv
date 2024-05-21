@@ -19,5 +19,5 @@ row,modified,group,name,m,n,nnz,κmax,κmin,ρmax,ρmin,K
 18,false,Mallya,lhr34,35152,35152,764014,36,1,63,1,65
 19,["m"],Mallya,lhr71c,70304,70304,1528092,36,1,63,1,65
 20,false,vanHeukelum,cage12,130228,130228,2032536,33,5,33,5,96
-21,false,LPnetlib,lp_osa_07,1118,25067,144812,6,1,17613,18,17613,
-22,false,LPnetlib,lp_fit2d,25,10524,129042,17,1,10500,1427,10501,
+21,false,LPnetlib,lp_osa_07,1118,25067,144812,6,1,17613,18,17613
+22,false,LPnetlib,lp_fit2d,25,10524,129042,17,1,10500,1427,10501
