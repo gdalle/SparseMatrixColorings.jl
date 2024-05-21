@@ -1,7 +1,7 @@
 """
     GreedyColoringAlgorithm <: ADTypes.AbstractColoringAlgorithm
 
-Matrix coloring algorithm for sparse Jacobians and Hessians.
+Greedy coloring algorithm for sparse Jacobians and Hessians, with configurable vertex order.
 
 Compatible with the [ADTypes.jl coloring framework](https://sciml.github.io/ADTypes.jl/stable/#Coloring-algorithm).
 
@@ -13,6 +13,10 @@ Compatible with the [ADTypes.jl coloring framework](https://sciml.github.io/ADTy
 
 - [`ADTypes.column_coloring`](@extref ADTypes) and [`ADTypes.row_coloring`](@extref ADTypes) with a partial distance-2 coloring of the bipartite graph
 - [`ADTypes.symmetric_coloring`](@extref ADTypes) with a star coloring of the adjacency graph
+
+# See also
+
+- [`AbstractOrder`](@ref)
 """
 struct GreedyColoringAlgorithm{O<:AbstractOrder} <: ADTypes.AbstractColoringAlgorithm
     order::O
