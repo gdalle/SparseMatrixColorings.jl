@@ -9,6 +9,8 @@ using SparseMatrixColorings:
     vertices
 using Test
 
+rng = StableRNG(63)
+
 @testset "NaturalOrder" begin
     A = sprand(rng, Bool, 5, 5, 0.5)
     ag = adjacency_graph(A)
@@ -26,14 +28,17 @@ end;
 @testset "RandomOrder" begin
     A = sprand(rng, Bool, 5, 5, 0.5)
     ag = adjacency_graph(A)
+    @test sort(vertices(ag, RandomOrder(rng))) == 1:5
     @test sort(vertices(ag, RandomOrder())) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
     bg = bipartite_graph(A)
+    @test sort(vertices(bg, Val(1), RandomOrder(rng))) == 1:5
     @test sort(vertices(bg, Val(1), RandomOrder())) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
     bg = bipartite_graph(A)
+    @test sort(vertices(bg, Val(2), RandomOrder(rng))) == 1:4
     @test sort(vertices(bg, Val(2), RandomOrder())) == 1:4
 end;
 
