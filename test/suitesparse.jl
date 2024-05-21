@@ -31,7 +31,7 @@ colpack_table_6_7 = CSV.read(
 
 @testset "Distance-2 coloring (ColPack paper)" begin
     @testset "$(row[:name])" for row in eachrow(colpack_table_6_7)
-        @info "Testing distance-2 coloring for $(row[:name])"
+        @info "Testing distance-2 coloring for $(row[:name]) against ColPack paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(original_mat)
         bg = bipartite_graph(mat)
@@ -51,14 +51,14 @@ end;
 Comparison with Tables 3.1 and 3.2 of "What color is your Jacobian?"
 =#
 
-what_table_31_32_33 = CSV.read(
-    joinpath(@__DIR__, "reference", "what_table_31_32_33.csv"), DataFrame
+what_table_31_32 = CSV.read(
+    joinpath(@__DIR__, "reference", "what_table_31_32.csv"), DataFrame
 )
 
 @testset "Distance-2 coloring (survey paper)" begin
-    @testset "$(row[:name])" for row in eachrow(what_table_31_32_33)
+    @testset "$(row[:name])" for row in eachrow(what_table_31_32)
         ismissing(row[:group]) && continue
-        @info "Testing distance-2 coloring for $(row[:name])"
+        @info "Testing distance-2 coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = original_mat  # no dropzeros
         bg = bipartite_graph(mat)
@@ -91,7 +91,7 @@ what_table_41_42 = CSV.read(
 @testset "Star coloring (survey paper)" begin
     @testset "$(row[:name])" for row in eachrow(what_table_41_42)
         ismissing(row[:group]) && continue
-        @info "Testing star coloring for $(row[:name])"
+        @info "Testing star coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = original_mat  # no dropzeros
         bg = bipartite_graph(mat)
