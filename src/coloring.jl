@@ -15,10 +15,24 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 function partial_distance2_coloring(
     bg::BipartiteGraph, ::Val{side}, order::AbstractOrder
 ) where {side}
+    colors = Vector{Int}(undef, length(bg, Val(side)))
+    forbidden_colors = Vector{Int}(undef, length(bg, Val(side)))
+    vertices_in_order = vertices(bg, Val(side), order)
+    partial_distance2_coloring!(colors, forbidden_colors, bg, Val(side), vertices_in_order)
+    return colors
+end
+
+function partial_distance2_coloring!(
+    colors::Vector{Int},
+    forbidden_colors::Vector{Int},
+    bg::BipartiteGraph,
+    ::Val{side},
+    vertices_in_order::AbstractVector{<:Integer},
+) where {side}
+    colors .= 0
+    forbidden_colors .= 0
     other_side = 3 - side
-    colors = zeros(Int, length(bg, Val(side)))
-    forbidden_colors = zeros(Int, length(bg, Val(side)))
-    for v in vertices(bg, Val(side), order)
+    for v in vertices_in_order
         for w in neighbors(bg, Val(side), v)
             for x in neighbors(bg, Val(other_side), w)
                 if !iszero(colors[x])
@@ -33,13 +47,12 @@ function partial_distance2_coloring(
             end
         end
     end
-    return colors
 end
 
 """
-    star_coloring(ag::AdjacencyGraph, order::AbstractOrder)
+    star_coloring1(g::Graph, order::AbstractOrder)
 
-Compute a star coloring of all vertices in the adjacency graph `ag` and return a vector of integer colors.
+Compute a star coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
 
 A _star coloring_ is a distance-1 coloring such that every path on 4 vertices uses at least 3 colors.
 
@@ -47,23 +60,35 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 # See also
 
-- [`AdjacencyGraph`](@ref)
+- [`Graph`](@ref)
 - [`AbstractOrder`](@ref)
 """
-function star_coloring(ag::AdjacencyGraph, order::AbstractOrder)
-    n = length(ag)
-    colors = zeros(Int, n)
-    forbidden_colors = zeros(Int, n)
-    for v in vertices(ag, order)
-        for w in neighbors(ag, v)
+function star_coloring1(g::Graph, order::AbstractOrder)
+    colors = Vector{Int}(undef, length(g))
+    forbidden_colors = Vector{Int}(undef, length(g))
+    vertices_in_order = vertices(g, order)
+    star_coloring1!(colors, forbidden_colors, g, vertices_in_order)
+    return colors
+end
+
+function star_coloring1!(
+    colors::Vector{Int},
+    forbidden_colors::Vector{Int},
+    g::Graph,
+    vertices_in_order::AbstractVector{<:Integer},
+)
+    colors .= 0
+    forbidden_colors .= 0
+    for v in vertices_in_order
+        for w in neighbors(g, v)
             if !iszero(colors[w])  # w is colored
                 forbidden_colors[colors[w]] = v
             end
-            for x in neighbors(ag, w)
+            for x in neighbors(g, w)
                 if !iszero(colors[x]) && iszero(colors[w])  # w is not colored
                     forbidden_colors[colors[x]] = v
                 else
-                    for y in neighbors(ag, x)
+                    for y in neighbors(g, x)
                         if !iszero(colors[y]) && y != w
                             if colors[y] == colors[w]
                                 forbidden_colors[colors[x]] = v
@@ -81,5 +106,4 @@ function star_coloring(ag::AdjacencyGraph, order::AbstractOrder)
             end
         end
     end
-    return colors
 end

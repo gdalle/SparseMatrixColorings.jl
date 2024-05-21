@@ -1,15 +1,16 @@
+using LinearAlgebra
 using SparseArrays
-using SparseMatrixColorings: Graph, BipartiteGraph, AdjacencyGraph, neighbors
+using SparseMatrixColorings: Graph, adjacency_graph, bipartite_graph, neighbors
 using Test
 
 ## Standard graph
 
 @testset "Graph" begin
-    g = Graph(sparse([
+    g = Graph([
         1 0 1
         1 1 0
         0 0 0
-    ]))
+    ])
 
     @test length(g) == 3
     @test neighbors(g, 1) == [1, 2]
@@ -27,7 +28,7 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    bg = BipartiteGraph(A)
+    bg = bipartite_graph(A)
     @test length(bg, Val(1)) == 4
     @test length(bg, Val(2)) == 8
     # neighbors of rows
@@ -56,14 +57,15 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    ag = AdjacencyGraph(transpose(A) * A)
-    @test length(ag) == 8
-    @test neighbors(ag, 1) == [6, 7, 8]
-    @test neighbors(ag, 2) == [5, 7, 8]
-    @test neighbors(ag, 3) == [5, 6, 8]
-    @test neighbors(ag, 4) == [5, 6, 7]
-    @test neighbors(ag, 5) == [2, 3, 4, 6, 7, 8]
-    @test neighbors(ag, 6) == [1, 3, 4, 5, 7, 8]
-    @test neighbors(ag, 7) == [1, 2, 4, 5, 6, 8]
-    @test neighbors(ag, 8) == [1, 2, 3, 5, 6, 7]
+    B = transpose(A) * A
+    g = adjacency_graph(B - Diagonal(B))
+    @test length(g) == 8
+    @test neighbors(g, 1) == [6, 7, 8]
+    @test neighbors(g, 2) == [5, 7, 8]
+    @test neighbors(g, 3) == [5, 6, 8]
+    @test neighbors(g, 4) == [5, 6, 7]
+    @test neighbors(g, 5) == [2, 3, 4, 6, 7, 8]
+    @test neighbors(g, 6) == [1, 3, 4, 5, 7, 8]
+    @test neighbors(g, 7) == [1, 2, 4, 5, 6, 8]
+    @test neighbors(g, 8) == [1, 2, 3, 5, 6, 7]
 end
