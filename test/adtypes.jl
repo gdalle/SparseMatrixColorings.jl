@@ -29,7 +29,7 @@ end
 end
 
 @testset "Symmetric coloring" begin
-    S = Symmetric(sprand(Bool, 100, 100, 0.05)) + I
+    S = sparse(Symmetric(sprand(Bool, 100, 100, 0.05)))
     symmetric_colors = symmetric_coloring(S, alg)
     @test check_symmetrically_orthogonal(S, symmetric_colors)
     @test minimum(symmetric_colors) == 1
