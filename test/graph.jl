@@ -56,7 +56,8 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    g = adjacency_graph(transpose(A) * A)
+    B = transpose(A) * A
+    g = adjacency_graph(B - Diagonal(B))
     @test length(g) == 8
     @test neighbors(g, 1) == [6, 7, 8]
     @test neighbors(g, 2) == [5, 7, 8]
