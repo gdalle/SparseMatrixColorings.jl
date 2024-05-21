@@ -7,7 +7,6 @@ using SparseMatrixColorings:
     Graph,
     adjacency_graph,
     bipartite_graph,
-    column_intersection_graph,
     LargestFirst,
     NaturalOrder,
     degree,

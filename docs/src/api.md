@@ -2,18 +2,61 @@
 
 ```@meta
 CollapsedDocStrings = true
+CurrentModule = SparseMatrixColorings
 ```
 
-## Public
+## Public, exported
 
-```@autodocs
-Modules = [SparseMatrixColorings]
-Private = false
+```@docs
+SparseMatrixColorings
+GreedyColoringAlgorithm
+```
+
+## Public, not exported
+
+### Orders
+
+```@docs
+AbstractOrder
+NaturalOrder
+RandomOrder
+LargestFirst
+```
+
+### Decompression
+
+```@docs
+decompress_columns!
+decompress_columns
+decompress_rows!
+decompress_rows
 ```
 
 ## Private
 
-```@autodocs
-Modules = [SparseMatrixColorings]
-Public = false
+### Graphs
+
+```@docs
+Graph
+BipartiteGraph
+adjacency_graph
+bipartite_graph
+neighbors
+vertices
+```
+
+### Coloring
+
+```@docs
+partial_distance2_coloring
+star_coloring1
+color_groups
+```
+
+### Testing
+
+```@docs
+check_structurally_orthogonal_columns
+check_structurally_orthogonal_rows
+check_symmetrically_orthogonal
 ```
