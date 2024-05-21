@@ -36,4 +36,7 @@ using Test
     @testset "ADTypes" begin
         include("adtypes.jl")
     end
+    @testset "SuiteSparse" begin
+        include("suitesparse.jl")
+    end
 end

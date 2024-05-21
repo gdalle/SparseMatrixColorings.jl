@@ -1,0 +1,11 @@
+row,modified,group,name,V,E,Δ,LF,N
+1,false,INPRO,msdoor,415863,9912536,76,42,42
+2,false,GHS_psdef,ldoor,952203,22785136,76,42,42
+3,false,DNVS,shipsec1,140874,3836265,101,54,48
+4,false,DNVS,shipsec5,179860,4966618,125,48,50
+5,false,Chen,pkustk11,87804,2565054,131,54,66
+6,false,Boeing,ct20stif,52329,1323067,206,47,49
+7,false,Boeing,pwtk,217918,5708253,179,42,48
+8,false,Chen,pkustk13,94893,3260967,299,45,57
+9,false,Nasa,nasasrb,54870,1311227,275,40,41
+10,false,GHS_indef,bmw3_2,227362,5530634,335,48,48

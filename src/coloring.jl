@@ -37,9 +37,9 @@ function partial_distance2_coloring(
 end
 
 """
-    star_coloring(ag::AdjacencyGraph, order::AbstractOrder)
+    star_coloring1(g::Graph, order::AbstractOrder)
 
-Compute a star coloring of all vertices in the adjacency graph `ag` and return a vector of integer colors.
+Compute a star coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
 
 A _star coloring_ is a distance-1 coloring such that every path on 4 vertices uses at least 3 colors.
 
@@ -47,23 +47,23 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 # See also
 
-- [`AdjacencyGraph`](@ref)
+- [`Graph`](@ref)
 - [`AbstractOrder`](@ref)
 """
-function star_coloring(ag::AdjacencyGraph, order::AbstractOrder)
-    n = length(ag)
+function star_coloring1(g::Graph, order::AbstractOrder)
+    n = length(g)
     colors = zeros(Int, n)
     forbidden_colors = zeros(Int, n)
-    for v in vertices(ag, order)
-        for w in neighbors(ag, v)
+    for v in vertices(g, order)
+        for w in neighbors(g, v)
             if !iszero(colors[w])  # w is colored
                 forbidden_colors[colors[w]] = v
             end
-            for x in neighbors(ag, w)
+            for x in neighbors(g, w)
                 if !iszero(colors[x]) && iszero(colors[w])  # w is not colored
                     forbidden_colors[colors[x]] = v
                 else
-                    for y in neighbors(ag, x)
+                    for y in neighbors(g, x)
                         if !iszero(colors[y]) && y != w
                             if colors[y] == colors[w]
                                 forbidden_colors[colors[x]] = v

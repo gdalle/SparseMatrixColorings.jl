@@ -21,16 +21,16 @@ end
 GreedyColoringAlgorithm() = GreedyColoringAlgorithm(NaturalOrder())
 
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    bg = BipartiteGraph(A)
+    bg = bipartite_graph(A)
     return partial_distance2_coloring(bg, Val(2), algo.order)
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    bg = BipartiteGraph(A)
+    bg = bipartite_graph(A)
     return partial_distance2_coloring(bg, Val(1), algo.order)
 end
 
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    ag = AdjacencyGraph(A)
-    return star_coloring(ag, algo.order)
+    ag = adjacency_graph(A)
+    return star_coloring1(ag, algo.order)
 end
