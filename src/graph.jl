@@ -104,7 +104,7 @@ The bipartite graph of a matrix `A ∈ ℝ^{m × n}` is `Gb(A) = (V₁, V₂, E)
 - `(i, j) ∈ E` whenever `A[i, j] ≠ 0`
 """
 function bipartite_graph(J::SparseMatrixCSC)
-    g1 = Graph(SparseMatrixCSC(transpose(J)))  # rows to columns
+    g1 = Graph(transpose(J))  # rows to columns
     g2 = Graph(J)  # columns to rows
     return BipartiteGraph(g1, g2)
 end

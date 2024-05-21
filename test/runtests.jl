@@ -6,8 +6,8 @@ using SparseMatrixColorings
 using Test
 
 @testset verbose = true "SparseMatrixColorings" begin
-    if VERSION >= v"1.10"
-        @testset verbose = true "Code quality" begin
+    @testset verbose = true "Code quality" begin
+        if VERSION >= v"1.10"
             @testset "Aqua" begin
                 Aqua.test_all(SparseMatrixColorings)
             end
@@ -20,23 +20,32 @@ using Test
                 )
             end
         end
+        @testset "Doctests" begin
+            Documenter.doctest(SparseMatrixColorings)
+        end
     end
-    @testset "Doctests" begin
-        Documenter.doctest(SparseMatrixColorings)
+    @testset verbose = true "Internals" begin
+        @testset "Graph" begin
+            include("graph.jl")
+        end
+        @testset "Order" begin
+            include("order.jl")
+        end
+        @testset "Check" begin
+            include("check.jl")
+        end
     end
-    @testset "Graph" begin
-        include("graph.jl")
+    @testset verbose = true "Correctness" begin
+        @testset "ADTypes" begin
+            include("adtypes.jl")
+        end
+        @testset "SuiteSparse" begin
+            include("suitesparse.jl")
+        end
     end
-    @testset "Order" begin
-        include("order.jl")
-    end
-    @testset "Check" begin
-        include("check.jl")
-    end
-    @testset "ADTypes" begin
-        include("adtypes.jl")
-    end
-    @testset "SuiteSparse" begin
-        include("suitesparse.jl")
+    @testset "Performance" begin
+        if VERSION >= v"1.10"
+            include("performance.jl")
+        end
     end
 end

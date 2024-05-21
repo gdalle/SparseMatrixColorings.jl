@@ -20,6 +20,10 @@ end
 
 GreedyColoringAlgorithm() = GreedyColoringAlgorithm(NaturalOrder())
 
+function Base.show(io::IO, algo::GreedyColoringAlgorithm)
+    return print(io, "GreedyColoringAlgorithm($(algo.order))")
+end
+
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(A)
     return partial_distance2_coloring(bg, Val(2), algo.order)
