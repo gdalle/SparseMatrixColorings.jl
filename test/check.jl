@@ -4,7 +4,7 @@ using SparseMatrixColorings:
     check_symmetrically_orthogonal
 using Test
 
-@testset "Column coloring" begin
+@testset "Structurally orthogonal columns" begin
     A = [
         1 0 0
         0 1 0
@@ -16,7 +16,7 @@ using Test
     @test !check_structurally_orthogonal_columns(A, [1, 2, 2])
 end
 
-@testset "Row coloring" begin
+@testset "Structurally orthogonal rows" begin
     A = [
         1 0 0
         0 1 0
@@ -28,8 +28,8 @@ end
     @test !check_structurally_orthogonal_rows(A, [1, 2, 2])
 end
 
-@testset "Symmetric coloring" begin
-    # example from "What color is your Jacobian", fig 4.1
+@testset "Symmetrically orthogonal" begin
+    # fig 4.1 of "What color is your Jacobian?"
     A = [
         1 1 0 0 0 0
         1 1 1 0 1 1

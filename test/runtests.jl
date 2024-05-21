@@ -24,8 +24,11 @@ using Test
     @testset "Doctests" begin
         Documenter.doctest(SparseMatrixColorings)
     end
-    @testset "Utils" begin
-        include("utils.jl")
+    @testset "Graph" begin
+        include("graph.jl")
+    end
+    @testset "Order" begin
+        include("order.jl")
     end
     @testset "Check" begin
         include("check.jl")
