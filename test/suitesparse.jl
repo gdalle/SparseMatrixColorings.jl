@@ -97,6 +97,8 @@ what_table_41_42 = CSV.read(
         g = adjacency_graph(mat)
         @test length(g) == row[:V]
         @test nnz(g) ÷ 2 == row[:E]
+        @test maximum_degree(g) == row[:Δ]
+        @test minimum_degree(g) == row[:δ]
         colors_Nb = partial_distance2_coloring(bg, Val(2), NaturalOrder())
         colors_Ns1 = star_coloring1(g, NaturalOrder())
         @test length(unique(colors_Nb)) == row[:K_d2]
