@@ -7,6 +7,7 @@ using SparseMatrixColorings:
     NaturalOrder,
     RandomOrder,
     vertices
+using StableRNGs
 using Test
 
 rng = StableRNG(63)
