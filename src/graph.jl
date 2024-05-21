@@ -110,20 +110,3 @@ function bipartite_graph(J::SparseMatrixCSC)
 end
 
 bipartite_graph(J::AbstractMatrix) = bipartite_graph(sparse(J))
-
-"""
-    column_intersection_graph(J::AbstractMatrix)
-
-Return a [`Graph`](@ref) representing the column intersections of a non-symmetric matrix (typically a Jacobian matrix).
-
-The column intersection graph of a matrix `A ∈ ℝ^{m × n}` is `Gc(A) = (V, E)` where
-
-- `V = 1:n` is the set of columns `j`
-- `(j1, j2) ∈ E` whenever `A[:, j1] ∩ A[:, j2] ≠ ∅`
-"""
-function column_intersection_graph(J::SparseMatrixCSC)
-    A = transpose(J) * J
-    return adjacency_graph(A - Diagonal(A))
-end
-
-column_intersection_graph(J::AbstractMatrix) = column_intersection_graph(sparse(J))

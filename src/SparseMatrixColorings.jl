@@ -6,7 +6,8 @@ $README
 module SparseMatrixColorings
 
 using ADTypes: ADTypes, AbstractColoringAlgorithm
-using DocStringExtensions
+using Compat: @compat
+using DocStringExtensions: README
 using LinearAlgebra: Diagonal, Transpose, checksquare, parent, transpose
 using Random: AbstractRNG, default_rng, randperm
 using SparseArrays:
@@ -15,6 +16,7 @@ using SparseArrays:
     dropzeros,
     dropzeros!,
     nnz,
+    nonzeros,
     nzrange,
     rowvals,
     sparse,
@@ -25,6 +27,11 @@ include("order.jl")
 include("coloring.jl")
 include("adtypes.jl")
 include("check.jl")
+include("decompression.jl")
+
+@compat public GreedyColoringAlgorithm
+@compat public NaturalOrder, RandomOrder, LargestFirst
+@compat public decompress_columns!, decompress_columns, decompress_rows!, decompress_rows
 
 export GreedyColoringAlgorithm
 

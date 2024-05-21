@@ -36,16 +36,23 @@ using Test
         end
     end
     @testset verbose = true "Correctness" begin
-        @testset "ADTypes" begin
-            include("adtypes.jl")
+        @testset "Coloring" begin
+            include("coloring_correctness.jl")
         end
-        @testset "SuiteSparse" begin
-            include("suitesparse.jl")
+        @testset "Decompression" begin
+            include("decompression_correctness.jl")
         end
     end
     @testset "Performance" begin
         if VERSION >= v"1.10"
-            include("performance.jl")
+            @testset "Coloring" begin
+                include("coloring_performance.jl")
+            end
+        end
+    end
+    @testset "Comparison" begin
+        @testset "SuiteSparse" begin
+            include("suitesparse.jl")
         end
     end
 end
