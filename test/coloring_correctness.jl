@@ -46,7 +46,7 @@ end
 @testset "Symmetric coloring" begin
     @testset "$(typeof(A)) - $(size(A))" for A in (
         sparse(Symmetric(sprand(rng, Bool, 100, 100, 0.05))),
-        sparse(Symmetric(Matrix(sprand(rng, Bool, 100, 100, 0.05)))),
+        Symmetric(Matrix(sprand(rng, Bool, 100, 100, 0.05))),
     )
         symmetric_colors = symmetric_coloring(A, algo)
         @test check_symmetrically_orthogonal(A, symmetric_colors)

@@ -1,7 +1,7 @@
 name = "SparseMatrixColorings"
 uuid = "0a514795-09f3-496d-8182-132a7b665d35"
 authors = ["Guillaume Dalle <22795598+gdalle@users.noreply.github.com>"]
-version = "0.2.1"
+version = "0.3.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
