@@ -34,7 +34,6 @@ Here, `C` is a compressed representation of matrix `A` obtained by summing the c
 """
 function decompress_columns! end
 
-#=
 function decompress_columns!(
     A::AbstractMatrix{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
@@ -46,7 +45,6 @@ function decompress_columns!(
     end
     return A
 end
-=#
 
 function decompress_columns!(
     A::SparseMatrixCSC{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
@@ -93,7 +91,6 @@ Here, `C` is a compressed representation of matrix `A` obtained by summing the r
 """
 function decompress_rows! end
 
-#=
 function decompress_rows!(
     A::AbstractMatrix{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
@@ -105,7 +102,6 @@ function decompress_rows!(
     end
     return A
 end
-=#
 
 function decompress_rows!(
     A::Transpose{R,<:SparseMatrixCSC{R}},

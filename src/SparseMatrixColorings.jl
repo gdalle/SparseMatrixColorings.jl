@@ -31,7 +31,9 @@ include("decompression.jl")
 
 @compat public GreedyColoringAlgorithm
 @compat public NaturalOrder, RandomOrder, LargestFirst
-@compat public decompress_columns!, decompress_columns, decompress_rows!, decompress_rows
+@compat public decompress_columns!, decompress_columns
+@compat public decompress_rows!, decompress_rows
+@compat public color_groups
 
 export GreedyColoringAlgorithm
 
