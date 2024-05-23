@@ -30,6 +30,7 @@ decompress_columns!
 decompress_columns
 decompress_rows!
 decompress_rows
+color_groups
 ```
 
 ## Private
@@ -50,7 +51,6 @@ vertices
 ```@docs
 partial_distance2_coloring
 star_coloring1
-color_groups
 ```
 
 ### Testing

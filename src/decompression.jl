@@ -25,32 +25,41 @@ end
 
 """
     decompress_columns!(
-        A::AbstractMatrix{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+        A::AbstractMatrix{R},
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
-Decompress the thin matrix `C` into the fat matrix `A`.
+Decompress the thin matrix `C` into a fat matrix `A` with the same sparsity pattern as `S`.
 
-Here, `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color in `colors`.
+Here, `colors` is a column coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
 function decompress_columns! end
 
-#=
 function decompress_columns!(
-    A::AbstractMatrix{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
 ) where {R<:Real}
     A .= zero(R)
     @views for j in axes(A, 2)
         k = colors[j]
-        rows_j = (!iszero).(A[:, j])
+        rows_j = map(!iszero, S[:, j])
         copyto!(A[rows_j, j], C[rows_j, k])
+        A[rows_j, j] .= C[rows_j, k]
     end
     return A
 end
-=#
 
 function decompress_columns!(
-    A::SparseMatrixCSC{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+    A::SparseMatrixCSC{R},
+    S::SparseMatrixCSC{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    # assume A and S have the same pattern
     Anz, Arv = nonzeros(A), rowvals(A)
     Anz .= zero(R)
     @views for j in axes(A, 2)
@@ -64,18 +73,20 @@ end
 
 """
     decompress_columns(
-        S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
 Decompress the thin matrix `C` into a new fat matrix `A` with the same sparsity pattern as `S`.
 
-Here, `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color in `colors`.
+Here, `colors` is a column coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
 function decompress_columns(
     S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
     A = transpose_respecting_similar(S, R)
-    return decompress_columns!(A, C, colors)
+    return decompress_columns!(A, S, C, colors)
 end
 
 ## Row decompression
@@ -83,35 +94,39 @@ end
 """
     decompress_rows!(
         A::AbstractMatrix{R},
-        C::AbstractMatrix{R}, S::AbstractMatrix{Bool},
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
         colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
-Decompress the small matrix `C` into the tall matrix `A`.
+Decompress the small matrix `C` into the tall matrix `A` with the same sparsity pattern as `S`.
 
-Here, `C` is a compressed representation of matrix `A` obtained by summing the rows that share the same color in `colors`.
+Here, `colors` is a row coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
 function decompress_rows! end
 
-#=
 function decompress_rows!(
-    A::AbstractMatrix{R}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
 ) where {R<:Real}
     A .= zero(R)
     @views for i in axes(A, 1)
         k = colors[i]
-        cols_i = (!iszero).(A[i, :])
+        cols_i = map(!iszero, S[i, :])
         copyto!(A[i, cols_i], C[k, cols_i])
     end
     return A
 end
-=#
 
 function decompress_rows!(
     A::Transpose{R,<:SparseMatrixCSC{R}},
+    S::Transpose{Bool,<:SparseMatrixCSC{Bool}},
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    # assume A and S have the same pattern
     PA = parent(A)
     PAnz, PArv = nonzeros(PA), rowvals(PA)
     PAnz .= zero(R)
@@ -126,16 +141,18 @@ end
 
 """
     decompress_rows(
-        S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
 Decompress the small matrix `C` into a new tall matrix `A` with the same sparsity pattern as `S`.
 
-Here, `C` is a compressed representation of matrix `A` obtained by summing the rows that share the same color in `colors`.
+Here, `colors` is a row coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
 function decompress_rows(
     S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
     A = transpose_respecting_similar(S, R)
-    return decompress_rows!(A, C, colors)
+    return decompress_rows!(A, S, C, colors)
 end
