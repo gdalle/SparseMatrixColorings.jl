@@ -9,6 +9,8 @@ using SparseMatrixColorings:
     decompress_columns!,
     decompress_rows,
     decompress_rows!,
+    decompress_symmetric,
+    decompress_symmetric!,
     same_sparsity_pattern
 using StableRNGs
 using Test
@@ -146,5 +148,33 @@ end
         ]
             @test decompress_rows(St, Ct, colors) == At
         end
+    end
+end
+
+@testset "Symmetric decompression" begin
+    @testset "Small" begin
+        # Fig 4.1 from "What color is your Jacobian?"
+        A0 = [
+            1 2 0 0 0 0
+            2 3 4 0 5 6
+            0 4 7 8 0 0
+            0 0 8 9 0 10
+            0 5 0 0 11 0
+            0 6 0 10 0 12
+        ]
+        S0 = (!iszero).(A0)
+        colors = [
+            1,  # green
+            2,  # red
+            1,  # green
+            3,  # blue
+            1,  # green
+            1,  # green
+        ]
+        groups = color_groups(colors)
+        C0 = stack(groups; dims=2) do group
+            dropdims(sum(A0[:, group]; dims=2); dims=2)
+        end
+        @test decompress_symmetric(S0, C0, colors) == A0
     end
 end

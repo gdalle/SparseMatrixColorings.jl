@@ -191,3 +191,65 @@ function decompress_rows(
     A = transpose_respecting_similar(S, R)
     return decompress_rows!(A, S, C, colors)
 end
+
+## Symmetric decompression
+
+"""
+    decompress_symmetric!(
+        A::AbstractMatrix{R},
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the thin matrix `C` into the symmetric matrix `A` which must have the same sparsity pattern as `S`.
+
+Here, `colors` is a symmetric coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+"""
+function decompress_symmetric! end
+
+function decompress_symmetric!(
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
+) where {R<:Real}
+    A .= zero(R)
+    n = checksquare(A)
+    for i_and_j in CartesianIndices(A)
+        i, j = Tuple(i_and_j)
+        i > j && continue
+        if iszero(S[i, j])
+            continue
+        end
+        ki, kj = colors[i], colors[j]
+        group_i = filter(i2 -> colors[i2] == ki, 1:n)
+        group_j = filter(j2 -> colors[j2] == kj, 1:n)
+        if sum(!iszero, view(S, i, group_j)) == 1
+            A[i, j] = C[j, kj]
+        elseif sum(!iszero, view(S, j, group_i)) == 1
+            A[i, j] = C[i, ki]
+        else
+            error("Symmetric coloring is not valid")
+        end
+    end
+    return A
+end
+
+"""
+    decompress_symmetric(
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the thin matrix `C` into a new symmetric matrix `A` with the same sparsity pattern as `S`.
+
+Here, `colors` is a symmetric coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+"""
+function decompress_symmetric(
+    S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+) where {R<:Real}
+    A = transpose_respecting_similar(S, R)
+    return decompress_symmetric!(A, S, C, colors)
+end
