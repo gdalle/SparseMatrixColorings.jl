@@ -4,6 +4,30 @@ function transpose_respecting_similar(A::Transpose, ::Type{T}) where {T}
     return transpose(similar(parent(A), T))
 end
 
+function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
+    if size(A) != size(B)
+        return false
+    elseif nnz(A) != nnz(B)
+        return false
+    else
+        for j in axes(A, 2)
+            rA = nzrange(A, j)
+            rB = nzrange(B, j)
+            if rA != rB
+                return false
+            end
+            # TODO: check rowvals?
+        end
+        return true
+    end
+end
+
+function same_sparsity_pattern(
+    A::Transpose{<:Any,<:SparseMatrixCSC}, B::Transpose{<:Any,<:SparseMatrixCSC}
+)
+    return same_sparsity_pattern(parent(A), parent(B))
+end
+
 """
     color_groups(colors)
 
@@ -60,7 +84,7 @@ function decompress_columns!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
-    if nnz(parent(A)) != nnz(parent(S))
+    if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     Anz, Arv = nonzeros(A), rowvals(A)
@@ -133,7 +157,7 @@ function decompress_rows!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
-    if nnz(parent(A)) != nnz(parent(S))
+    if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     PA = parent(A)
