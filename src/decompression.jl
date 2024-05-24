@@ -31,7 +31,7 @@ end
         colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
-Decompress the thin matrix `C` into a fat matrix `A` with the same sparsity pattern as `S`.
+Decompress the thin matrix `C` into the fat matrix `A` which must have the same sparsity pattern as `S`.
 
 Here, `colors` is a column coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
@@ -44,11 +44,12 @@ function decompress_columns!(
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
     A .= zero(R)
-    @views for j in axes(A, 2)
+    for j in axes(A, 2)
         k = colors[j]
-        rows_j = map(!iszero, S[:, j])
-        copyto!(A[rows_j, j], C[rows_j, k])
-        A[rows_j, j] .= C[rows_j, k]
+        rows_j = (!iszero).(view(S, :, j))
+        Aj = view(A, rows_j, j)
+        Cj = view(C, rows_j, k)
+        copyto!(Aj, Cj)
     end
     return A
 end
@@ -59,14 +60,18 @@ function decompress_columns!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
-    # assume A and S have the same pattern
+    if nnz(parent(A)) != nnz(parent(S))
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     Anz, Arv = nonzeros(A), rowvals(A)
     Anz .= zero(R)
-    @views for j in axes(A, 2)
+    for j in axes(A, 2)
         k = colors[j]
         nzrange_j = nzrange(A, j)
-        rows_j = Arv[nzrange_j]
-        copyto!(Anz[nzrange_j], C[rows_j, k])
+        rows_j = view(Arv, nzrange_j)
+        Aj = view(Anz, nzrange_j)
+        Cj = view(C, rows_j, k)
+        copyto!(Aj, Cj)
     end
     return A
 end
@@ -99,7 +104,7 @@ end
         colors::AbstractVector{<:Integer}
     ) where {R<:Real}
 
-Decompress the small matrix `C` into the tall matrix `A` with the same sparsity pattern as `S`.
+Decompress the small matrix `C` into the tall matrix `A` which must have the same sparsity pattern as `S`.
 
 Here, `colors` is a row coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
 """
@@ -112,10 +117,12 @@ function decompress_rows!(
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
     A .= zero(R)
-    @views for i in axes(A, 1)
+    for i in axes(A, 1)
         k = colors[i]
-        cols_i = map(!iszero, S[i, :])
-        copyto!(A[i, cols_i], C[k, cols_i])
+        cols_i = (!iszero).(view(S, i, :))
+        Ai = view(A, i, cols_i)
+        Ci = view(C, k, cols_i)
+        copyto!(Ai, Ci)
     end
     return A
 end
@@ -126,15 +133,19 @@ function decompress_rows!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
-    # assume A and S have the same pattern
+    if nnz(parent(A)) != nnz(parent(S))
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     PA = parent(A)
     PAnz, PArv = nonzeros(PA), rowvals(PA)
     PAnz .= zero(R)
-    @views for i in axes(A, 1)
+    for i in axes(A, 1)
         k = colors[i]
         nzrange_i = nzrange(PA, i)
-        cols_i = PArv[nzrange_i]
-        copyto!(PAnz[nzrange_i], C[k, cols_i])
+        cols_i = view(PArv, nzrange_i)
+        Ai = view(PAnz, nzrange_i)
+        Ci = view(C, k, cols_i)
+        copyto!(Ai, Ci)
     end
     return A
 end

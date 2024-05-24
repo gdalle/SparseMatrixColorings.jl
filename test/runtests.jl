@@ -43,14 +43,14 @@ using Test
             include("decompression_correctness.jl")
         end
     end
-    @testset "Performance" begin
+    @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
             @testset "Coloring" begin
                 include("coloring_performance.jl")
             end
         end
     end
-    @testset "Comparison" begin
+    @testset verbose = true "Comparison" begin
         @testset "SuiteSparse" begin
             include("suitesparse.jl")
         end
