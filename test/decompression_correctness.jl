@@ -1,14 +1,45 @@
 using ADTypes: column_coloring, row_coloring, symmetric_coloring
 using Compat
+using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: color_groups, decompress_columns, decompress_rows
+using SparseMatrixColorings:
+    color_groups,
+    decompress_columns,
+    decompress_columns!,
+    decompress_rows,
+    decompress_rows!,
+    same_sparsity_pattern
 using StableRNGs
 using Test
 
 rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
+
+@testset "Sparsity pattern comparison" begin
+    A = [
+        1 1
+        0 1
+        0 0
+    ]
+    B1 = [
+        1 1
+        0 1
+        1 0
+    ]
+    B2 = [
+        1 1
+        0 0
+        0 1
+    ]
+    @test same_sparsity_pattern(sparse(A), sparse(A))
+    @test !same_sparsity_pattern(sparse(A), sparse(B1))
+    @test_broken !same_sparsity_pattern(sparse(A), sparse(B2))
+    @test same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(A)))
+    @test !same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(B1)))
+    @test_broken !same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(B2)))
+end
 
 @testset "Column decompression" begin
     @testset "Small" begin
@@ -33,6 +64,11 @@ algo = GreedyColoringAlgorithm()
             (sparse(A0), sparse(S0)),
         ]
             @test decompress_columns(S, C, colors) == A
+            if A isa SparseMatrixCSC
+                @test_throws DimensionMismatch decompress_columns!(
+                    similar(A), false .* S, C, colors
+                )
+            end
         end
     end
     @testset "Medium" begin
@@ -76,6 +112,11 @@ end
             (transpose(sparse(transpose(A0))), transpose(sparse(transpose(S0)))),
         ]
             @test decompress_rows(S, C, colors) == A
+            if A isa Transpose{<:Any,<:SparseMatrixCSC}
+                @test_throws DimensionMismatch decompress_rows!(
+                    transpose(similar(parent(A))), transpose(false .* parent(S)), C, colors
+                )
+            end
         end
     end
     @testset "Medium" begin
