@@ -10,40 +10,91 @@ rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
 
-m, n = 10, 20
-
-A0 = sprand(rng, Bool, m, n, 0.3)
-A1 = Matrix(A0)
-A0t = transpose(A0)
-A1t = transpose(A1)
-
-S0 = map(!iszero, A0)
-S1 = map(!iszero, A1)
-S0t = transpose(S0)
-S1t = transpose(S1)
-
 @testset "Column decompression" begin
-    @testset "$(typeof(A))" for (A, S) in zip((A0, A1), (S0, S1))
-        colors = column_coloring(A, algo)
-        groups = color_groups(colors)
-        @test length(groups[1]) > 1
-        C = stack(groups) do group
-            dropdims(sum(A[:, group]; dims=2); dims=2)
+    @testset "Small" begin
+        A0 = [
+            1 0 2
+            0 3 4
+            5 0 0
+        ]
+        S0 = Bool[
+            1 0 1
+            0 1 1
+            1 0 0
+        ]
+        C = [
+            1 2
+            3 4
+            5 0
+        ]
+        colors = [1, 1, 2]
+        @testset "$(typeof(A)) - $(typeof(S))" for (A, S) in [
+            (A0, S0),  #
+            (sparse(A0), sparse(S0)),
+        ]
+            @test decompress_columns(S, C, colors) == A
         end
-        A_new = decompress_columns(S, C, colors)
-        @test A_new == A
+    end
+    @testset "Medium" begin
+        m, n = 18, 20
+        A0 = sprand(rng, Bool, m, n, 0.2)
+        S0 = map(!iszero, A0)
+        colors = column_coloring(A0, algo)
+        groups = color_groups(colors)
+        C = stack(groups; dims=2) do group
+            dropdims(sum(A0[:, group]; dims=2); dims=2)
+        end
+        @test size(C) == (size(A0, 1), length(groups))
+        @testset "$(typeof(A)) - $(typeof(S))" for (A, S) in [
+            (A0, S0),  #
+            (Matrix(A0), Matrix(S0)),
+        ]
+            @test decompress_columns(S, C, colors) == A
+        end
     end
 end
 
 @testset "Row decompression" begin
-    @testset "$(typeof(At))" for (At, St) in zip((A0t, A1t), (S0t, S1t))
-        colors = row_coloring(At, algo)
-        groups = color_groups(colors)
-        @test length(groups[1]) > 1
-        Ct = stack(groups; dims=1) do group
-            dropdims(sum(At[group, :]; dims=1); dims=1)
+    @testset "Small" begin
+        A0 = [
+            1 0 3
+            0 2 0
+            4 5 0
+        ]
+        S0 = Bool[
+            1 0 1
+            0 1 0
+            1 1 0
+        ]
+        C = [
+            1 2 3
+            4 5 0
+        ]
+        colors = [1, 1, 2]
+        @testset "$(typeof(A)) - $(typeof(S))" for (A, S) in [
+            (A0, S0), #
+            (transpose(sparse(transpose(A0))), transpose(sparse(transpose(S0)))),
+        ]
+            @test decompress_rows(S, C, colors) == A
         end
-        At_new = decompress_rows(St, Ct, colors)
-        @test At_new == At
+    end
+    @testset "Medium" begin
+        m, n = 18, 20
+        A0 = sprand(rng, Bool, m, n, 0.2)
+        S0 = map(!iszero, A0)
+        A0t = transpose(A0)
+        S0t = transpose(S0)
+        colors = row_coloring(A0t, algo)
+        groups = color_groups(colors)
+        Ct = stack(groups; dims=1) do group
+            dropdims(sum(A0t[group, :]; dims=1); dims=1)
+        end
+        @test size(Ct) == (length(groups), size(A0t, 2))
+        @testset "$(typeof(At)) - $(typeof(St))" for (At, St) in [
+            (A0t, S0t),  #
+            (Matrix(A0t), Matrix(S0t)),
+        ]
+            @test decompress_rows(St, Ct, colors) == At
+        end
     end
 end
