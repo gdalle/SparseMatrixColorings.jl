@@ -1,50 +1,3 @@
-transpose_respecting_similar(A::AbstractMatrix, ::Type{T}) where {T} = similar(A, T)
-
-function transpose_respecting_similar(A::Transpose, ::Type{T}) where {T}
-    return transpose(similar(parent(A), T))
-end
-
-function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
-    if size(A) != size(B)
-        return false
-    elseif nnz(A) != nnz(B)
-        return false
-    else
-        for j in axes(A, 2)
-            rA = nzrange(A, j)
-            rB = nzrange(B, j)
-            if rA != rB
-                return false
-            end
-            # TODO: check rowvals?
-        end
-        return true
-    end
-end
-
-function same_sparsity_pattern(
-    A::Transpose{<:Any,<:SparseMatrixCSC}, B::Transpose{<:Any,<:SparseMatrixCSC}
-)
-    return same_sparsity_pattern(parent(A), parent(B))
-end
-
-"""
-    color_groups(colors)
-
-Return `groups::Vector{Vector{Int}}` such that `i ∈ groups[c]` iff `colors[i] == c`.
-
-Assumes the colors are contiguously numbered from `1` to some `cmax`.
-"""
-function color_groups(colors::AbstractVector{<:Integer})
-    cmin, cmax = extrema(colors)
-    @assert cmin == 1
-    groups = [Int[] for c in 1:cmax]
-    for (k, c) in enumerate(colors)
-        push!(groups[c], k)
-    end
-    return groups
-end
-
 ## Column decompression
 
 """
@@ -67,6 +20,9 @@ function decompress_columns!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     A .= zero(R)
     for j in axes(A, 2)
         k = colors[j]
@@ -114,7 +70,7 @@ Here, `colors` is a column coloring of `S`, while `C` is a compressed representa
 function decompress_columns(
     S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
-    A = transpose_respecting_similar(S, R)
+    A = respectful_similar(S, R)
     return decompress_columns!(A, S, C, colors)
 end
 
@@ -140,6 +96,9 @@ function decompress_rows!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     A .= zero(R)
     for i in axes(A, 1)
         k = colors[i]
@@ -152,8 +111,8 @@ function decompress_rows!(
 end
 
 function decompress_rows!(
-    A::Transpose{R,<:SparseMatrixCSC{R}},
-    S::Transpose{Bool,<:SparseMatrixCSC{Bool}},
+    A::TransposeOrAdjoint{R,<:SparseMatrixCSC{R}},
+    S::TransposeOrAdjoint{Bool,<:SparseMatrixCSC{Bool}},
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
@@ -188,6 +147,75 @@ Here, `colors` is a row coloring of `S`, while `C` is a compressed representatio
 function decompress_rows(
     S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
 ) where {R<:Real}
-    A = transpose_respecting_similar(S, R)
+    A = respectful_similar(S, R)
     return decompress_rows!(A, S, C, colors)
+end
+
+## Symmetric decompression
+
+"""
+    decompress_symmetric!(
+        A::AbstractMatrix{R},
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the thin matrix `C` into the symmetric matrix `A` which must have the same sparsity pattern as `S`.
+
+Here, `colors` is a symmetric coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+"""
+function decompress_symmetric! end
+
+function decompress_symmetric!(
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
+) where {R<:Real}
+    A .= zero(R)
+    groups = color_groups(colors)
+    checksquare(A)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(S[i, j]) && continue
+        ki, kj = colors[i], colors[j]
+        gi, gj = groups[ki], groups[kj]
+        if sum(!iszero, view(S, i, gj)) == 1
+            A[i, j] = C[i, kj]
+        elseif sum(!iszero, view(S, j, gi)) == 1
+            A[i, j] = C[j, ki]
+        else
+            error("Symmetric coloring is not valid")
+        end
+    end
+    return A
+end
+
+function decompress_symmetric!(
+    A::Symmetric{R},
+    S::AbstractMatrix{Bool},
+    C::AbstractMatrix{R},
+    colors::AbstractVector{<:Integer},
+) where {R<:Real}
+    # requires parent decompression to handle both upper and lower triangles
+    decompress_symmetric!(parent(A), S, C, colors)
+    return A
+end
+
+"""
+    decompress_symmetric(
+        S::AbstractMatrix{Bool},
+        C::AbstractMatrix{R},
+        colors::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the thin matrix `C` into a new symmetric matrix `A` with the same sparsity pattern as `S`.
+
+Here, `colors` is a symmetric coloring of `S`, while `C` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+"""
+function decompress_symmetric(
+    S::AbstractMatrix{Bool}, C::AbstractMatrix{R}, colors::AbstractVector{<:Integer}
+) where {R<:Real}
+    A = respectful_similar(S, R)
+    return decompress_symmetric!(A, S, C, colors)
 end
