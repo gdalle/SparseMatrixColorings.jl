@@ -29,7 +29,7 @@ end
 end
 
 @testset "Symmetrically orthogonal" begin
-    # fig 4.1 of "What color is your Jacobian?"
+    # Fig 4.1 of "What color is your Jacobian?"
     A = [
         1 1 0 0 0 0
         1 1 1 0 1 1

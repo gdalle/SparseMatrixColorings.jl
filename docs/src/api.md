@@ -26,14 +26,24 @@ LargestFirst
 ### Decompression
 
 ```@docs
-decompress_columns!
-decompress_columns
-decompress_rows!
-decompress_rows
 color_groups
+decompress_columns
+decompress_columns!
+decompress_rows
+decompress_rows!
+decompress_symmetric
+decompress_symmetric!
 ```
 
 ## Private
+
+### Matrices
+
+```@docs
+matrix_versions
+respectful_similar
+same_sparsity_pattern
+```
 
 ### Graphs
 

@@ -12,14 +12,15 @@ A partition of the columns of a matrix `A` is _structurally orthogonal_ if, for 
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
 function check_structurally_orthogonal_columns(
-    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=false
+    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=true
 )
-    for c in unique(colors)
-        js = filter(j -> colors[j] == c, axes(A, 2))
-        Ajs = @view A[:, js]
-        nonzeros_per_row = count(!iszero, Ajs; dims=2)
-        if maximum(nonzeros_per_row) > 1
-            verbose && @warn "Color $c has columns $js sharing nonzeros"
+    groups = color_groups(colors)
+    for (c, g) in enumerate(groups)
+        Ag = @view A[:, g]
+        nonzeros_per_row = dropdims(count(!iszero, Ag; dims=2); dims=2)
+        max_nonzeros_per_row, i = findmax(nonzeros_per_row)
+        if max_nonzeros_per_row > 1
+            verbose && @warn "Columns $g (with color $c) share nonzeros in row $i"
             return false
         end
     end
@@ -40,14 +41,15 @@ A partition of the rows of a matrix `A` is _structurally orthogonal_ if, for eve
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
 function check_structurally_orthogonal_rows(
-    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=false
+    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=true
 )
-    for c in unique(colors)
-        is = filter(i -> colors[i] == c, axes(A, 1))
-        Ais = @view A[is, :]
-        nonzeros_per_column = count(!iszero, Ais; dims=1)
-        if maximum(nonzeros_per_column) > 1
-            verbose && @warn "Color $c has rows $is sharing nonzeros"
+    groups = color_groups(colors)
+    for (c, g) in enumerate(groups)
+        Ag = @view A[g, :]
+        nonzeros_per_col = dropdims(count(!iszero, Ag; dims=1); dims=1)
+        max_nonzeros_per_col, j = findmax(nonzeros_per_col)
+        if max_nonzeros_per_col > 1
+            verbose && @warn "Rows $g (with color $c) share nonzeros in column $j"
             return false
         end
     end
@@ -71,24 +73,26 @@ A partition of the columns of a symmetrix matrix `A` is _symmetrically orthogona
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
 function check_symmetrically_orthogonal(
-    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=false
+    A::AbstractMatrix, colors::AbstractVector{<:Integer}; verbose::Bool=true
 )
+    checksquare(A)
+    issymmetric(A) || return false
+    groups = color_groups(colors)
     for i in axes(A, 2), j in axes(A, 2)
-        if !iszero(A[i, j])
-            group_i = filter(i2 -> (i2 != i) && (colors[i2] == colors[i]), axes(A, 2))
-            group_j = filter(j2 -> (j2 != j) && (colors[j2] == colors[j]), axes(A, 2))
-            A_group_i_column_j = @view A[group_i, j]
-            A_group_j_column_i = @view A[group_j, i]
-            nonzeros_group_i_column_j = count(!iszero, A_group_i_column_j)
-            nonzeros_group_j_column_i = count(!iszero, A_group_j_column_i)
-            if nonzeros_group_i_column_j > 0 && nonzeros_group_j_column_i > 0
-                verbose && @warn """
-                For coefficient $((i, j)), both of the following have confounding zeros:
-                - color $(colors[j]) with group $group_j
-                - color $(colors[i]) with group $group_i
-                """
-                return false
-            end
+        iszero(A[i, j]) && continue
+        ki, kj = colors[i], colors[j]
+        gi, gj = groups[ki], groups[kj]
+        A_gj_rowi = view(A, i, gj)
+        A_gi_rowj = view(A, j, gi)
+        nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
+        nonzeros_gi_rowj = count(!iszero, A_gi_rowj)
+        if nonzeros_gj_rowi > 1 && nonzeros_gi_rowj > 1
+            verbose && @warn """
+            For coefficient $((i, j)):
+            - columns $gj (with color $kj) share nonzeros in row $i
+            - columns $gi (with color $ki) share nonzeros in row $j
+            """
+            return false
         end
     end
     return true
