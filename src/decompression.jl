@@ -20,6 +20,9 @@ function decompress_columns!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     A .= zero(R)
     for j in axes(A, 2)
         k = colors[j]
@@ -93,6 +96,9 @@ function decompress_rows!(
     C::AbstractMatrix{R},
     colors::AbstractVector{<:Integer},
 ) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
     A .= zero(R)
     for i in axes(A, 1)
         k = colors[i]

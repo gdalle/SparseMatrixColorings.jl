@@ -34,6 +34,9 @@ using Test
         @testset "Check" begin
             include("check.jl")
         end
+        @testset "Matrices" begin
+            include("matrices.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Coloring" begin
