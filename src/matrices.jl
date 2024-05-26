@@ -12,17 +12,17 @@ Used for internal testing.
 """
 function matrix_versions(A)
     A_dense = Matrix(A)
-    A_sparse = SparseMatrixCSC(A)
+    A_sparse = sparse(A)
     versions = [
         A_dense,
         transpose(Matrix(transpose(A_dense))),
         adjoint(Matrix(adjoint(A_dense))),
         A_sparse,
-        transpose(SparseMatrixCSC(transpose(A_sparse))),
-        adjoint(SparseMatrixCSC(adjoint(A_sparse))),
+        transpose(sparse(transpose(A_sparse))),
+        adjoint(sparse(adjoint(A_sparse))),
     ]
     if issymmetric(A)
-        append!(versions, [Symmetric(A_dense), Symmetric(A_sparse)])
+        append!(versions, Symmetric.(versions))
     end
     return versions
 end

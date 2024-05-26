@@ -75,7 +75,7 @@ function star_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
     color = zeros(Int, length(g))
     forbidden_colors = zeros(Int, length(g))
-    first_neighbor = Vector{Tuple{Int,Int}}(undef, length(g))
+    first_neighbor = fill((0, 0), length(g))  # at first no neighbors have been encountered
     treated = zeros(Int, length(g))
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
@@ -137,13 +137,13 @@ end
 
 function _update_stars!(
     # modified
-    star,
+    star::Dict{<:Tuple,<:Integer},
     hub::AbstractVector{<:Integer},
     # not modified
     g::Graph,
     v::Integer,
     color::AbstractVector{<:Integer},
-    first_neighbor::AbstractVector{<:Tuple{<:Integer,<:Integer}},
+    first_neighbor::AbstractVector{<:Tuple},
 )
     for w in neighbors(g, v)
         iszero(color[w]) && continue

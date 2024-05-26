@@ -13,7 +13,7 @@ Coloring algorithms for sparse Jacobian and Hessian matrices.
 To install this package, run the following in a Julia Pkg REPL:
 
 ```julia
-pkg> add https://github.com/gdalle/SparseMatrixColorings.jl
+pkg> add SparseMatrixColorings
 ```
 
 ## Background
