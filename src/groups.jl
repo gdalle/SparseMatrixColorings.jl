@@ -1,16 +1,16 @@
 """
-    color_groups(colors)
+    color_groups(color)
 
-Return `groups::Vector{Vector{Int}}` such that `i ∈ groups[c]` iff `colors[i] == c`.
+Return `group::Vector{Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
 
 Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
-function color_groups(colors::AbstractVector{<:Integer})
-    cmin, cmax = extrema(colors)
+function color_groups(color::AbstractVector{<:Integer})
+    cmin, cmax = extrema(color)
     @assert cmin == 1
-    groups = [Int[] for c in 1:cmax]
-    for (k, c) in enumerate(colors)
-        push!(groups[c], k)
+    group = [Int[] for c in 1:cmax]
+    for (k, c) in enumerate(color)
+        push!(group[c], k)
     end
-    return groups
+    return group
 end

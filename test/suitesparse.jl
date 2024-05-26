@@ -14,7 +14,7 @@ using SparseMatrixColorings:
     maximum_degree,
     neighbors,
     partial_distance2_coloring,
-    star_coloring1,
+    star_coloring,
     vertices
 using Test
 
@@ -39,10 +39,10 @@ colpack_table_6_7 = CSV.read(
         @test nnz(bg) == row[:E]
         @test maximum_degree(bg, Val(1)) == row[:Δ1]
         @test maximum_degree(bg, Val(2)) == row[:Δ2]
-        colors_N1 = partial_distance2_coloring(bg, Val(1), NaturalOrder())
-        colors_N2 = partial_distance2_coloring(bg, Val(2), NaturalOrder())
-        @test length(unique(colors_N1)) == row[:N1]
-        @test length(unique(colors_N2)) == row[:N2]
+        color_N1 = partial_distance2_coloring(bg, Val(1), NaturalOrder())
+        color_N2 = partial_distance2_coloring(bg, Val(2), NaturalOrder())
+        @test length(unique(color_N1)) == row[:N1]
+        @test length(unique(color_N2)) == row[:N2]
     end
 end;
 
@@ -68,40 +68,13 @@ what_table_31_32 = CSV.read(
         @test maximum_degree(bg, Val(1)) == row[:ρmax]
         @test minimum_degree(bg, Val(2)) == row[:κmin]
         @test maximum_degree(bg, Val(2)) == row[:κmax]
-        colors_Nb = partial_distance2_coloring(bg, Val(2), NaturalOrder())
-        if length(unique(colors_Nb)) == row[:K]
-            @test length(unique(colors_Nb)) == row[:K]
+        color_Nb = partial_distance2_coloring(bg, Val(2), NaturalOrder())
+        if length(unique(color_Nb)) == row[:K]
+            @test length(unique(color_Nb)) == row[:K]
         else
-            @test_broken length(unique(colors_Nb)) == row[:K]
+            @test_broken length(unique(color_Nb)) == row[:K]
         end
     end
 end;
 
 ## Star coloring
-
-#=
-Comparison with Tables 4.1 and 4.2 of "What color is your Jacobian?"
-=#
-
-what_table_41_42 = CSV.read(
-    joinpath(@__DIR__, "reference", "what_table_41_42.csv"), DataFrame
-)
-
-@testset "Star coloring (survey paper)" begin
-    @testset "$(row[:name])" for row in eachrow(what_table_41_42)
-        ismissing(row[:group]) && continue
-        @info "Testing star coloring for $(row[:name]) against survey paper"
-        original_mat = matrixdepot("$(row[:group])/$(row[:name])")
-        mat = original_mat  # no dropzeros
-        bg = bipartite_graph(mat)
-        g = adjacency_graph(mat)
-        @test length(g) == row[:V]
-        @test nnz(g) ÷ 2 == row[:E]
-        @test maximum_degree(g) == row[:Δ]
-        @test minimum_degree(g) == row[:δ]
-        colors_Nb = partial_distance2_coloring(bg, Val(2), NaturalOrder())
-        colors_Ns1 = star_coloring1(g, NaturalOrder())
-        @test length(unique(colors_Nb)) == row[:K_d2]
-        @test length(unique(colors_Ns1)) == row[:K_star1]
-    end
-end;

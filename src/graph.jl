@@ -88,6 +88,10 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 - `V = 1:n` is the set of rows or columns `i`/`j`
 - `(i, j) ∈ E` whenever `A[i, j] ≠ 0` and `i ≠ j`
+
+# References
+
+> [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 adjacency_graph(H::SparseMatrixCSC) = Graph(H - Diagonal(H))
 adjacency_graph(H::AbstractMatrix) = adjacency_graph(sparse(H))
@@ -102,6 +106,10 @@ The bipartite graph of a matrix `A ∈ ℝ^{m × n}` is `Gb(A) = (V₁, V₂, E)
 - `V₁ = 1:m` is the set of rows `i`
 - `V₂ = 1:n` is the set of columns `j`
 - `(i, j) ∈ E` whenever `A[i, j] ≠ 0`
+
+# References
+
+> [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function bipartite_graph(J::SparseMatrixCSC)
     g1 = Graph(transpose(J))  # rows to columns

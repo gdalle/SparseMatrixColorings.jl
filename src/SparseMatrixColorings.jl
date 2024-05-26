@@ -5,7 +5,8 @@ $README
 """
 module SparseMatrixColorings
 
-using ADTypes: ADTypes, AbstractColoringAlgorithm
+using ADTypes:
+    ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
 using Compat: @compat
 using DocStringExtensions: README
 using LinearAlgebra:
@@ -46,7 +47,9 @@ include("check.jl")
 @compat public decompress_columns, decompress_columns!
 @compat public decompress_rows, decompress_rows!
 @compat public decompress_symmetric, decompress_symmetric!
+@compat public column_coloring, row_coloring, symmetric_coloring
 
 export GreedyColoringAlgorithm
+export column_coloring, row_coloring, symmetric_coloring
 
 end
