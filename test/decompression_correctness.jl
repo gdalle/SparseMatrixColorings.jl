@@ -32,7 +32,7 @@ algo = GreedyColoringAlgorithm()
             0 1 1
             1 0 0
         ]
-        C = [
+        B = [
             1 2
             3 4
             5 0
@@ -41,7 +41,7 @@ algo = GreedyColoringAlgorithm()
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_columns(S, C, color) == A
+            @test decompress_columns(S, B, color) == A
         end
     end
 
@@ -51,14 +51,14 @@ algo = GreedyColoringAlgorithm()
         S0 = map(!iszero, A0)
         color = column_coloring(A0, algo)
         group = color_groups(color)
-        C = stack(group; dims=2) do g
+        B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end
-        @test size(C) == (size(A0, 1), length(group))
+        @test size(B) == (size(A0, 1), length(group))
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_columns(S, C, color) == A
+            @test decompress_columns(S, B, color) == A
         end
     end
 end;
@@ -75,7 +75,7 @@ end;
             0 1 0
             1 1 0
         ]
-        C = [
+        B = [
             1 2 3
             4 5 0
         ]
@@ -83,7 +83,7 @@ end;
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_rows(S, C, color) == A
+            @test decompress_rows(S, B, color) == A
         end
     end
 
@@ -93,14 +93,14 @@ end;
         S0 = map(!iszero, A0)
         color = row_coloring(A0, algo)
         group = color_groups(color)
-        C = stack(group; dims=1) do g
+        B = stack(group; dims=1) do g
             dropdims(sum(A0[g, :]; dims=1); dims=1)
         end
-        @test size(C) == (length(group), size(A0, 2))
+        @test size(B) == (length(group), size(A0, 2))
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_rows(S, C, color) == A
+            @test decompress_rows(S, B, color) == A
         end
     end
 end;
@@ -126,13 +126,13 @@ end;
             1,  # green
         ]
         group = color_groups(color)
-        C = stack(group; dims=2) do g
+        B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_symmetric(S, C, color) == A
+            @test decompress_symmetric(S, B, color) == A
         end
     end
 end;

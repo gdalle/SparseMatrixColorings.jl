@@ -70,8 +70,28 @@ Function defined by ADTypes, re-exported by SparseMatrixColorings.
 
 # Example
 
-!!! warning
-    Work in progress.
+```jldoctest
+using SparseMatrixColorings, SparseArrays
+
+algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
+
+A = sparse([
+    0 0 1 1 0
+    1 0 0 0 1
+    0 1 1 0 0
+    0 1 1 0 1
+])
+
+row_coloring(A, algo)
+
+# output
+
+4-element Vector{Int64}:
+ 2
+ 2
+ 3
+ 1
+```
 """
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(A)
