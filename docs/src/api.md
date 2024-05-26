@@ -10,6 +10,9 @@ CurrentModule = SparseMatrixColorings
 ```@docs
 SparseMatrixColorings
 GreedyColoringAlgorithm
+column_coloring
+row_coloring
+symmetric_coloring
 ```
 
 ## Public, not exported
@@ -60,13 +63,12 @@ vertices
 
 ```@docs
 partial_distance2_coloring
-star_coloring1
+star_coloring
 ```
 
 ### Testing
 
 ```@docs
 check_structurally_orthogonal_columns
-check_structurally_orthogonal_rows
-check_symmetrically_orthogonal
+check_symmetrically_orthogonal_columns
 ```

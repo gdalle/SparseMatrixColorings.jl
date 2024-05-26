@@ -9,35 +9,6 @@ Compatible with the [ADTypes.jl coloring framework](https://sciml.github.io/ADTy
 
     GreedyColoringAlgorithm(order::AbstractOrder=NaturalOrder())
 
-# Implements
-
-- [`ADTypes.column_coloring`](@extref ADTypes) and [`ADTypes.row_coloring`](@extref ADTypes) with a partial distance-2 coloring of the bipartite graph
-- [`ADTypes.symmetric_coloring`](@extref ADTypes) with a star coloring of the adjacency graph
-
-# Example use
-
-```jldoctest
-using ADTypes, SparseMatrixColorings, SparseArrays
-
-algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
-A = sparse([
-    0 0 1 1 0
-    1 0 0 0 1
-    0 1 1 0 0
-    0 1 1 0 1
-])
-ADTypes.column_coloring(A, algo)
-
-# output
-
-5-element Vector{Int64}:
- 1
- 2
- 1
- 2
- 3
-```
-
 # See also
 
 - [`AbstractOrder`](@ref)
@@ -52,17 +23,74 @@ function Base.show(io::IO, algo::GreedyColoringAlgorithm)
     return print(io, "GreedyColoringAlgorithm($(algo.order))")
 end
 
+"""
+    column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a partial distance-2 coloring of the columns in the bipartite graph of the matrix `A`.
+
+Function defined by ADTypes, re-exported by SparseMatrixColorings.
+
+# Example
+
+```jldoctest
+using SparseMatrixColorings, SparseArrays
+
+algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
+
+A = sparse([
+    0 0 1 1 0
+    1 0 0 0 1
+    0 1 1 0 0
+    0 1 1 0 1
+])
+
+column_coloring(A, algo)
+
+# output
+
+5-element Vector{Int64}:
+ 1
+ 2
+ 1
+ 2
+ 3
+```
+"""
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(A)
     return partial_distance2_coloring(bg, Val(2), algo.order)
 end
 
+"""
+    row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a partial distance-2 coloring of the rows in the bipartite graph of the matrix `A`.
+
+Function defined by ADTypes, re-exported by SparseMatrixColorings.
+
+# Example
+
+!!! warning
+    Work in progress.
+"""
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(A)
     return partial_distance2_coloring(bg, Val(1), algo.order)
 end
 
+"""
+    symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a star coloring of the columns in the adjacency graph of the symmetric matrix `A`.
+
+Function defined by ADTypes, re-exported by SparseMatrixColorings.
+
+# Example
+
+!!! warning
+    Work in progress.
+"""
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     ag = adjacency_graph(A)
-    return star_coloring1(ag, algo.order)
+    return star_coloring(ag, algo.order)
 end
