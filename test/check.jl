@@ -19,12 +19,12 @@ using Test
 
     @test !check_structurally_orthogonal_columns(A, [1, 2])
     @test_logs (:warn, "2 colors provided for 3 columns") check_structurally_orthogonal_columns(
-        A, [1, 2]
+        A, [1, 2]; verbose=true
     )
 
     @test !check_structurally_orthogonal_columns(A, [1, 2, 2])
     @test_logs (:warn, "In color 2, columns [2, 3] all have nonzeros in row 3") check_structurally_orthogonal_columns(
-        A, [1, 2, 2]
+        A, [1, 2, 2]; verbose=true
     )
 end
 
