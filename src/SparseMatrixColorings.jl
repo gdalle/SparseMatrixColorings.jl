@@ -7,7 +7,7 @@ module SparseMatrixColorings
 
 using ADTypes:
     ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
-using Compat: @compat
+using Compat: @compat, stack
 using DocStringExtensions: README
 using LinearAlgebra:
     Adjoint,
