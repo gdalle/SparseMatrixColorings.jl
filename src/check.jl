@@ -1,5 +1,17 @@
+function proper_length_coloring(
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool
+)
+    if length(color) != size(A, 2)
+        if verbose
+            @warn "$(length(color)) colors provided for $(size(A, 2)) columns."
+        end
+        return false
+    end
+    return true
+end
+
 """
-    check_structurally_orthogonal_columns(
+    structurally_orthogonal_columns(
         A::AbstractMatrix, color::AbstractVector{<:Integer}
         verbose=false
     )
@@ -15,13 +27,10 @@ A partition of the columns of a matrix `A` is _structurally orthogonal_ if, for 
 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-function check_structurally_orthogonal_columns(
+function structurally_orthogonal_columns(
     A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
-    if length(color) != size(A, 2)
-        if verbose
-            @warn "$(length(color)) colors provided for $(size(A, 2)) columns"
-        end
+    if !proper_length_coloring(A, color; verbose)
         return false
     end
     group = color_groups(color)
@@ -32,7 +41,7 @@ function check_structurally_orthogonal_columns(
         if max_nonzeros_per_row > 1
             if verbose
                 incompatible_columns = g[findall(!iszero, view(Ag, i, :))]
-                @warn "In color $c, columns $incompatible_columns all have nonzeros in row $i"
+                @warn "In color $c, columns $incompatible_columns all have nonzeros in row $i."
             end
             return false
         end
@@ -41,7 +50,7 @@ function check_structurally_orthogonal_columns(
 end
 
 """
-    check_symmetrically_orthogonal_columns(
+    symmetrically_orthogonal_columns(
         A::AbstractMatrix, color::AbstractVector{<:Integer};
         verbose=false
     )
@@ -60,14 +69,11 @@ A partition of the columns of a symmetrix matrix `A` is _symmetrically orthogona
 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-function check_symmetrically_orthogonal_columns(
+function symmetrically_orthogonal_columns(
     A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
     checksquare(A)
-    if length(color) != size(A, 2)
-        if verbose
-            @warn "$(length(color)) colors provided for $(size(A, 2)) columns"
-        end
+    if !proper_length_coloring(A, color; verbose)
         return false
     end
     issymmetric(A) || return false
@@ -86,12 +92,49 @@ function check_symmetrically_orthogonal_columns(
                 gi_incompatible_columns = gi[findall(!iszero, A_gi_rowj)]
                 @warn """
                 For coefficient (i=$i, j=$j) with column colors (ci=$ci, cj=$cj):
-                - in color ci=$ci, columns $gi_incompatible_columns all have nonzeros in row j=$j
-                - in color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i
+                - In color ci=$ci, columns $gi_incompatible_columns all have nonzeros in row j=$j.
+                - In color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
                 """
             end
             return false
         end
+    end
+    return true
+end
+
+"""
+    directly_recoverable_columns(
+        A::AbstractMatrix, color::AbstractVector{<:Integer}
+        verbose=false
+    )
+
+Return `true` if coloring the columns of the symmetric matrix `A` with the vector `color` results in a column-compressed representation that preserves every unique value, thus making direct recovery possible.
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+
+# References
+
+> [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
+"""
+function directly_recoverable_columns(
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
+)
+    if !proper_length_coloring(A, color; verbose)
+        return false
+    end
+    group = color_groups(color)
+    B = stack(group; dims=2) do g
+        dropdims(sum(A[:, g]; dims=2); dims=2)
+    end
+    A_unique = Set(unique(A))
+    B_unique = Set(unique(B))
+    if !issubset(A_unique, B_unique)
+        if verbose
+            @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable."
+            return false
+        end
+        return false
     end
     return true
 end

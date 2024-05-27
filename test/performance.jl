@@ -9,7 +9,7 @@ using Test
 
 rng = StableRNG(63)
 
-@testset "Type stability" begin
+@testset "Coloring - type stability" begin
     n = 10
     A = sprand(rng, Bool, n, n, 3 / n)
     algo = GreedyColoringAlgorithm()
@@ -28,6 +28,6 @@ function benchmark_distance2_coloring(n)
     ) partial_distance2_coloring!(_.color, _.forbidden_colors, _.bg, Val(1), 1:n) evals = 1
 end
 
-@testset "Allocations" begin
+@testset "Coloring - allocations" begin
     @test minimum(benchmark_distance2_coloring(10)).allocs == 0
 end
