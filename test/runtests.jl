@@ -5,6 +5,8 @@ using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
+include("reference/figures.jl")
+
 @testset verbose = true "SparseMatrixColorings" begin
     @testset verbose = true "Code quality" begin
         if VERSION >= v"1.10"
@@ -39,18 +41,16 @@ using Test
         end
     end
     @testset verbose = true "Correctness" begin
-        @testset "Coloring" begin
-            include("coloring_correctness.jl")
+        @testset "Small instances" begin
+            include("small.jl")
         end
-        @testset "Decompression" begin
-            include("decompression_correctness.jl")
+        @testset "Random instances" begin
+            include("random.jl")
         end
     end
     @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
-            @testset "Coloring" begin
-                include("coloring_performance.jl")
-            end
+            include("performance.jl")
         end
     end
     @testset verbose = true "Comparison" begin

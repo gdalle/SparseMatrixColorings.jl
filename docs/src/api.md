@@ -69,6 +69,7 @@ star_coloring
 ### Testing
 
 ```@docs
-check_structurally_orthogonal_columns
-check_symmetrically_orthogonal_columns
+structurally_orthogonal_columns
+symmetrically_orthogonal_columns
+directly_recoverable_columns
 ```
