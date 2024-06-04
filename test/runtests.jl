@@ -54,6 +54,9 @@ include("reference/figures.jl")
         end
     end
     @testset verbose = true "Comparison" begin
+        @testset "ColPack.jl" begin
+            include("colpack.jl")
+        end
         @testset "SuiteSparse" begin
             include("suitesparse.jl")
         end
