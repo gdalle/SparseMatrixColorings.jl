@@ -43,6 +43,7 @@ include("check.jl")
 
 @compat public GreedyColoringAlgorithm
 @compat public NaturalOrder, RandomOrder, LargestFirst
+@compat public SmallestLast, IncidenceDegree, DynamicLargestFirst
 @compat public color_groups
 @compat public decompress_columns, decompress_columns!
 @compat public decompress_rows, decompress_rows!

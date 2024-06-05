@@ -1,11 +1,15 @@
+using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
     Graph,
     adjacency_graph,
     bipartite_graph,
-    LargestFirst,
     NaturalOrder,
     RandomOrder,
+    LargestFirst,
+    SmallestLast,
+    IncidenceDegree,
+    DynamicLargestFirst,
     vertices
 using StableRNGs
 using Test
@@ -72,3 +76,15 @@ end;
 
     @test vertices(bg, Val(2), LargestFirst()) == [1, 3, 2, 4]
 end;
+
+@testset "Dynamic degree-based orders" begin
+    A = sparse(Symmetric(sprand(rng, Bool, 10, 10, 0.3)))
+    g = Graph(A - Diagonal(A))
+
+    @testset "$order" for order in
+                          [SmallestLast(), IncidenceDegree(), DynamicLargestFirst()]
+        @test endswith(string(order), "()")
+        @test length(vertices(g, order)) == length(g)
+        @test length(unique(vertices(g, order))) == length(g)
+    end
+end
