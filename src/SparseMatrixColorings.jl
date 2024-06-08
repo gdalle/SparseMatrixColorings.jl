@@ -41,13 +41,11 @@ include("matrices.jl")
 include("decompression.jl")
 include("check.jl")
 
-@compat public GreedyColoringAlgorithm
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public color_groups
 @compat public decompress_columns, decompress_columns!
 @compat public decompress_rows, decompress_rows!
 @compat public decompress_symmetric, decompress_symmetric!
-@compat public column_coloring, row_coloring, symmetric_coloring
 
 export GreedyColoringAlgorithm
 export column_coloring, row_coloring, symmetric_coloring
