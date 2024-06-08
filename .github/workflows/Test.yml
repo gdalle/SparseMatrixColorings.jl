@@ -20,13 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        juliaup-channel: ['1.6', '1', 'alpha']
+        julia-version: ['1.6', '1']
 
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/install-juliaup@v2
+      - uses: julia-actions/setup-julia@v2
         with:
-          channel: ${{ matrix.juliaup-channel }}
+          version: ${{ matrix.julia-version }}
+          arch: x64
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
