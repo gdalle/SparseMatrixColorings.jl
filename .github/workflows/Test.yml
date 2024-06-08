@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        juliaup-channel: ['1.6', '1', 'nightly']
+        juliaup-channel: ['1.6', '1', 'alpha']
 
     steps:
       - uses: actions/checkout@v4
