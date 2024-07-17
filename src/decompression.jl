@@ -188,6 +188,7 @@ function decompress_symmetric!(
     group = color_groups(color)
     for ij in findall(!iszero, S)
         i, j = Tuple(ij)
+        (i > j) && continue
         j2_exists = false
         for j2 in group[color[j]]
             j2 == j && continue
@@ -223,7 +224,7 @@ function decompress_symmetric!(
         end
     end
     for ((i, j), star_id) in pairs(star)
-        i == j && continue
+        (i ≥ j) && continue
         h = hub[star_id]
         if h == 0
             # pick arbitrary hub
