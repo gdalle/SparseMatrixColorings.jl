@@ -13,6 +13,7 @@ GreedyColoringAlgorithm
 column_coloring
 row_coloring
 symmetric_coloring
+symmetric_coloring_detailed
 ```
 
 ## Public, not exported
@@ -36,6 +37,7 @@ decompress_rows
 decompress_rows!
 decompress_symmetric
 decompress_symmetric!
+StarSet
 ```
 
 ## Private
@@ -64,6 +66,7 @@ vertices
 ```@docs
 partial_distance2_coloring
 star_coloring
+star_coloring_detailed
 ```
 
 ### Testing

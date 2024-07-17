@@ -72,6 +72,51 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 function star_coloring(g::Graph, order::AbstractOrder)
+    color, _ = star_coloring_detailed(g, order)
+    return color
+end
+
+"""
+    StarSet
+
+Encode a set of 2-colored stars resulting from the star coloring algorithm.
+
+# Fields
+
+The fields are not part of the public API, even though the type is.
+
+- `star::Dict{Tuple{Int,Int},Int}`: a mapping from edges (pair of vertices) their to star index
+- `hub::Vector{Int}`: a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+"""
+struct StarSet
+    star::Dict{Tuple{Int,Int},Int}
+    hub::Vector{Int}
+end
+
+"""
+    star_coloring_detailed(g::Graph, order::AbstractOrder)
+
+Do the same as [`star_coloring`](@ref) but return a tuple `(color, star_set)`, where
+
+- `color` is the vector of integer colors
+- `star_set` is a [`StarSet`](@ref) encoding the set of 2-colored stars, which can be used to speed up decompression
+
+# See also
+
+- [`star_coloring`](@ref)
+- [`StarSet`](@ref)
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+
+> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 2
+"""
+function star_coloring_detailed(g::Graph, order::AbstractOrder)
     # Initialize data structures
     color = zeros(Int, length(g))
     forbidden_colors = zeros(Int, length(g))
@@ -112,7 +157,7 @@ function star_coloring(g::Graph, order::AbstractOrder)
         end
         _update_stars!(star, hub, g, v, color, first_neighbor)
     end
-    return color
+    return color, StarSet(star, hub)
 end
 
 _sort(u, v) = (min(u, v), max(u, v))
