@@ -72,7 +72,9 @@ end;
         A0 = Symmetric(sprand(rng, Bool, n, n, p))
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            color = symmetric_coloring(A, algo)
+            # Naive decompression
+            color, star_set = symmetric_coloring_detailed(A, algo)
+            @test color == symmetric_coloring(A, algo)
             @test symmetrically_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
             group = color_groups(color)
@@ -81,6 +83,7 @@ end;
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
                 @test decompress_symmetric(S, B, color) == A
+                @test decompress_symmetric(S, B, color, star_set) == A
             end
         end
     end
