@@ -94,7 +94,7 @@ The fields are not part of the public API, even though the type is.
 """
 struct StarSet
     star::Dict{Tuple{Int,Int},Int}
-    hubs::Vector{Int}
+    hub::Vector{Int}
 end
 
 """
