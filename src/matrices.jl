@@ -1,5 +1,3 @@
-const TransposeOrAdjoint{T,M} = Union{Transpose{T,M},Adjoint{T,M}}
-
 """
     matrix_versions(A::AbstractMatrix)
 
@@ -76,8 +74,8 @@ function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
 end
 
 function same_sparsity_pattern(
-    A::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
-    B::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
+    A::AdjOrTrans{<:Any,<:SparseMatrixCSC},
+    B::AdjOrTrans{<:Any,<:SparseMatrixCSC},
 )
     return same_sparsity_pattern(parent(A), parent(B))
 end

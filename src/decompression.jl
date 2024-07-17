@@ -111,8 +111,8 @@ function decompress_rows!(
 end
 
 function decompress_rows!(
-    A::TransposeOrAdjoint{R,<:SparseMatrixCSC{R}},
-    S::TransposeOrAdjoint{Bool,<:SparseMatrixCSC{Bool}},
+    A::AdjOrTrans{R,<:SparseMatrixCSC{R}},
+    S::AdjOrTrans{Bool,<:SparseMatrixCSC{Bool}},
     B::AbstractMatrix{R},
     color::AbstractVector{<:Integer},
 ) where {R<:Real}

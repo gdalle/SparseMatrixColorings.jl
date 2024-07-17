@@ -18,7 +18,8 @@ using LinearAlgebra:
     checksquare,
     issymmetric,
     parent,
-    transpose
+    transpose,
+    AdjOrTrans
 using Random: AbstractRNG, default_rng, randperm
 using SparseArrays:
     SparseArrays,
