@@ -217,7 +217,7 @@ function decompress_symmetric!(
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     A .= zero(R)
-    for i in axis(A, 1)
+    for i in axes(A, 1)
         if !iszero(S[i, i])
             A[i, i] = B[i, color[i]]
         end
