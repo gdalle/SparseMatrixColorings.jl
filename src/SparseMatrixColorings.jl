@@ -43,8 +43,8 @@ include("check.jl")
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public color_groups
-@compat public decompress_columns, decompress_columns!
-@compat public decompress_rows, decompress_rows!
+@compat public decompress_columns, decompress_columns!, decompress_column!
+@compat public decompress_rows, decompress_rows!, decompress_row!
 @compat public decompress_symmetric, decompress_symmetric!
 @compat public StarSet
 

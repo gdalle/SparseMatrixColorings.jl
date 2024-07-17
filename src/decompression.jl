@@ -74,6 +74,67 @@ function decompress_columns(
     return decompress_columns!(A, S, B, color)
 end
 
+"""
+    decompress_column!(
+        A::AbstractMatrix{R},
+        S::AbstractMatrix{Bool},
+        v::AbstractVector{R},
+        c::Int,
+        color::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the column `v` associated to color `c` into the wide matrix `A` which must have the same sparsity pattern as `S`.
+
+Here, `color` is a column coloring of `S`, while `v` is obtained by summing the columns of `A` that share the same color `c`.
+"""
+function decompress_column! end
+
+function decompress_column!(
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    v::AbstractVector{R},
+    c::Int,
+    color::AbstractVector{<:Integer},
+) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
+    for j in axes(A, 2)
+        cj = color[j]
+        if cj == c
+            rows_j = (!iszero).(view(S, :, j))
+            Aj = view(A, rows_j, j)
+            vj = view(v, rows_j)
+            copyto!(Aj, vj)
+        end
+    end
+    return A
+end
+
+function decompress_column!(
+    A::SparseMatrixCSC{R},
+    S::SparseMatrixCSC{Bool},
+    v::AbstractVector{R},
+    c::Int,
+    color::AbstractVector{<:Integer},
+) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
+    Anz, Arv = nonzeros(A), rowvals(A)
+    for j in axes(A, 2)
+        cj = color[j]
+        if cj == c
+            nzrange_j = nzrange(A, j)
+            rows_j = view(Arv, nzrange_j)
+            Aj = view(Anz, nzrange_j)
+            vj = view(v, rows_j)
+            copyto!(Aj, vj)
+        end
+    end
+    return A
+end
+
 ## Row decompression
 
 """
@@ -86,7 +147,7 @@ end
 
 Decompress the small matrix `B` into the tall matrix `A` which must have the same sparsity pattern as `S`.
 
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
 """
 function decompress_rows! end
 
@@ -142,13 +203,75 @@ end
 
 Decompress the small matrix `B` into a new tall matrix `A` with the same sparsity pattern as `S`.
 
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
 """
 function decompress_rows(
     S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, color::AbstractVector{<:Integer}
 ) where {R<:Real}
     A = respectful_similar(S, R)
     return decompress_rows!(A, S, B, color)
+end
+
+"""
+    decompress_row!(
+        A::AbstractMatrix{R},
+        S::AbstractMatrix{Bool},
+        v::AbstractVector{R},
+        c::Int,
+        color::AbstractVector{<:Integer}
+    ) where {R<:Real}
+
+Decompress the row `v` associated to color `c` into the tall matrix `A` which must have the same sparsity pattern as `S`.
+
+Here, `color` is a row coloring of `S`, while `v` is obtained by summing the rows that share the same color `c`.
+"""
+function decompress_row! end
+
+function decompress_row!(
+    A::AbstractMatrix{R},
+    S::AbstractMatrix{Bool},
+    v::AbstractVector{R},
+    c::Int,
+    color::AbstractVector{<:Integer},
+) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
+    for i in axes(A, 1)
+        ci = color[i]
+        if ci == c
+            cols_i = (!iszero).(view(S, i, :))
+            Ai = view(A, i, cols_i)
+            vi = view(v, cols_i)
+            copyto!(Ai, vi)
+        end
+    end
+    return A
+end
+
+function decompress_row!(
+    A::TransposeOrAdjoint{R,<:SparseMatrixCSC{R}},
+    S::TransposeOrAdjoint{Bool,<:SparseMatrixCSC{Bool}},
+    v::AbstractVector{R},
+    c::Int,
+    color::AbstractVector{<:Integer},
+) where {R<:Real}
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
+    PA = parent(A)
+    PAnz, PArv = nonzeros(PA), rowvals(PA)
+    for i in axes(A, 1)
+        ci = color[i]
+        if ci == c
+            nzrange_i = nzrange(PA, i)
+            cols_i = view(PArv, nzrange_i)
+            Ai = view(PAnz, nzrange_i)
+            vi = view(v, cols_i)
+            copyto!(Ai, vi)
+        end
+    end
+    return A
 end
 
 ## Symmetric decompression
@@ -164,7 +287,7 @@ end
 
 Decompress the narrow matrix `B` into the symmetric matrix `A` which must have the same sparsity pattern as `S`.
 
-Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows / columns that share the same color.
 
 Decompression is faster when a [`StarSet`](@ref) is also provided.
 
@@ -273,7 +396,7 @@ end
 
 Decompress the narrow matrix `B` into a new symmetric matrix `A` with the same sparsity pattern as `S`.
 
-Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows / columns that share the same color.
 
 Decompression is faster when a [`StarSet`](@ref) is also provided.
 
