@@ -222,12 +222,14 @@ function decompress_symmetric!(
             A[i, i] = B[i, color[i]]
         end
     end
-    for (i, j) in keys(star)
-        h = star_set.hub[star[i, j]]
+    for ((i, j), star_id) in pairs(star)
+        i == j && continue
+        h = hub[star_id]
         if h == 0
-            # no hub, arbitrary spoke (here i)
-            A[i, j] = A[j, i] = B[i, color[i]]
-        elseif h == j
+            # pick arbitrary hub
+            h = i
+        end
+        if h == j
             # i is the spoke
             A[i, j] = A[j, i] = B[i, color[h]]
         elseif h == i

@@ -7,6 +7,7 @@ using SparseMatrixColorings:
     GreedyColoringAlgorithm,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
+    directly_recoverable_columns,
     matrix_versions
 using StableRNGs
 using Test
