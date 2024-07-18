@@ -37,6 +37,7 @@ decompress_rows
 decompress_rows!
 decompress_symmetric
 decompress_symmetric!
+symmetric_coefficient
 StarSet
 ```
 

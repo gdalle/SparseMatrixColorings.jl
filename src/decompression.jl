@@ -86,7 +86,7 @@ end
 
 Decompress the small matrix `B` into the tall matrix `A` which must have the same sparsity pattern as `S`.
 
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
 """
 function decompress_rows! end
 
@@ -142,7 +142,7 @@ end
 
 Decompress the small matrix `B` into a new tall matrix `A` with the same sparsity pattern as `S`.
 
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
 """
 function decompress_rows(
     S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, color::AbstractVector{<:Integer}
