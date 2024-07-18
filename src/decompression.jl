@@ -224,7 +224,7 @@ function decompress_symmetric!(
         end
     end
     for ((i, j), star_id) in pairs(star)
-        (i ≥ j) && continue
+        i == j && continue
         h = hub[star_id]
         if h == 0
             # pick arbitrary hub
