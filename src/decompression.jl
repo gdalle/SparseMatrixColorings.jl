@@ -154,6 +154,73 @@ end
 ## Symmetric decompression
 
 """
+    symmetric_coefficient(
+        i::Integer, j::Integer,
+        color::AbstractVector{<:Integer},
+        group::AbstractVector{<:AbstractVector{<:Integer}},
+        S::AbstractMatrix{Bool}
+    )
+
+    symmetric_coefficient(
+        i::Integer, j::Integer,
+        color::AbstractVector{<:Integer},
+        star_set::StarSet
+    )
+
+Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
+
+The first version corresponds to algorithm `DirectRecover1` in the paper, the second to `DirectRecover2`.
+
+# References
+
+> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
+"""
+function symmetric_coefficient end
+
+function symmetric_coefficient(
+    i::Integer,
+    j::Integer,
+    color::AbstractVector{<:Integer},
+    group::AbstractVector{<:AbstractVector{<:Integer}},
+    S::AbstractMatrix{Bool},
+)
+    for j2 in group[color[j]]
+        j2 == j && continue
+        if !iszero(S[i, j2])
+            return j, color[i]
+        end
+    end
+    return i, color[j]
+end
+
+function symmetric_coefficient(
+    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
+)
+    @compat (; star, hub) = star_set
+    if i == j
+        # diagonal
+        return i, color[j]
+    end
+    if !haskey(star, (i, j))  # could be optimized
+        # star only contains one triangle
+        i, j = j, i
+    end
+    star_id = star[i, j]
+    h = hub[star_id]
+    if h == 0
+        # pick arbitrary hub
+        h = i
+    end
+    if h == j
+        # i is the spoke
+        return i, color[h]
+    elseif h == i
+        # j is the spoke
+        return j, color[h]
+    end
+end
+
+"""
     decompress_symmetric!(
         A::AbstractMatrix{R},
         S::AbstractMatrix{Bool},
@@ -188,18 +255,8 @@ function decompress_symmetric!(
     group = color_groups(color)
     for ij in findall(!iszero, S)
         i, j = Tuple(ij)
-        j2_exists = false
-        for j2 in group[color[j]]
-            j2 == j && continue
-            if !iszero(S[i, j2])
-                A[i, j] = A[j, i] = B[j, color[i]]
-                j2_exists = true
-                break
-            end
-        end
-        if !j2_exists
-            A[i, j] = A[j, i] = B[i, color[j]]
-        end
+        k, l = symmetric_coefficient(i, j, color, group, S)
+        A[i, j] = B[k, l]
     end
     return A
 end
@@ -217,25 +274,10 @@ function decompress_symmetric!(
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     A .= zero(R)
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
-        end
-    end
-    for ((i, j), star_id) in pairs(star)
-        i == j && continue
-        h = hub[star_id]
-        if h == 0
-            # pick arbitrary hub
-            h = i
-        end
-        if h == j
-            # i is the spoke
-            A[i, j] = A[j, i] = B[i, color[h]]
-        elseif h == i
-            # j is the spoke
-            A[i, j] = A[j, i] = B[j, color[h]]
-        end
+    for ij in findall(!iszero, S)
+        i, j = Tuple(ij)
+        k, l = symmetric_coefficient(i, j, color, star_set)
+        A[i, j] = B[k, l]
     end
     return A
 end
