@@ -46,7 +46,7 @@ include("check.jl")
 @compat public decompress_columns, decompress_columns!
 @compat public decompress_rows, decompress_rows!
 @compat public decompress_symmetric, decompress_symmetric!
-@compat public StarSet
+@compat public symmetric_coefficient, StarSet
 
 export GreedyColoringAlgorithm
 export column_coloring, row_coloring, symmetric_coloring, symmetric_coloring_detailed
