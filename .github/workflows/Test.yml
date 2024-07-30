@@ -28,6 +28,10 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
           arch: x64
+      - uses: julia-actions/julia-downgrade-compat@v1
+        if: ${{ matrix.version == 'lts' }}
+        with:
+          skip: LinearAlgebra, Random, SparseArrays
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
