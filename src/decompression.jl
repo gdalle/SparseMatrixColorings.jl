@@ -201,7 +201,7 @@ function symmetric_coefficient(
         # diagonal
         return i, color[j]
     end
-    if !haskey(star, (i, j))  # could be optimized
+    if i > j  # keys of star are sorted tuples
         # star only contains one triangle
         i, j = j, i
     end
