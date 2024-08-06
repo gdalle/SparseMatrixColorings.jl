@@ -168,9 +168,6 @@ function decompress_symmetric!(
     B::AbstractMatrix{R},
     coloring_result::AbstractColoringResult,
 ) where {R<:Real}
-    if A isa Symmetric
-        return decompress_symmetric!(parent(A), S, B, coloring_result)
-    end
     checksquare(A)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))

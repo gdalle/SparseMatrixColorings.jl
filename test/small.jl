@@ -13,6 +13,7 @@ using SparseMatrixColorings:
     decompress_symmetric,
     decompress_symmetric!,
     matrix_versions,
+    respectful_similar,
     same_sparsity_pattern
 using StableRNGs
 using Test
@@ -22,11 +23,11 @@ rng = StableRNG(63)
 algo = GreedyColoringAlgorithm()
 
 @testset "Column decompression" begin
-    A0 = [
+    A0 = sparse([
         1 0 2
         0 3 4
         5 0 0
-    ]
+    ])
     S0 = map(!iszero, A0)
     B = [
         1 2
@@ -38,15 +39,18 @@ algo = GreedyColoringAlgorithm()
         matrix_versions(A0), matrix_versions(S0)
     )
         @test decompress_columns(S, B, SimpleColoringResult(color)) == A
+        @test decompress_columns!(
+            respectful_similar(A), S, B, SimpleColoringResult(color)
+        ) == A
     end
 end;
 
 @testset "Row decompression" begin
-    A0 = [
+    A0 = sparse([
         1 0 3
         0 2 0
         4 5 0
-    ]
+    ])
     S0 = map(!iszero, A0)
     B = [
         1 2 3
@@ -57,6 +61,7 @@ end;
         matrix_versions(A0), matrix_versions(S0)
     )
         @test decompress_rows(S, B, SimpleColoringResult(color)) == A
+        @test decompress_rows!(respectful_similar(A), S, B, SimpleColoringResult(color)) == A
     end
 end;
 
@@ -80,6 +85,9 @@ end;
             matrix_versions(A0), matrix_versions(S0)
         )
             @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
+            @test decompress_symmetric!(
+                respectful_similar(A), S, B, SimpleColoringResult(color)
+            ) == A
         end
     end
 
@@ -121,6 +129,9 @@ end;
             matrix_versions(A0), matrix_versions(S0)
         )
             @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
+            @test decompress_symmetric!(
+                respectful_similar(A), S, B, SimpleColoringResult(color)
+            ) == A
         end
     end
 end;

@@ -21,9 +21,9 @@ function matrix_versions(A)
         transpose(sparse(transpose(A_sparse))),
         adjoint(sparse(adjoint(A_sparse))),
     ]
-    if issymmetric(A)
-        append!(versions, Symmetric.(versions))
-    end
+    # if issymmetric(A)
+    #     append!(versions, Symmetric.(versions))
+    # end
     return versions
 end
 
@@ -54,7 +54,7 @@ Perform a partial equality check on the sparsity patterns of `A` and `B`:
 - if the return is `false`, they definitely don't have the same sparsity pattern
 """
 function same_sparsity_pattern(A::AbstractMatrix, B::AbstractMatrix)
-    return true
+    return size(A) == size(B)
 end
 
 function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)

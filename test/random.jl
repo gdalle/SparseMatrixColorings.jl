@@ -8,7 +8,8 @@ using SparseMatrixColorings:
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
     directly_recoverable_columns,
-    matrix_versions
+    matrix_versions,
+    respectful_similar
 using StableRNGs
 using Test
 
@@ -43,6 +44,7 @@ symmetric_params = vcat(
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
                 @test decompress_columns(S, B, coloring_result) == A
+                @test decompress_columns!(respectful_similar(A), S, B, coloring_result) == A
             end
         end
     end
@@ -63,6 +65,7 @@ end;
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
                 @test decompress_rows(S, B, coloring_result) == A
+                @test decompress_rows!(respectful_similar(A), S, B, coloring_result) == A
             end
         end
     end
@@ -85,6 +88,7 @@ end;
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
                 @test decompress_symmetric(S, B, coloring_result) == A
+                @test decompress_symmetric!(respectful_similar(A), S, B, coloring_result) == A
             end
         end
     end
