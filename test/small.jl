@@ -4,6 +4,7 @@ using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
+    SimpleColoringResult,
     color_groups,
     decompress_columns,
     decompress_columns!,
@@ -36,7 +37,7 @@ algo = GreedyColoringAlgorithm()
     @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
         matrix_versions(A0), matrix_versions(S0)
     )
-        @test decompress_columns(S, B, color) == A
+        @test decompress_columns(S, B, SimpleColoringResult(color)) == A
     end
 end;
 
@@ -55,7 +56,7 @@ end;
     @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
         matrix_versions(A0), matrix_versions(S0)
     )
-        @test decompress_rows(S, B, color) == A
+        @test decompress_rows(S, B, SimpleColoringResult(color)) == A
     end
 end;
 
@@ -78,7 +79,7 @@ end;
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_symmetric(S, B, color) == A
+            @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
         end
     end
 
@@ -119,7 +120,7 @@ end;
         @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
             matrix_versions(A0), matrix_versions(S0)
         )
-            @test decompress_symmetric(S, B, color) == A
+            @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
         end
     end
 end;

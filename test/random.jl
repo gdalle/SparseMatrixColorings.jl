@@ -35,7 +35,8 @@ symmetric_params = vcat(
         A0 = sprand(rng, Bool, m, n, p)
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            color = column_coloring(A, algo)
+            coloring_result = column_coloring_detailed(A, algo)
+            color = get_colors(coloring_result)
             @test structurally_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
             group = color_groups(color)
@@ -43,7 +44,7 @@ symmetric_params = vcat(
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_columns(S, B, color) == A
+                @test decompress_columns(S, B, coloring_result) == A
             end
         end
     end
@@ -54,7 +55,8 @@ end;
         A0 = sprand(rng, Bool, m, n, p)
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            color = row_coloring(A, algo)
+            coloring_result = row_coloring_detailed(A, algo)
+            color = get_colors(coloring_result)
             @test structurally_orthogonal_columns(transpose(A), color)
             @test directly_recoverable_columns(transpose(A), color)
             group = color_groups(color)
@@ -62,7 +64,7 @@ end;
                 dropdims(sum(A[g, :]; dims=1); dims=1)
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_rows(S, B, color) == A
+                @test decompress_rows(S, B, coloring_result) == A
             end
         end
     end
@@ -74,7 +76,8 @@ end;
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             # Naive decompression
-            color, star_set = symmetric_coloring_detailed(A, algo)
+            coloring_result = symmetric_coloring_detailed(A, algo)
+            color = get_colors(coloring_result)
             @test color == symmetric_coloring(A, algo)
             @test symmetrically_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
@@ -83,8 +86,7 @@ end;
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_symmetric(S, B, color) == A
-                @test decompress_symmetric(S, B, color, star_set) == A
+                @test decompress_symmetric(S, B, coloring_result) == A
             end
         end
     end

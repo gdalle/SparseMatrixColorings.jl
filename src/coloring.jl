@@ -56,7 +56,10 @@ end
 """
     star_coloring(g::Graph, order::AbstractOrder)
 
-Compute a star coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
+Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
+
+- `color` is the vector of integer colors
+- `star_set` is a [`StarSet`](@ref) encoding the set of 2-colored stars
 
 A _star coloring_ is a distance-1 coloring such that every path on 4 vertices uses at least 3 colors.
 
@@ -72,51 +75,6 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 function star_coloring(g::Graph, order::AbstractOrder)
-    color, _ = star_coloring_detailed(g, order)
-    return color
-end
-
-"""
-    StarSet
-
-Encode a set of 2-colored stars resulting from the star coloring algorithm.
-
-# Fields
-
-The fields are not part of the public API, even though the type is.
-
-- `star::Dict{Tuple{Int,Int},Int}`: a mapping from edges (pair of vertices) their to star index
-- `hub::Vector{Int}`: a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
-"""
-struct StarSet
-    star::Dict{Tuple{Int,Int},Int}
-    hub::Vector{Int}
-end
-
-"""
-    star_coloring_detailed(g::Graph, order::AbstractOrder)
-
-Do the same as [`star_coloring`](@ref) but return a tuple `(color, star_set)`, where
-
-- `color` is the vector of integer colors
-- `star_set` is a [`StarSet`](@ref) encoding the set of 2-colored stars, which can be used to speed up decompression
-
-# See also
-
-- [`star_coloring`](@ref)
-- [`StarSet`](@ref)
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 2
-"""
-function star_coloring_detailed(g::Graph, order::AbstractOrder)
     # Initialize data structures
     color = zeros(Int, length(g))
     forbidden_colors = zeros(Int, length(g))
@@ -158,6 +116,27 @@ function star_coloring_detailed(g::Graph, order::AbstractOrder)
         _update_stars!(star, hub, g, v, color, first_neighbor)
     end
     return color, StarSet(star, hub)
+end
+
+"""
+    StarSet
+
+Encode a set of 2-colored stars resulting from the star coloring algorithm.
+
+# Fields
+
+The fields are not part of the public API, even though the type is.
+
+- `star::Dict{Tuple{Int,Int},Int}`: a mapping from edges (pair of vertices) their to star index
+- `hub::Vector{Int}`: a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+"""
+struct StarSet
+    star::Dict{Tuple{Int,Int},Int}
+    hub::Vector{Int}
 end
 
 _sort(u, v) = (min(u, v), max(u, v))
@@ -216,4 +195,44 @@ function _update_stars!(
         end
     end
     return nothing
+end
+
+"""
+    symmetric_coefficient(
+        i::Integer, j::Integer,
+        color::AbstractVector{<:Integer},
+        star_set::StarSet
+    )
+
+Given a symmetric matrix `A` and its columnwise compression `B`, return the pair `(k, c)` such that `A[i, j] = B[k, c]`. 
+
+# References
+
+> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
+"""
+function symmetric_coefficient(
+    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
+)
+    @compat (; star, hub) = star_set
+    if i == j
+        # diagonal
+        return i, color[j]
+    end
+    if i > j  # keys of star are sorted tuples
+        # star only contains one triangle
+        i, j = j, i
+    end
+    star_id = star[i, j]
+    h = hub[star_id]
+    if h == 0
+        # pick arbitrary hub
+        h = i
+    end
+    if h == j
+        # i is the spoke
+        return i, color[h]
+    elseif h == i
+        # j is the spoke
+        return j, color[h]
+    end
 end

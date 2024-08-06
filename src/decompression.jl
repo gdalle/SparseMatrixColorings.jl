@@ -1,3 +1,53 @@
+## Out of place
+
+"""
+    decompress_columns(
+        S::AbstractMatrix{Bool},
+        B::AbstractMatrix{R},
+        coloring_result::AbstractColoringResult,
+    ) where {R<:Real}
+
+Decompress the columnwise compression `B` into a new matrix `A`, given the sparsity pattern `S` of `A` and a column `coloring_result` of `S`.
+"""
+function decompress_columns(
+    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, coloring_result::AbstractColoringResult
+) where {R<:Real}
+    A = respectful_similar(S, R)
+    return decompress_columns!(A, S, B, coloring_result)
+end
+
+"""
+    decompress_rows(
+        S::AbstractMatrix{Bool},
+        B::AbstractMatrix{R},
+        coloring_result::AbstractColoringResult,
+    ) where {R<:Real}
+
+Decompress the rowwise compression `B` into a new matrix `A`, given the sparsity pattern `S` of `A` and a row `coloring_result` of `S`.
+"""
+function decompress_rows(
+    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, coloring_result::AbstractColoringResult
+) where {R<:Real}
+    A = respectful_similar(S, R)
+    return decompress_rows!(A, S, B, coloring_result)
+end
+
+"""
+    decompress_symmetric(
+        S::AbstractMatrix{Bool},
+        B::AbstractMatrix{R},
+        coloring_result::AbstractColoringResult,
+    ) where {R<:Real}
+
+Decompress the columnwise compression `B` into a new matrix `A`, given the sparsity pattern `S` of `A` and a symmetric `coloring_result` of `S`.
+"""
+function decompress_symmetric(
+    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, coloring_result::AbstractColoringResult
+) where {R<:Real}
+    A = respectful_similar(S, R)
+    return decompress_symmetric!(A, S, B, coloring_result)
+end
+
 ## Column decompression
 
 """
@@ -5,12 +55,10 @@
         A::AbstractMatrix{R},
         S::AbstractMatrix{Bool},
         B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer}
+        coloring_result::AbstractColoringResult,
     ) where {R<:Real}
 
-Decompress the narrow matrix `B` into the wide matrix `A` which must have the same sparsity pattern as `S`.
-
-Here, `color` is a column coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
+Decompress the columnwise compression `B` into `A`, given the sparsity pattern `S` of `A` and a column `coloring_result` of `S`.
 """
 function decompress_columns! end
 
@@ -18,8 +66,9 @@ function decompress_columns!(
     A::AbstractMatrix{R},
     S::AbstractMatrix{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::AbstractColoringResult,
 ) where {R<:Real}
+    color = get_colors(coloring_result)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
@@ -38,40 +87,13 @@ function decompress_columns!(
     A::SparseMatrixCSC{R},
     S::SparseMatrixCSC{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::SparseColoringResult,
 ) where {R<:Real}
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    Anz, Arv = nonzeros(A), rowvals(A)
-    Anz .= zero(R)
-    for j in axes(A, 2)
-        cj = color[j]
-        nzrange_j = nzrange(A, j)
-        rows_j = view(Arv, nzrange_j)
-        Aj = view(Anz, nzrange_j)
-        Bj = view(B, rows_j, cj)
-        copyto!(Aj, Bj)
-    end
+    nonzeros(A) .= B[coloring_result.compressed_indices]
     return A
-end
-
-"""
-    decompress_columns(
-        S::AbstractMatrix{Bool},
-        B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer}
-    ) where {R<:Real}
-
-Decompress the narrow matrix `B` into a new wide matrix `A` with the same sparsity pattern as `S`.
-
-Here, `color` is a column coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
-"""
-function decompress_columns(
-    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, color::AbstractVector{<:Integer}
-) where {R<:Real}
-    A = respectful_similar(S, R)
-    return decompress_columns!(A, S, B, color)
 end
 
 ## Row decompression
@@ -81,12 +103,10 @@ end
         A::AbstractMatrix{R},
         S::AbstractMatrix{Bool},
         B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer}
+        coloring_result::AbstractColoringResult,
     ) where {R<:Real}
 
-Decompress the small matrix `B` into the tall matrix `A` which must have the same sparsity pattern as `S`.
-
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
+Decompress the rowwise compression `B` into `A`, given the sparsity pattern `S` of `A` and a row `coloring_result` of `S`.
 """
 function decompress_rows! end
 
@@ -94,8 +114,9 @@ function decompress_rows!(
     A::AbstractMatrix{R},
     S::AbstractMatrix{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::AbstractColoringResult,
 ) where {R<:Real}
+    color = get_colors(coloring_result)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
@@ -111,129 +132,29 @@ function decompress_rows!(
 end
 
 function decompress_rows!(
-    A::TransposeOrAdjoint{R,<:SparseMatrixCSC{R}},
-    S::TransposeOrAdjoint{Bool,<:SparseMatrixCSC{Bool}},
+    A::SparseMatrixCSC{R},
+    S::SparseMatrixCSC{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::SparseColoringResult,
 ) where {R<:Real}
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    PA = parent(A)
-    PAnz, PArv = nonzeros(PA), rowvals(PA)
-    PAnz .= zero(R)
-    for i in axes(A, 1)
-        ci = color[i]
-        nzrange_i = nzrange(PA, i)
-        cols_i = view(PArv, nzrange_i)
-        Ai = view(PAnz, nzrange_i)
-        Bi = view(B, ci, cols_i)
-        copyto!(Ai, Bi)
-    end
+    nonzeros(A) .= B[coloring_result.compressed_indices]
     return A
 end
 
-"""
-    decompress_rows(
-        S::AbstractMatrix{Bool},
-        B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer}
-    ) where {R<:Real}
-
-Decompress the small matrix `B` into a new tall matrix `A` with the same sparsity pattern as `S`.
-
-Here, `color` is a row coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the rows that share the same color.
-"""
-function decompress_rows(
-    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, color::AbstractVector{<:Integer}
-) where {R<:Real}
-    A = respectful_similar(S, R)
-    return decompress_rows!(A, S, B, color)
-end
-
 ## Symmetric decompression
-
-"""
-    symmetric_coefficient(
-        i::Integer, j::Integer,
-        color::AbstractVector{<:Integer},
-        group::AbstractVector{<:AbstractVector{<:Integer}},
-        S::AbstractMatrix{Bool}
-    )
-
-    symmetric_coefficient(
-        i::Integer, j::Integer,
-        color::AbstractVector{<:Integer},
-        star_set::StarSet
-    )
-
-Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
-
-The first version corresponds to algorithm `DirectRecover1` in the paper, the second to `DirectRecover2`.
-
-# References
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
-"""
-function symmetric_coefficient end
-
-function symmetric_coefficient(
-    i::Integer,
-    j::Integer,
-    color::AbstractVector{<:Integer},
-    group::AbstractVector{<:AbstractVector{<:Integer}},
-    S::AbstractMatrix{Bool},
-)
-    for j2 in group[color[j]]
-        j2 == j && continue
-        if !iszero(S[i, j2])
-            return j, color[i]
-        end
-    end
-    return i, color[j]
-end
-
-function symmetric_coefficient(
-    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
-)
-    @compat (; star, hub) = star_set
-    if i == j
-        # diagonal
-        return i, color[j]
-    end
-    if i > j  # keys of star are sorted tuples
-        # star only contains one triangle
-        i, j = j, i
-    end
-    star_id = star[i, j]
-    h = hub[star_id]
-    if h == 0
-        # pick arbitrary hub
-        h = i
-    end
-    if h == j
-        # i is the spoke
-        return i, color[h]
-    elseif h == i
-        # j is the spoke
-        return j, color[h]
-    end
-end
 
 """
     decompress_symmetric!(
         A::AbstractMatrix{R},
         S::AbstractMatrix{Bool},
         B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer},
-        [star_set::StarSet],
+        coloring_result::AbstractColoringResult,
     ) where {R<:Real}
 
-Decompress the narrow matrix `B` into the symmetric matrix `A` which must have the same sparsity pattern as `S`.
-
-Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
-
-Decompression is faster when a [`StarSet`](@ref) is also provided.
+Decompress the columnwise compression `B` into `A`, given the sparsity pattern `S` of `A` and a symmetric `coloring_result` of `S`.
 
 # References
 
@@ -242,22 +163,13 @@ Decompression is faster when a [`StarSet`](@ref) is also provided.
 function decompress_symmetric! end
 
 function decompress_symmetric!(
-    A::AbstractMatrix{R},
+    A::Symmetric{R},
     S::AbstractMatrix{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::AbstractColoringResult,
 ) where {R<:Real}
-    checksquare(A)
-    if !same_sparsity_pattern(A, S)
-        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
-    end
-    A .= zero(R)
-    group = color_groups(color)
-    for ij in findall(!iszero, S)
-        i, j = Tuple(ij)
-        k, l = symmetric_coefficient(i, j, color, group, S)
-        A[i, j] = B[k, l]
-    end
+    # requires parent decompression to handle both upper and lower triangles
+    decompress_symmetric!(parent(A), S, B, coloring_result)
     return A
 end
 
@@ -265,9 +177,9 @@ function decompress_symmetric!(
     A::AbstractMatrix{R},
     S::AbstractMatrix{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
-    star_set::StarSet,
+    coloring_result::StarSetColoringResult,
 ) where {R<:Real}
+    @compat (; color, star_set) = coloring_result
     @compat (; star, hub) = star_set
     checksquare(A)
     if !same_sparsity_pattern(A, S)
@@ -283,59 +195,15 @@ function decompress_symmetric!(
 end
 
 function decompress_symmetric!(
-    A::Symmetric{R},
-    S::AbstractMatrix{Bool},
+    A::SparseMatrixCSC{R},
+    S::SparseMatrixCSC{Bool},
     B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
+    coloring_result::SparseColoringResult,
 ) where {R<:Real}
-    # requires parent decompression to handle both upper and lower triangles
-    decompress_symmetric!(parent(A), S, B, color)
+    checksquare(A)
+    if !same_sparsity_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
+    nonzeros(A) .= B[coloring_result.compressed_indices]
     return A
-end
-
-function decompress_symmetric!(
-    A::Symmetric{R},
-    S::AbstractMatrix{Bool},
-    B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
-    star_set::StarSet,
-) where {R<:Real}
-    # requires parent decompression to handle both upper and lower triangles
-    decompress_symmetric!(parent(A), S, B, color, star_set)
-    return A
-end
-
-"""
-    decompress_symmetric(
-        S::AbstractMatrix{Bool},
-        B::AbstractMatrix{R},
-        color::AbstractVector{<:Integer},
-        [star_set::StarSet],
-    ) where {R<:Real}
-
-Decompress the narrow matrix `B` into a new symmetric matrix `A` with the same sparsity pattern as `S`.
-
-Here, `color` is a symmetric coloring of `S`, while `B` is a compressed representation of matrix `A` obtained by summing the columns that share the same color.
-
-Decompression is faster when a [`StarSet`](@ref) is also provided.
-
-# References
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
-"""
-function decompress_symmetric(
-    S::AbstractMatrix{Bool}, B::AbstractMatrix{R}, color::AbstractVector{<:Integer}
-) where {R<:Real}
-    A = respectful_similar(S, R)
-    return decompress_symmetric!(A, S, B, color)
-end
-
-function decompress_symmetric(
-    S::AbstractMatrix{Bool},
-    B::AbstractMatrix{R},
-    color::AbstractVector{<:Integer},
-    star_set::StarSet,
-) where {R<:Real}
-    A = respectful_similar(S, R)
-    return decompress_symmetric!(A, S, B, color, star_set)
 end

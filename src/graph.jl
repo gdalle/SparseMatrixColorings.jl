@@ -15,8 +15,8 @@ struct Graph{T<:Integer}
     rowval::Vector{T}
 end
 
-Graph(A::SparseMatrixCSC) = Graph(A.colptr, A.rowval)
-Graph(A::AbstractMatrix) = Graph(sparse(A))
+Graph(S::SparseMatrixCSC) = Graph(S.colptr, S.rowval)
+Graph(S::AbstractMatrix) = Graph(sparse(S))
 
 Base.length(g::Graph) = length(g.colptr) - 1
 SparseArrays.nnz(g::Graph) = length(g.rowval)
