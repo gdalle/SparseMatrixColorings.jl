@@ -198,7 +198,8 @@ function decompress_symmetric!(
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     try
-        nonzeros(A) .= vec(B)[coloring_result.compressed_indices]
+        left = B[coloring_result.compressed_indices]
+        nonzeros(A) .= left
     catch e
         @show size(A) size(B) nnz(A) length(coloring_result.compressed_indices) extrema(
             coloring_result.compressed_indices
