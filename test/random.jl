@@ -88,7 +88,8 @@ end;
             end
             @testset "S::$(typeof(S))" for S in matrix_versions(S0)
                 @test decompress_symmetric(S, B, coloring_result) == A
-                @test decompress_symmetric!(respectful_similar(A), S, B, coloring_result) == A
+                @test decompress_symmetric!(respectful_similar(A), S, B, coloring_result) ==
+                    A
             end
         end
     end

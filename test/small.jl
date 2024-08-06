@@ -61,7 +61,8 @@ end;
         matrix_versions(A0), matrix_versions(S0)
     )
         @test decompress_rows(S, B, SimpleColoringResult(color)) == A
-        @test decompress_rows!(respectful_similar(A), S, B, SimpleColoringResult(color)) == A
+        @test decompress_rows!(respectful_similar(A), S, B, SimpleColoringResult(color)) ==
+            A
     end
 end;
 
