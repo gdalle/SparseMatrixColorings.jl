@@ -200,7 +200,9 @@ function decompress_symmetric!(
     try
         nonzeros(A) .= vec(B)[coloring_result.compressed_indices]
     catch e
-        @show size(A) size(B) nnz(A) length(coloring_result.compressed_indices)
+        @show size(A) size(B) nnz(A) length(coloring_result.compressed_indices) extrema(
+            coloring_result.compressed_indices
+        )
         throw(e)
     end
     return A
