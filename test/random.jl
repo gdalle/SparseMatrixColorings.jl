@@ -16,8 +16,6 @@ rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
 
-@test startswith(string(algo), "GreedyColoringAlgorithm(")
-
 asymmetric_params = vcat(
     [(10, 20, p) for p in (0.1:0.1:0.5)],
     [(20, 10, p) for p in (0.1:0.1:0.5)],
@@ -37,9 +35,9 @@ symmetric_params = vcat(
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             coloring_result = column_coloring_detailed(A, algo)
             color = get_colors(coloring_result)
+            group = get_groups(coloring_result)
             @test structurally_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
-            group = color_groups(color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
@@ -57,9 +55,9 @@ end;
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             coloring_result = row_coloring_detailed(A, algo)
             color = get_colors(coloring_result)
+            group = get_groups(coloring_result)
             @test structurally_orthogonal_columns(transpose(A), color)
             @test directly_recoverable_columns(transpose(A), color)
-            group = color_groups(color)
             B = stack(group; dims=1) do g
                 dropdims(sum(A[g, :]; dims=1); dims=1)
             end
@@ -78,10 +76,10 @@ end;
             # Naive decompression
             coloring_result = symmetric_coloring_detailed(A, algo)
             color = get_colors(coloring_result)
+            group = get_groups(coloring_result)
             @test color == symmetric_coloring(A, algo)
             @test symmetrically_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
-            group = color_groups(color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end

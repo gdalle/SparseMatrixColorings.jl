@@ -201,15 +201,42 @@ end
     symmetric_coefficient(
         i::Integer, j::Integer,
         color::AbstractVector{<:Integer},
+        group::AbstractVector{<:AbstractVector{<:Integer}},
+        S::AbstractMatrix{Bool}
+    )
+
+    symmetric_coefficient(
+        i::Integer, j::Integer,
+        color::AbstractVector{<:Integer},
         star_set::StarSet
     )
 
-Given a symmetric matrix `A` and its columnwise compression `B`, return the pair `(k, c)` such that `A[i, j] = B[k, c]`. 
+Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
+
+The first version corresponds to algorithm `DirectRecover1` in the paper, the second to `DirectRecover2`.
 
 # References
 
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
+> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
 """
+function symmetric_coefficient end
+
+function symmetric_coefficient(
+    i::Integer,
+    j::Integer,
+    color::AbstractVector{<:Integer},
+    group::AbstractVector{<:AbstractVector{<:Integer}},
+    S::AbstractMatrix{Bool},
+)
+    for j2 in group[color[j]]
+        j2 == j && continue
+        if !iszero(S[i, j2])
+            return j, color[i]
+        end
+    end
+    return i, color[j]
+end
+
 function symmetric_coefficient(
     i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
 )

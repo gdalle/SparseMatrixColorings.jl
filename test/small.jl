@@ -5,7 +5,7 @@ using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
     SimpleColoringResult,
-    color_groups,
+    group_by_color,
     decompress_columns,
     decompress_columns!,
     decompress_rows,
@@ -72,7 +72,7 @@ end;
             1,  # green
             1,  # green
         ]
-        group = color_groups(color)
+        group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end
@@ -98,7 +98,7 @@ end;
             1,  # red
             2,  # blue
         ]
-        group = color_groups(color)
+        group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end

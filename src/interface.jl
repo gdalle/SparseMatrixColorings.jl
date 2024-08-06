@@ -109,18 +109,18 @@ function row_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     return SimpleColoringResult(color)
 end
 
-
 function row_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     n = size(S, 1)
+    C = maximum(color)
     I, J, _ = findnz(S)
     compressed_indices = zeros(Int, nnz(S))
     for k in eachindex(I, J, compressed_indices)
         i, j = I[k], J[k]
         c = color[i]
         # A[i, j] = B[c, j]
-        compressed_indices[k] = (j - 1) * n + c
+        compressed_indices[k] = (j - 1) * C + c
     end
     return SparseColoringResult(color, compressed_indices)
 end
@@ -158,21 +158,20 @@ get_colors(symmetric_coloring_detailed(S, algo))
 function symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
-    return StarSetColoringResult(color, star_set)
+    return SymmetricColoringResult(color, star_set)
 end
-
 
 function symmetric_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
     ag = adjacency_graph(S)
-    color, star_set = star_coloring_detailed(ag, algo.order)
+    color, star_set = star_coloring(ag, algo.order)
     n = size(S, 1)
     I, J, _ = findnz(S)
     compressed_indices = zeros(Int, nnz(S))
     for k in eachindex(I, J, compressed_indices)
         i, j = I[k], J[k]
-        l = symmetric_coefficient(i, j, color, star_set)
-        # A[i, j] = B[l, j]
-        compressed_indices[k] = (j - 1) * n + l
+        l, c = symmetric_coefficient(i, j, color, star_set)
+        # A[i, j] = B[l, c]
+        compressed_indices[k] = (c - 1) * n + l
     end
     return SparseColoringResult(color, compressed_indices)
 end

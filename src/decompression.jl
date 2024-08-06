@@ -68,10 +68,10 @@ function decompress_columns!(
     B::AbstractMatrix{R},
     coloring_result::AbstractColoringResult,
 ) where {R<:Real}
-    color = get_colors(coloring_result)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
+    color = get_colors(coloring_result)
     A .= zero(R)
     for j in axes(A, 2)
         cj = color[j]
@@ -92,7 +92,7 @@ function decompress_columns!(
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    nonzeros(A) .= B[coloring_result.compressed_indices]
+    nonzeros(A) .= vec(B)[coloring_result.compressed_indices]
     return A
 end
 
@@ -116,10 +116,10 @@ function decompress_rows!(
     B::AbstractMatrix{R},
     coloring_result::AbstractColoringResult,
 ) where {R<:Real}
-    color = get_colors(coloring_result)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
+    color = get_colors(coloring_result)
     A .= zero(R)
     for i in axes(A, 1)
         ci = color[i]
@@ -140,7 +140,7 @@ function decompress_rows!(
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    nonzeros(A) .= B[coloring_result.compressed_indices]
+    nonzeros(A) .= vec(B)[coloring_result.compressed_indices]
     return A
 end
 
@@ -163,32 +163,28 @@ Decompress the columnwise compression `B` into `A`, given the sparsity pattern `
 function decompress_symmetric! end
 
 function decompress_symmetric!(
-    A::Symmetric{R},
+    A::AbstractMatrix{R},
     S::AbstractMatrix{Bool},
     B::AbstractMatrix{R},
     coloring_result::AbstractColoringResult,
 ) where {R<:Real}
-    # requires parent decompression to handle both upper and lower triangles
-    decompress_symmetric!(parent(A), S, B, coloring_result)
-    return A
-end
-
-function decompress_symmetric!(
-    A::AbstractMatrix{R},
-    S::AbstractMatrix{Bool},
-    B::AbstractMatrix{R},
-    coloring_result::StarSetColoringResult,
-) where {R<:Real}
-    @compat (; color, star_set) = coloring_result
-    @compat (; star, hub) = star_set
+    if A isa Symmetric
+        return decompress_symmetric!(parent(A), S, B, coloring_result)
+    end
     checksquare(A)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
+    color = get_colors(coloring_result)
+    group = get_groups(coloring_result)
     A .= zero(R)
     for ij in findall(!iszero, S)
         i, j = Tuple(ij)
-        k, l = symmetric_coefficient(i, j, color, star_set)
+        if coloring_result isa SymmetricColoringResult
+            k, l = symmetric_coefficient(i, j, color, coloring_result.star_set)
+        else
+            k, l = symmetric_coefficient(i, j, color, group, S)
+        end
         A[i, j] = B[k, l]
     end
     return A
@@ -204,6 +200,6 @@ function decompress_symmetric!(
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    nonzeros(A) .= B[coloring_result.compressed_indices]
+    nonzeros(A) .= vec(B)[coloring_result.compressed_indices]
     return A
 end
