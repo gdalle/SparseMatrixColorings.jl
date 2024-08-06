@@ -10,13 +10,20 @@ CurrentModule = SparseMatrixColorings
 ```@docs
 SparseMatrixColorings
 GreedyColoringAlgorithm
-column_coloring
-row_coloring
-symmetric_coloring
+column_coloring_detailed
+row_coloring_detailed
 symmetric_coloring_detailed
+get_colors
+get_groups
 ```
 
 ## Public, not exported
+
+### Coloring
+
+```@docs
+AbstractColoringResult
+```
 
 ### Orders
 
@@ -30,15 +37,12 @@ LargestFirst
 ### Decompression
 
 ```@docs
-color_groups
 decompress_columns
 decompress_columns!
 decompress_rows
 decompress_rows!
 decompress_symmetric
 decompress_symmetric!
-symmetric_coefficient
-StarSet
 ```
 
 ## Private
@@ -62,12 +66,14 @@ neighbors
 vertices
 ```
 
-### Coloring
+### Coloring (low level)
 
 ```@docs
+group_by_color
 partial_distance2_coloring
 star_coloring
-star_coloring_detailed
+symmetric_coefficient
+StarSet
 ```
 
 ### Testing
