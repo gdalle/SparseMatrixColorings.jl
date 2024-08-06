@@ -32,7 +32,7 @@ symmetric_params = vcat(
 
 @testset "Column coloring & decompression" begin
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
-        A0 = sprand(rng, Bool, m, n, p)
+        A0 = sprand(rng, m, n, p)
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             coloring_result = column_coloring_detailed(A, algo)
@@ -52,7 +52,7 @@ end;
 
 @testset "Row coloring & decompression" begin
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
-        A0 = sprand(rng, Bool, m, n, p)
+        A0 = sprand(rng, m, n, p)
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             coloring_result = row_coloring_detailed(A, algo)
@@ -72,7 +72,7 @@ end;
 
 @testset "Symmetric coloring & decompression" begin
     @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
-        A0 = Symmetric(sprand(rng, Bool, n, n, p))
+        A0 = Symmetric(sprand(rng, n, n, p))
         S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             # Naive decompression
