@@ -7,8 +7,10 @@ using SparseMatrixColorings:
     color_groups,
     decompress_columns,
     decompress_columns!,
+    decompress_column!,
     decompress_rows,
     decompress_rows!,
+    decompress_row!,
     decompress_symmetric,
     decompress_symmetric!,
     matrix_versions,
@@ -37,6 +39,15 @@ algo = GreedyColoringAlgorithm()
         matrix_versions(A0), matrix_versions(S0)
     )
         @test decompress_columns(S, B, color) == A
+
+        A2 = copy(A)
+        fill!(A2, 0)
+        ncolors = 2
+        for c in 1:ncolors
+            decompress_column!(A2, S, B[:, c], c, color)
+        end
+
+        @test A2 == A
     end
 end;
 
@@ -56,6 +67,15 @@ end;
         matrix_versions(A0), matrix_versions(S0)
     )
         @test decompress_rows(S, B, color) == A
+
+        A2 = copy(A)
+        fill!(A2, 0)
+        ncolors = 2
+        for c in 1:ncolors
+            decompress_row!(A2, S, B[c, :], c, color)
+        end
+
+        @test A2 == A
     end
 end;
 
