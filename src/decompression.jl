@@ -1,27 +1,25 @@
 """
-    decompress(B::AbstractMatrix, coloring_result::AbstractColoringResult)
+    decompress(B::AbstractMatrix, result::AbstractColoringResult)
 
-Decompress `B` out-of-place into a new matrix `A`, given a `coloring_result` of the sparsity pattern of `A`.
+Decompress `B` out-of-place into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
 """
-function decompress(
-    B::AbstractMatrix{R}, coloring_result::AbstractColoringResult
-) where {R<:Real}
-    S = get_matrix(coloring_result)
+function decompress(B::AbstractMatrix{R}, result::AbstractColoringResult) where {R<:Real}
+    S = get_matrix(result)
     A = respectful_similar(S, R)
-    return decompress!(A, B, coloring_result)
+    return decompress!(A, B, result)
 end
 
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        coloring_result::AbstractColoringResult,
+        result::AbstractColoringResult,
     )
 
-Decompress `B` in-place into an existing matrix `A`, given a `coloring_result` of the sparsity pattern of `A`.
+Decompress `B` in-place into an existing matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 
 # See also
 
@@ -30,16 +28,15 @@ Decompress `B` in-place into an existing matrix `A`, given a `coloring_result` o
 function decompress!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    coloring_result::AbstractColoringResult{partition,symmetric,decompression},
+    result::AbstractColoringResult{partition,symmetric,decompression},
 ) where {R<:Real,partition,symmetric,decompression}
     # common checks
-    S = get_matrix(coloring_result)
+    S = get_matrix(result)
     symmetric && checksquare(A)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
-    A .= zero(R)
-    return decompress_aux!(A, B, coloring_result)
+    return decompress_aux!(A, B, result)
 end
 
 ## Generic algorithms
@@ -47,10 +44,10 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    coloring_result::AbstractColoringResult{:column,false,:direct},
+    result::AbstractColoringResult{:column,false,:direct},
 ) where {R<:Real}
-    S = get_matrix(coloring_result)
-    color = column_colors(coloring_result)
+    S = get_matrix(result)
+    color = column_colors(result)
     for j in axes(A, 2)
         cj = color[j]
         rows_j = (!iszero).(view(S, :, j))
@@ -64,10 +61,10 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    coloring_result::AbstractColoringResult{:row,false,:direct},
+    result::AbstractColoringResult{:row,false,:direct},
 ) where {R<:Real}
-    S = get_matrix(coloring_result)
-    color = row_colors(coloring_result)
+    S = get_matrix(result)
+    color = row_colors(result)
     for i in axes(A, 1)
         ci = color[i]
         cols_i = (!iszero).(view(S, i, :))
@@ -81,11 +78,11 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    coloring_result::AbstractColoringResult{:column,true,:direct},
+    result::AbstractColoringResult{:column,true,:direct},
 ) where {R<:Real}
-    S = get_matrix(coloring_result)
-    color = column_colors(coloring_result)
-    group = column_groups(coloring_result)
+    S = get_matrix(result)
+    color = column_colors(result)
+    group = column_groups(result)
     for ij in findall(!iszero, S)
         i, j = Tuple(ij)
         k, l = symmetric_coefficient(i, j, color, group, S)
@@ -97,8 +94,12 @@ end
 ## SparseMatrixCSC
 
 function decompress_aux!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, coloring_result::SparseColoringResult
+    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::SparseColoringResult
 ) where {R<:Real}
-    nonzeros(A) .= B[coloring_result.compressed_indices]
+    nzA = nonzeros(A)
+    ind = result.compressed_indices
+    for i in eachindex(nzA, ind)
+        nzA[i] = B[ind[i]]
+    end
     return A
 end

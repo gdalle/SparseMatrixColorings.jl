@@ -31,7 +31,7 @@ algo = GreedyColoringAlgorithm()
         5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:column,false}(S0, color)
+    result = SimpleColoringResult{:column,false}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -44,13 +44,12 @@ end;
         0 2 0
         4 5 0
     ])
-    S0 = map(!iszero, A0)
     B = [
         1 2 3
         4 5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:row,false}(S0, color)
+    result = SimpleColoringResult{:row,false}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -60,7 +59,6 @@ end;
 @testset "Symmetric decompression" begin
     @testset "Fig 4.1 from 'What color is your Jacobian'" begin
         A0 = what_fig_41()
-        S0 = map(!iszero, A0)
         color = [
             1,  # green
             2,  # red
@@ -69,7 +67,7 @@ end;
             1,  # green
             1,  # green
         ]
-        result = SimpleColoringResult{:column,true}(S0, color)
+        result = SimpleColoringResult{:column,true}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
@@ -82,7 +80,6 @@ end;
 
     @testset "Fig 1 from 'Efficient computation of sparse hessians using coloring and AD'" begin
         A0 = efficient_fig_1()
-        S0 = map(!iszero, A0)
         color = [
             1,  # red
             2,  # blue
@@ -95,7 +92,7 @@ end;
             1,  # red
             2,  # blue
         ]
-        result = SimpleColoringResult{:column,true}(S0, color)
+        result = SimpleColoringResult{:column,true}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)

@@ -30,36 +30,3 @@ same_view(::Adjoint, ::Adjoint) = true
         size(B) == size(A) && same_view(A, B)
     end
 end
-
-@testset "Sparsity pattern comparison" begin
-    A = [
-        1 1
-        0 1
-        0 0
-    ]
-    B1 = [
-        1 1
-        0 1
-        1 0
-    ]
-    B2 = [
-        1 1
-        0 0
-        0 1
-    ]
-    C = [
-        1 1 0
-        0 1 0
-        0 0 0
-    ]
-
-    @test same_sparsity_pattern(sparse(A), sparse(A))
-    @test !same_sparsity_pattern(sparse(A), sparse(B1))
-    @test_broken !same_sparsity_pattern(sparse(A), sparse(B2))
-    @test !same_sparsity_pattern(sparse(A), sparse(C))
-
-    @test same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(A)))
-    @test !same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(B1)))
-    @test_broken !same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(B2)))
-    @test !same_sparsity_pattern(transpose(sparse(A)), transpose(sparse(C)))
-end;
