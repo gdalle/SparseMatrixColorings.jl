@@ -25,6 +25,9 @@ AbstractOrder
 NaturalOrder
 RandomOrder
 LargestFirst
+SmallestLast
+IncidenceDegree
+DynamicLargestFirst
 ```
 
 ### Decompression
@@ -60,6 +63,7 @@ adjacency_graph
 bipartite_graph
 neighbors
 vertices
+DynamicDegreeBasedOrder
 ```
 
 ### Coloring
