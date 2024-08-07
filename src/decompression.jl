@@ -46,6 +46,7 @@ function decompress_aux!(
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:column,false,:direct},
 ) where {R<:Real}
+    A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
     for j in axes(A, 2)
@@ -63,6 +64,7 @@ function decompress_aux!(
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:row,false,:direct},
 ) where {R<:Real}
+    A .= zero(R)
     S = get_matrix(result)
     color = row_colors(result)
     for i in axes(A, 1)
@@ -80,6 +82,7 @@ function decompress_aux!(
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:column,true,:direct},
 ) where {R<:Real}
+    A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
     group = column_groups(result)
