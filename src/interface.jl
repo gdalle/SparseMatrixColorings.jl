@@ -40,7 +40,7 @@ S = sparse([
     0 1 1 0 1
 ])
 
-get_colors(column_coloring_detailed(S, algo))
+column_colors(column_coloring_detailed(S, algo))
 
 # output
 
@@ -55,7 +55,7 @@ get_colors(column_coloring_detailed(S, algo))
 function column_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return SimpleColoringResult(color)
+    return SimpleColoringResult{:column,false}(S, color)
 end
 
 function column_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
@@ -70,7 +70,7 @@ function column_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgori
         # A[i, j] = B[i, c]
         compressed_indices[k] = (c - 1) * n + i
     end
-    return SparseColoringResult(color, compressed_indices)
+    return SparseColoringResult{:column,false}(S, color, compressed_indices)
 end
 
 """
@@ -92,7 +92,7 @@ S = sparse([
     0 1 1 0 1
 ])
 
-get_colors(row_coloring_detailed(S, algo))
+row_colors(row_coloring_detailed(S, algo))
 
 # output
 
@@ -106,7 +106,7 @@ get_colors(row_coloring_detailed(S, algo))
 function row_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return SimpleColoringResult(color)
+    return SimpleColoringResult{:row,false}(S, color)
 end
 
 function row_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
@@ -122,7 +122,7 @@ function row_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm
         # A[i, j] = B[c, j]
         compressed_indices[k] = (j - 1) * C + c
     end
-    return SparseColoringResult(color, compressed_indices)
+    return SparseColoringResult{:row,false}(S, color, compressed_indices)
 end
 
 """
@@ -144,7 +144,7 @@ S = sparse([
     1 0 0 1
 ])
 
-get_colors(symmetric_coloring_detailed(S, algo))
+column_colors(symmetric_coloring_detailed(S, algo))
 
 # output
 
@@ -158,7 +158,8 @@ get_colors(symmetric_coloring_detailed(S, algo))
 function symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
-    return SymmetricColoringResult(color, star_set)
+    # TODO: handle star_set
+    return SimpleColoringResult{:column,true}(S, color)
 end
 
 function symmetric_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
@@ -173,19 +174,34 @@ function symmetric_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlg
         # A[i, j] = B[l, c]
         compressed_indices[k] = (c - 1) * n + l
     end
-    return SparseColoringResult(color, compressed_indices)
+    return SparseColoringResult{:column,true}(S, color, compressed_indices)
 end
 
 ## ADTypes interface
 
+"""
+    ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Call [`column_coloring_detailed`](@ref) and return only the vector of column colors.
+"""
 function ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return get_colors(column_coloring_detailed(S, algo))
+    return column_colors(column_coloring_detailed(S, algo))
 end
 
+"""
+    ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Call [`row_coloring_detailed`](@ref) and return only the vector of column colors.
+"""
 function ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return get_colors(row_coloring_detailed(S, algo))
+    return row_colors(row_coloring_detailed(S, algo))
 end
 
+"""
+    ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Call [`symmetric_coloring_detailed`](@ref) and return only the vector of column colors.
+"""
 function ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return get_colors(symmetric_coloring_detailed(S, algo))
+    return column_colors(symmetric_coloring_detailed(S, algo))
 end

@@ -226,7 +226,7 @@ function symmetric_coefficient(
     j::Integer,
     color::AbstractVector{<:Integer},
     group::AbstractVector{<:AbstractVector{<:Integer}},
-    S::AbstractMatrix{Bool},
+    S::AbstractMatrix,
 )
     for j2 in group[color[j]]
         j2 == j && continue

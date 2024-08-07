@@ -5,13 +5,9 @@ using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
     SimpleColoringResult,
+    decompress,
+    decompress!,
     group_by_color,
-    decompress_columns,
-    decompress_columns!,
-    decompress_rows,
-    decompress_rows!,
-    decompress_symmetric,
-    decompress_symmetric!,
     matrix_versions,
     respectful_similar,
     same_sparsity_pattern
@@ -35,13 +31,10 @@ algo = GreedyColoringAlgorithm()
         5 0
     ]
     color = [1, 1, 2]
-    @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
-        matrix_versions(A0), matrix_versions(S0)
-    )
-        @test decompress_columns(S, B, SimpleColoringResult(color)) == A
-        @test decompress_columns!(
-            respectful_similar(A), S, B, SimpleColoringResult(color)
-        ) == A
+    result = SimpleColoringResult{:column,false}(S0, color)
+    @test decompress(B, result) == A0
+    for A in matrix_versions(A0)
+        @test decompress!(respectful_similar(A), B, result) == A
     end
 end;
 
@@ -57,12 +50,10 @@ end;
         4 5 0
     ]
     color = [1, 1, 2]
-    @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
-        matrix_versions(A0), matrix_versions(S0)
-    )
-        @test decompress_rows(S, B, SimpleColoringResult(color)) == A
-        @test decompress_rows!(respectful_similar(A), S, B, SimpleColoringResult(color)) ==
-            A
+    result = SimpleColoringResult{:row,false}(S0, color)
+    @test decompress(B, result) == A0
+    for A in matrix_versions(A0)
+        @test decompress!(respectful_similar(A), B, result) == A
     end
 end;
 
@@ -78,17 +69,14 @@ end;
             1,  # green
             1,  # green
         ]
+        result = SimpleColoringResult{:column,true}(S0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end
-        @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
-            matrix_versions(A0), matrix_versions(S0)
-        )
-            @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
-            @test decompress_symmetric!(
-                respectful_similar(A), S, B, SimpleColoringResult(color)
-            ) == A
+        @test decompress(B, result) == A0
+        for A in matrix_versions(A0)
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 
@@ -107,6 +95,7 @@ end;
             1,  # red
             2,  # blue
         ]
+        result = SimpleColoringResult{:column,true}(S0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
@@ -126,13 +115,9 @@ end;
         ]
         @test B == B_th
         #! format: on
-        @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
-            matrix_versions(A0), matrix_versions(S0)
-        )
-            @test decompress_symmetric(S, B, SimpleColoringResult(color)) == A
-            @test decompress_symmetric!(
-                respectful_similar(A), S, B, SimpleColoringResult(color)
-            ) == A
+        @test decompress(B, result) == A0
+        for A in matrix_versions(A0)
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;
