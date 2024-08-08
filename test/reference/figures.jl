@@ -15,7 +15,7 @@ function what_fig_41()
     ]
     #! format: on
     @assert A == transpose(A)
-    return A
+    return sparse(A)
 end
 
 """
@@ -39,5 +39,5 @@ function efficient_fig_1()
     ]
     #! format: on
     @assert A == transpose(A)
-    return A
+    return sparse(A)
 end

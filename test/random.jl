@@ -8,15 +8,14 @@ using SparseMatrixColorings:
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
     directly_recoverable_columns,
-    matrix_versions
+    matrix_versions,
+    respectful_similar
 using StableRNGs
 using Test
 
 rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
-
-@test startswith(string(algo), "GreedyColoringAlgorithm(")
 
 asymmetric_params = vcat(
     [(10, 20, p) for p in (0.1:0.1:0.5)],
@@ -33,18 +32,18 @@ symmetric_params = vcat(
 @testset "Column coloring & decompression" begin
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
-        S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            color = column_coloring(A, algo)
+            result = column_coloring_detailed(A, algo)
+            color = column_colors(result)
+            group = column_groups(result)
+            @test color == column_coloring(A, algo)
             @test structurally_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
-            group = color_groups(color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
-            @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_columns(S, B, color) == A
-            end
+            @test decompress(B, result) == A
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;
@@ -52,18 +51,18 @@ end;
 @testset "Row coloring & decompression" begin
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
-        S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            color = row_coloring(A, algo)
+            result = row_coloring_detailed(A, algo)
+            color = row_colors(result)
+            group = row_groups(result)
+            @test color == row_coloring(A, algo)
             @test structurally_orthogonal_columns(transpose(A), color)
             @test directly_recoverable_columns(transpose(A), color)
-            group = color_groups(color)
             B = stack(group; dims=1) do g
                 dropdims(sum(A[g, :]; dims=1); dims=1)
             end
-            @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_rows(S, B, color) == A
-            end
+            @test decompress(B, result) == A
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;
@@ -71,21 +70,19 @@ end;
 @testset "Symmetric coloring & decompression" begin
     @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
-        S0 = map(!iszero, A0)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             # Naive decompression
-            color, star_set = symmetric_coloring_detailed(A, algo)
+            result = symmetric_coloring_detailed(A, algo)
+            color = column_colors(result)
+            group = column_groups(result)
             @test color == symmetric_coloring(A, algo)
             @test symmetrically_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
-            group = color_groups(color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
-            @testset "S::$(typeof(S))" for S in matrix_versions(S0)
-                @test decompress_symmetric(S, B, color) == A
-                @test decompress_symmetric(S, B, color, star_set) == A
-            end
+            @test decompress(B, result) == A
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;

@@ -33,7 +33,7 @@ function structurally_orthogonal_columns(
     if !proper_length_coloring(A, color; verbose)
         return false
     end
-    group = color_groups(color)
+    group = group_by_color(color)
     for (c, g) in enumerate(group)
         Ag = view(A, :, g)
         nonzeros_per_row = dropdims(count(!iszero, Ag; dims=2); dims=2)
@@ -77,7 +77,7 @@ function symmetrically_orthogonal_columns(
         return false
     end
     issymmetric(A) || return false
-    group = color_groups(color)
+    group = group_by_color(color)
     for i in axes(A, 2), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
@@ -123,7 +123,7 @@ function directly_recoverable_columns(
     if !proper_length_coloring(A, color; verbose)
         return false
     end
-    group = color_groups(color)
+    group = group_by_color(color)
     B = stack(group; dims=2) do g
         dropdims(sum(A[:, g]; dims=2); dims=2)
     end
