@@ -12,6 +12,7 @@ Compatible with the [ADTypes.jl coloring framework](https://sciml.github.io/ADTy
 # See also
 
 - [`AbstractOrder`](@ref)
+- [`ADTypes.AbstractColoringAlgorithm`](@extref ADTypes.AbstractColoringAlgorithm)
 """
 struct GreedyColoringAlgorithm{O<:AbstractOrder} <: ADTypes.AbstractColoringAlgorithm
     order::O
@@ -29,27 +30,32 @@ Compute a partial distance-2 coloring of the columns in the bipartite graph of t
 # Example
 
 ```jldoctest
-using SparseMatrixColorings, SparseArrays
+julia> using SparseMatrixColorings, SparseArrays
 
-algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
 
-S = sparse([
-    0 0 1 1 0
-    1 0 0 0 1
-    0 1 1 0 0
-    0 1 1 0 1
-])
+julia> S = sparse([
+           0 0 1 1 0
+           1 0 0 0 1
+           0 1 1 0 0
+           0 1 1 0 1
+       ]);
 
-column_colors(column_coloring_detailed(S, algo))
+julia> result = column_coloring_detailed(S, algo);
 
-# output
-
+julia> column_colors(result)
 5-element Vector{Int64}:
  1
  2
  1
  2
  3
+
+julia> column_groups(result)
+3-element Vector{Vector{Int64}}:
+ [1, 3]
+ [2, 4]
+ [5]
 ```
 """
 function column_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
@@ -81,26 +87,31 @@ Compute a partial distance-2 coloring of the rows in the bipartite graph of the 
 # Example
 
 ```jldoctest
-using SparseMatrixColorings, SparseArrays
+julia> using SparseMatrixColorings, SparseArrays
 
-algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
 
-S = sparse([
-    0 0 1 1 0
-    1 0 0 0 1
-    0 1 1 0 0
-    0 1 1 0 1
-])
+julia> S = sparse([
+           0 0 1 1 0
+           1 0 0 0 1
+           0 1 1 0 0
+           0 1 1 0 1
+       ]);
 
-row_colors(row_coloring_detailed(S, algo))
+julia> result = row_coloring_detailed(S, algo);
 
-# output
-
+julia> row_colors(result)
 4-element Vector{Int64}:
  2
  2
  3
  1
+
+julia> row_groups(result)
+3-element Vector{Vector{Int64}}:
+ [4]
+ [1, 2]
+ [3]
 ```
 """
 function row_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
@@ -126,33 +137,37 @@ function row_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm
 end
 
 """
-    symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
 
 Compute a star coloring of the columns in the adjacency graph of the symmetric matrix `S`, return an [`AbstractColoringResult`](@ref).
 
 # Example
 
 ```jldoctest
-using SparseMatrixColorings, SparseArrays
+julia> using SparseMatrixColorings, SparseArrays
 
-algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst())
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
 
-S = sparse([
-    1 1 1 1
-    1 1 0 0
-    1 0 1 0
-    1 0 0 1
-])
+julia> S = sparse([
+           1 1 1 1
+           1 1 0 0
+           1 0 1 0
+           1 0 0 1
+       ]);
 
-column_colors(symmetric_coloring_detailed(S, algo))
+julia> result = symmetric_coloring_detailed(S, algo);
 
-# output
-
+julia> column_colors(result)
 4-element Vector{Int64}:
  1
  2
  2
  2
+
+julia> column_groups(result)
+2-element Vector{Vector{Int64}}:
+ [1]
+ [2, 3, 4]
 ```
 """
 function symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
@@ -179,18 +194,100 @@ end
 
 ## ADTypes interface
 
+"""
+    ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a partial distance-2 coloring of the columns in the bipartite graph of the matrix `S`, return a vector of integer colors.
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
+
+julia> S = sparse([
+           0 0 1 1 0
+           1 0 0 0 1
+           0 1 1 0 0
+           0 1 1 0 1
+       ]);
+
+julia> column_coloring(S, algo)
+5-element Vector{Int64}:
+ 1
+ 2
+ 1
+ 2
+ 3
+```
+"""
 function ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return color
 end
 
+"""
+    ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a partial distance-2 coloring of the rows in the bipartite graph of the matrix `S`, return a vector of integer colors.
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
+
+julia> S = sparse([
+           0 0 1 1 0
+           1 0 0 0 1
+           0 1 1 0 0
+           0 1 1 0 1
+       ]);
+
+julia> row_coloring(S, algo)
+4-element Vector{Int64}:
+ 2
+ 2
+ 3
+ 1
+```
+"""
 function ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return color
 end
 
+"""
+    ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute a star coloring of the columns in the adjacency graph of the symmetric matrix `S`, return a vector of integer colors.
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
+
+julia> S = sparse([
+           1 1 1 1
+           1 1 0 0
+           1 0 1 0
+           1 0 0 1
+       ]);
+
+julia> symmetric_coloring(S, algo)
+4-element Vector{Int64}:
+ 1
+ 2
+ 2
+ 2
+```
+"""
 function ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
