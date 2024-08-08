@@ -30,6 +30,14 @@ column_groups
 row_groups
 ```
 
+### ADTypes interface
+
+```@docs
+column_coloring
+row_coloring
+symmetric_coloring
+```
+
 ## Public, not exported
 
 ### Decompression
