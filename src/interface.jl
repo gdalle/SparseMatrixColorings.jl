@@ -179,29 +179,20 @@ end
 
 ## ADTypes interface
 
-"""
-    ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Call [`column_coloring_detailed`](@ref) and return only the vector of column colors.
-"""
 function ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return column_colors(column_coloring_detailed(S, algo))
+    bg = bipartite_graph(S)
+    color = partial_distance2_coloring(bg, Val(2), algo.order)
+    return color
 end
 
-"""
-    ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Call [`row_coloring_detailed`](@ref) and return only the vector of column colors.
-"""
 function ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return row_colors(row_coloring_detailed(S, algo))
+    bg = bipartite_graph(S)
+    color = partial_distance2_coloring(bg, Val(1), algo.order)
+    return color
 end
 
-"""
-    ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Call [`symmetric_coloring_detailed`](@ref) and return only the vector of column colors.
-"""
 function ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    return column_colors(symmetric_coloring_detailed(S, algo))
+    ag = adjacency_graph(S)
+    color, star_set = star_coloring(ag, algo.order)
+    return color
 end
