@@ -5,6 +5,8 @@ $README
 """
 module SparseMatrixColorings
 
+using DataStructures:
+    DisjointSets, find_root!, root_union!, num_groups
 using ADTypes:
     ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
 using Compat: @compat, stack
@@ -48,7 +50,7 @@ include("check.jl")
 export GreedyColoringAlgorithm
 export AbstractColoringResult
 export column_coloring, row_coloring, symmetric_coloring
-export column_coloring_detailed, row_coloring_detailed, symmetric_coloring_detailed
+export column_coloring_detailed, row_coloring_detailed, symmetric_coloring_detailed, acyclic_coloring_detailed
 export column_colors, row_colors
 export column_groups, row_groups
 

@@ -192,6 +192,35 @@ function symmetric_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlg
     return SparseColoringResult{:column,true}(S, color, compressed_indices)
 end
 
+"""
+    acyclic_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+
+Compute an acyclic coloring of the columns in the adjacency graph of the symmetric matrix `S`, return an [`AbstractColoringResult`](@ref).
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
+
+julia> S = sparse([
+           1 1 1 1
+           1 1 0 0
+           1 0 1 0
+           1 0 0 1
+       ]);
+
+julia> result = acyclic_coloring_detailed(S, algo);
+```
+"""
+function acyclic_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    ag = adjacency_graph(S)
+    color, tree_set = acyclic_coloring(ag, algo.order)
+    # TODO: handle star_set
+    return SimpleColoringResult{:column,true}(S, color)
+end
+
 ## ADTypes interface
 
 """

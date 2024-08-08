@@ -18,6 +18,7 @@ GreedyColoringAlgorithm
 column_coloring_detailed
 row_coloring_detailed
 symmetric_coloring_detailed
+acyclic_coloring_detailed
 ```
 
 ### Result analysis
@@ -78,6 +79,7 @@ SparseMatrixColorings.star_coloring
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.group_by_color
 SparseMatrixColorings.get_matrix
+SparseMatrixColorings.TreeSet
 ```
 
 ### Testing
