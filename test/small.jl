@@ -133,7 +133,7 @@ end;
         result = coloring(
             A0,
             ColoringProblem(;
-                structure=:symmetric, partition=:column, decompression=:direct
+                structure=:symmetric, partition=:column, decompression=:substitution
             ),
             GreedyColoringAlgorithm(),
         )
