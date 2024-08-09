@@ -97,38 +97,37 @@ function decompress_aux!(
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:symmetric,:column,:substitution},
 ) where {R<:Real}
-    # build T such that T * upper_nonzeros(A) = B and invert the linear system
-    # only consider the upper triangle of A because of symmetry
+    # build T such that T * strict_lower_nonzeros(A) = B
+    # and solve a linear least-squares problem
+    # only consider the strict lower triangle of A because of symmetry
     # TODO: make more efficient
     A .= zero(R)
     S = sparse(get_matrix(result))
     color = column_colors(result)
 
     n = checksquare(S)
-    upper_nonzero_inds = Tuple{Int,Int}[]
+    nonzero_inds = Tuple{Int,Int}[]
     I, J, _ = findnz(S)
     for (i, j) in zip(I, J)
-        i >= j && push!(upper_nonzero_inds, (i, j))
+        (i > j) && push!(nonzero_inds, (i, j))
+        (i == j) && (A[i, i] = B[i, color[i]])
     end
 
-    T = spzeros(float(R), length(B), length(upper_nonzero_inds))
-    for (l, (i, j)) in enumerate(upper_nonzero_inds)
+    T = spzeros(float(R), length(B), length(nonzero_inds))
+    for (l, (i, j)) in enumerate(nonzero_inds)
         ci = color[i]
         cj = color[j]
         ki = (ci - 1) * n + j  # A[i, j] appears in B[j, ci]
         kj = (cj - 1) * n + i  # A[i, j] appears in B[i, cj]
         T[ki, l] = one(float(R))
-        if i != j
-            T[kj, l] = one(float(R))
-        end
+        T[kj, l] = one(float(R))
     end
 
-    upper_nonzeros_A = T \ vec(B)
-    for (l, (i, j)) in enumerate(upper_nonzero_inds)
-        A[i, j] = upper_nonzeros_A[l]
-        if i != j
-            A[j, i] = upper_nonzeros_A[l]
-        end
+    # Solve a least-squares problem!
+    strict_lower_nonzeros_A = T \ vec(B)
+    for (l, (i, j)) in enumerate(nonzero_inds)
+        A[i, j] = strict_lower_nonzeros_A[l]
+        A[j, i] = strict_lower_nonzeros_A[l]
     end
     return A
 end
