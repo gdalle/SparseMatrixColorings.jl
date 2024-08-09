@@ -154,6 +154,17 @@ function coloring(
     return DefaultColoringResult{:symmetric,:column,:direct}(S, color)
 end
 
+function coloring(
+    S::AbstractMatrix,
+    ::ColoringProblem{:symmetric,:column,:substitution},
+    algo::GreedyColoringAlgorithm,
+)
+    ag = adjacency_graph(S)
+    color, tree_set = acyclic_coloring(ag, algo.order)
+    # TODO: handle tree_set
+    return DefaultColoringResult{:symmetric,:column,:substitution}(S, color)
+end
+
 ## ADTypes interface
 
 function ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)

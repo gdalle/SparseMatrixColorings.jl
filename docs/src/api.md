@@ -66,9 +66,11 @@ SparseMatrixColorings.bipartite_graph
 SparseMatrixColorings.partial_distance2_coloring
 SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
-SparseMatrixColorings.StarSet
+SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
 SparseMatrixColorings.get_matrix
+SparseMatrixColorings.StarSet
+SparseMatrixColorings.TreeSet
 ```
 
 ### Concrete coloring results
@@ -99,5 +101,7 @@ SparseMatrixColorings.matrix_versions
 ```@docs
 SparseMatrixColorings.Example
 SparseMatrixColorings.what_fig_41
+SparseMatrixColorings.what_fig_61
 SparseMatrixColorings.efficient_fig_1
+SparseMatrixColorings.efficient_fig_4
 ```
