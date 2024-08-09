@@ -36,23 +36,21 @@ Decompress `B` in-place into an existing matrix `A`, given a coloring `result` o
 function decompress!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    result::AbstractColoringResult{partition,symmetric,decompression},
-) where {R<:Real,partition,symmetric,decompression}
+    result::AbstractColoringResult{structure,partition,decompression},
+) where {R<:Real,structure,partition,decompression}
     # common checks
     S = get_matrix(result)
-    symmetric && checksquare(A)
+    structure == :symmetric && checksquare(A)
     if !same_sparsity_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
     return decompress_aux!(A, B, result)
 end
 
-## Generic algorithms
-
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    result::AbstractColoringResult{:column,false,:direct},
+    result::AbstractColoringResult{:nonsymmetric,:column,:direct},
 ) where {R<:Real}
     A .= zero(R)
     S = get_matrix(result)
@@ -70,7 +68,7 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    result::AbstractColoringResult{:row,false,:direct},
+    result::AbstractColoringResult{:nonsymmetric,:row,:direct},
 ) where {R<:Real}
     A .= zero(R)
     S = get_matrix(result)
@@ -88,7 +86,7 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    result::AbstractColoringResult{:column,true,:direct},
+    result::AbstractColoringResult{:symmetric,:column,:direct},
 ) where {R<:Real}
     A .= zero(R)
     S = get_matrix(result)
@@ -105,7 +103,7 @@ end
 function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
-    result::AbstractColoringResult{:column,true,:substitution},
+    result::AbstractColoringResult{:symmetric,:column,:substitution},
 ) where {R<:Real}
     @compat (; disjoint_sets, parent) = result
 
@@ -129,7 +127,7 @@ function decompress_aux!(
     ntrees = length(set_roots)
     println(ntrees)
 
-    trees = [Int[] for i = 1:ntrees]
+    trees = [Int[] for i in 1:ntrees]
     k = 0
     for root in set_roots
         k += 1
@@ -192,19 +190,6 @@ function decompress_aux!(
                 A[j, i] = val
             end
         end
-    end
-    return A
-end
-
-## SparseMatrixCSC
-
-function decompress_aux!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::SparseColoringResult
-) where {R<:Real}
-    nzA = nonzeros(A)
-    ind = result.compressed_indices
-    for i in eachindex(nzA, ind)
-        nzA[i] = B[ind[i]]
     end
     return A
 end

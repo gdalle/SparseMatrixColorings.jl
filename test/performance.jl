@@ -6,7 +6,6 @@ using SparseMatrixColorings
 using SparseMatrixColorings:
     adjacency_graph,
     bipartite_graph,
-    decompress_aux!,
     decompress!,
     partial_distance2_coloring!,
     respectful_similar
@@ -24,6 +23,7 @@ rng = StableRNG(63)
     @test_opt target_modules = (SparseMatrixColorings,) symmetric_coloring(
         Symmetric(A), algo
     )
+    @test_opt target_modules = (SparseMatrixColorings,) coloring(A, ColoringProblem(), algo)
 end
 
 function benchmark_distance2_coloring(n)
@@ -42,7 +42,11 @@ end
 
 function benchmark_sparse_decompression(n)
     A = sprand(n, 2n, 5 / n)
-    result = column_coloring_detailed(A, GreedyColoringAlgorithm())
+    result = coloring(
+        A,
+        ColoringProblem(; structure=:nonsymmetric, partition=:column),
+        GreedyColoringAlgorithm(),
+    )
     group = column_groups(result)
     B = stack(group; dims=2) do g
         dropdims(sum(A[:, g]; dims=2); dims=2)

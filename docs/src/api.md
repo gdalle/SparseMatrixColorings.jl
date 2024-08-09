@@ -11,14 +11,12 @@ CurrentModule = SparseMatrixColorings
 SparseMatrixColorings
 ```
 
-### Coloring algorithms
+### Entry point
 
 ```@docs
+coloring
+ColoringProblem
 GreedyColoringAlgorithm
-column_coloring_detailed
-row_coloring_detailed
-symmetric_coloring_detailed
-acyclic_coloring_detailed
 ```
 
 ### Result analysis
@@ -76,10 +74,17 @@ SparseMatrixColorings.bipartite_graph
 SparseMatrixColorings.partial_distance2_coloring
 SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
-SparseMatrixColorings.StarSet
 SparseMatrixColorings.group_by_color
 SparseMatrixColorings.get_matrix
+SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
+```
+
+### Concrete coloring results
+
+```@docs
+SparseMatrixColorings.DefaultColoringResult
+SparseMatrixColorings.DirectSparseColoringResult
 ```
 
 ### Testing

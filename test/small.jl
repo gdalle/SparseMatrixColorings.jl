@@ -4,17 +4,13 @@ using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    SimpleColoringResult,
+    DefaultColoringResult,
     decompress,
     decompress!,
     group_by_color,
     matrix_versions,
-    respectful_similar,
-    same_sparsity_pattern
-using StableRNGs
+    respectful_similar
 using Test
-
-rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
 
@@ -31,7 +27,7 @@ algo = GreedyColoringAlgorithm()
         5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:column,false}(A0, color)
+    result = DefaultColoringResult{:nonsymmetric,:column,:direct}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -49,7 +45,7 @@ end;
         4 5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:row,false}(A0, color)
+    result = DefaultColoringResult{:nonsymmetric,:row,:direct}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -67,7 +63,7 @@ end;
             1,  # green
             1,  # green
         ]
-        result = SimpleColoringResult{:column,true}(A0, color)
+        result = DefaultColoringResult{:symmetric,:column,:direct}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
@@ -92,7 +88,7 @@ end;
             1,  # red
             2,  # blue
         ]
-        result = SimpleColoringResult{:column,true}(A0, color)
+        result = DefaultColoringResult{:symmetric,:column,:direct}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
@@ -122,7 +118,6 @@ end;
 @testset "Acyclic coloring" begin
     @testset "Fig 1 from 'Efficient computation of sparse hessians using coloring and AD'" begin
         A0 = efficient_fig_1()
-        S0 = map(!iszero, A0)
         color = [
             1,  # red
             2,  # blue
@@ -135,10 +130,14 @@ end;
             2,  # blue
             1,  # red
         ]
-        g = SparseMatrixColorings.Graph(S0)
-        order = SparseMatrixColorings.NaturalOrder()
-        g_color, tree_set = acyclic_coloring(g, order)
-        @test g_color == color
+        result = coloring(
+            A0,
+            ColoringProblem(;
+                structure=:symmetric, partition=:column, decompression=:direct
+            ),
+            GreedyColoringAlgorithm(),
+        )
+        @test column_colors(result) == color
 
         group = color_groups(color)
         B = stack(group; dims=2) do g
@@ -159,10 +158,9 @@ end;
         ]
         @test B == B_th
         #! format: on
-        @testset "A::$(typeof(A)) - S::$(typeof(S))" for (A, S) in product(
-            matrix_versions(A0), matrix_versions(S0)
-        )
-            @test decompress_acyclic(S, B, color) == A
+        @test decompress(B, result) == A0
+        for A in matrix_versions(A0)
+            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;

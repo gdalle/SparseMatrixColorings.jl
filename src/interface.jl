@@ -1,4 +1,40 @@
 """
+    ColoringProblem{
+        structure,
+        partition,
+        decompression
+    }
+
+Selector type for the coloring problem to solve, enabling multiple dispatch.
+
+# Constructor
+
+    ColoringProblem(;
+        structure::Symbol=:nonsymmetric,
+        partition::Symbol=:column,
+        decompression::Symbol=:direct,
+    )
+
+# Type parameters
+
+- `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
+- `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
+- `decompression::Symbol`: either `:direct` or `:substitution`
+"""
+struct ColoringProblem{structure,partition,decompression} end
+
+function ColoringProblem(;
+    structure::Symbol=:nonsymmetric,
+    partition::Symbol=:column,
+    decompression::Symbol=:direct,
+)
+    @assert structure in (:nonsymmetric, :symmetric)
+    @assert partition in (:column, :row, :bidirectional)
+    @assert decompression in (:direct, :substitution)
+    return ColoringProblem{structure,partition,decompression}()
+end
+
+"""
     GreedyColoringAlgorithm <: ADTypes.AbstractColoringAlgorithm
 
 Greedy coloring algorithm for sparse Jacobians and Hessians, with configurable vertex order.
@@ -20,19 +56,20 @@ end
 
 GreedyColoringAlgorithm() = GreedyColoringAlgorithm(NaturalOrder())
 
-## Detailed interface
-
 """
-    column_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    coloring(
+        S::AbstractMatrix,
+        problem::ColoringProblem,
+        algo::GreedyColoringAlgorithm
+    )
 
-Compute a partial distance-2 coloring of the columns in the bipartite graph of the matrix `S`, return an [`AbstractColoringResult`](@ref).
+Solve the coloring `problem` on matrix `S` with `algo` and return an [`AbstractColoringResult`](@ref).
 
 # Example
 
 ```jldoctest
 julia> using SparseMatrixColorings, SparseArrays
 
-julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
 
 julia> S = sparse([
            0 0 1 1 0
@@ -41,7 +78,11 @@ julia> S = sparse([
            0 1 1 0 1
        ]);
 
-julia> result = column_coloring_detailed(S, algo);
+julia> problem = ColoringProblem(structure=:nonsymmetric, partition=:column);
+
+julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
+
+julia> result = coloring(S, problem, algo);
 
 julia> column_colors(result)
 5-element Vector{Int64}:
@@ -57,168 +98,55 @@ julia> column_groups(result)
  [2, 4]
  [5]
 ```
+
+# See also
+
+- [`ColoringProblem`](@ref)
+- [`GreedyColoringAlgorithm`](@ref)
+- [`AbstractColoringResult`](@ref)
 """
-function column_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function coloring end
+
+function coloring(
+    S::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:column,:direct},
+    algo::GreedyColoringAlgorithm,
+)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return SimpleColoringResult{:column,false}(S, color)
+    return DefaultColoringResult{:nonsymmetric,:column,:direct}(S, color)
 end
 
-function column_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
-    bg = bipartite_graph(S)
-    color = partial_distance2_coloring(bg, Val(2), algo.order)
-    n = size(S, 1)
-    I, J, _ = findnz(S)
-    compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[j]
-        # A[i, j] = B[i, c]
-        compressed_indices[k] = (c - 1) * n + i
-    end
-    return SparseColoringResult{:column,false}(S, color, compressed_indices)
-end
-
-"""
-    row_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Compute a partial distance-2 coloring of the rows in the bipartite graph of the matrix `S`, return an [`AbstractColoringResult`](@ref).
-
-# Example
-
-```jldoctest
-julia> using SparseMatrixColorings, SparseArrays
-
-julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
-
-julia> S = sparse([
-           0 0 1 1 0
-           1 0 0 0 1
-           0 1 1 0 0
-           0 1 1 0 1
-       ]);
-
-julia> result = row_coloring_detailed(S, algo);
-
-julia> row_colors(result)
-4-element Vector{Int64}:
- 2
- 2
- 3
- 1
-
-julia> row_groups(result)
-3-element Vector{Vector{Int64}}:
- [4]
- [1, 2]
- [3]
-```
-"""
-function row_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function coloring(
+    S::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:row,:direct},
+    algo::GreedyColoringAlgorithm,
+)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return SimpleColoringResult{:row,false}(S, color)
+    return DefaultColoringResult{:nonsymmetric,:row,:direct}(S, color)
 end
 
-function row_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
-    bg = bipartite_graph(S)
-    color = partial_distance2_coloring(bg, Val(1), algo.order)
-    n = size(S, 1)
-    C = maximum(color)
-    I, J, _ = findnz(S)
-    compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[i]
-        # A[i, j] = B[c, j]
-        compressed_indices[k] = (j - 1) * C + c
-    end
-    return SparseColoringResult{:row,false}(S, color, compressed_indices)
-end
-
-"""
-    symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Compute a star coloring of the columns in the adjacency graph of the symmetric matrix `S`, return an [`AbstractColoringResult`](@ref).
-
-# Example
-
-```jldoctest
-julia> using SparseMatrixColorings, SparseArrays
-
-julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
-
-julia> S = sparse([
-           1 1 1 1
-           1 1 0 0
-           1 0 1 0
-           1 0 0 1
-       ]);
-
-julia> result = symmetric_coloring_detailed(S, algo);
-
-julia> column_colors(result)
-4-element Vector{Int64}:
- 1
- 2
- 2
- 2
-
-julia> column_groups(result)
-2-element Vector{Vector{Int64}}:
- [1]
- [2, 3, 4]
-```
-"""
-function symmetric_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function coloring(
+    S::AbstractMatrix,
+    ::ColoringProblem{:symmetric,:column,:direct},
+    algo::GreedyColoringAlgorithm,
+)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
     # TODO: handle star_set
-    return SimpleColoringResult{:column,true}(S, color)
+    return DefaultColoringResult{:symmetric,:column,:direct}(S, color)
 end
 
-function symmetric_coloring_detailed(S::SparseMatrixCSC, algo::GreedyColoringAlgorithm)
-    ag = adjacency_graph(S)
-    color, star_set = star_coloring(ag, algo.order)
-    n = size(S, 1)
-    I, J, _ = findnz(S)
-    compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        l, c = symmetric_coefficient(i, j, color, star_set)
-        # A[i, j] = B[l, c]
-        compressed_indices[k] = (c - 1) * n + l
-    end
-    return SparseColoringResult{:column,true}(S, color, compressed_indices)
-end
-
-"""
-    acyclic_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
-
-Compute an acyclic coloring of the columns in the adjacency graph of the symmetric matrix `S`, return an [`AbstractColoringResult`](@ref).
-
-# Example
-
-```jldoctest
-julia> using SparseMatrixColorings, SparseArrays
-
-julia> algo = GreedyColoringAlgorithm(SparseMatrixColorings.LargestFirst());
-
-julia> S = sparse([
-           1 1 1 1
-           1 1 0 0
-           1 0 1 0
-           1 0 0 1
-       ]);
-
-julia> result = acyclic_coloring_detailed(S, algo);
-```
-"""
-function acyclic_coloring_detailed(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function coloring(
+    S::AbstractMatrix,
+    ::ColoringProblem{:symmetric,:column,:substitution},
+    algo::GreedyColoringAlgorithm,
+)
     ag = adjacency_graph(S)
     color, tree_set = acyclic_coloring(ag, algo.order)
-    # TODO: handle star_set
-    return SimpleColoringResult{:column,true}(S, color)
+    # TODO: handle tree_set
+    return DefaultColoringResult{:symmetric,:column,:substitution}(S, color)
 end
 
 ## ADTypes interface

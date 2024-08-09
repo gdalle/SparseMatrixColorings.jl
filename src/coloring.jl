@@ -120,23 +120,22 @@ function star_coloring(g::Graph, order::AbstractOrder)
 end
 
 """
-    StarSet
+$TYPEDEF
 
 Encode a set of 2-colored stars resulting from the star coloring algorithm.
 
 # Fields
 
-The fields are not part of the public API, even though the type is.
-
-- `star::Dict{Tuple{Int,Int},Int}`: a mapping from edges (pair of vertices) their to star index
-- `hub::Vector{Int}`: a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)
+$TYPEDFIELDS
 
 # References
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct StarSet
+    "a mapping from edges (pair of vertices) their to star index"
     star::Dict{Tuple{Int,Int},Int}
+    "a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)"
     hub::Vector{Int}
 end
 
@@ -282,7 +281,7 @@ The fields are not part of the public API, even though the type is.
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct TreeSet
-    disjoint_sets::DisjointSets{Tuple{Int, Int}}
+    disjoint_sets::DisjointSets{Tuple{Int,Int}}
     parent::Vector{Int}
 end
 
@@ -311,7 +310,7 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
     forbidden_colors = zeros(Int, nvertices)
     first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), nnz(g))  # Could we use less than nnz(g) values?
-    disjoint_sets = DisjointSets{Tuple{Int, Int}}()
+    disjoint_sets = DisjointSets{Tuple{Int,Int}}()
     vertices_in_order = vertices(g, order)
     parent = Int[]  # Could be a vector of Bool
 
@@ -325,7 +324,9 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
             for x in neighbors(g, w)
                 iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
-                    _prevent_cycle!(v, w, x, color, first_visit_to_tree, forbidden_colors, disjoint_sets)
+                    _prevent_cycle!(
+                        v, w, x, color, first_visit_to_tree, forbidden_colors, disjoint_sets
+                    )
                 end
             end
         end
@@ -361,7 +362,7 @@ function _prevent_cycle!(
     # modified
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
-    disjoint_sets::DisjointSets{<:Tuple{Int,Int}}
+    disjoint_sets::DisjointSets{<:Tuple{Int,Int}},
 )
     wx = _sort(w, x)
     root = find_root!(disjoint_sets, wx)  # edge wx belongs to the 2-colored tree T represented by edge "root"
@@ -384,7 +385,7 @@ function _grow_star!(
     # modified
     first_neighbor::AbstractVector{<:Tuple},
     disjoint_sets::DisjointSets{Tuple{Int,Int}},
-    parent::Vector{Int}
+    parent::Vector{Int},
 )
     vw = _sort(v, w)
     push!(disjoint_sets, vw)  # Create a new tree T_{vw} consisting only of edge vw
@@ -408,7 +409,7 @@ function _merge_trees!(
     w::Integer,
     x::Integer,
     # modified
-    disjoint_sets::DisjointSets{Tuple{Int,Int}}
+    disjoint_sets::DisjointSets{Tuple{Int,Int}},
 )
     vw = _sort(v, w)
     wx = _sort(w, x)
