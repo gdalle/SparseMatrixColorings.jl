@@ -11,13 +11,12 @@ CurrentModule = SparseMatrixColorings
 SparseMatrixColorings
 ```
 
-### Coloring algorithms
+### Entry point
 
 ```@docs
+coloring
+ColoringProblem
 GreedyColoringAlgorithm
-column_coloring_detailed
-row_coloring_detailed
-symmetric_coloring_detailed
 ```
 
 ### Result analysis

@@ -4,17 +4,13 @@ using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    SimpleColoringResult,
+    DefaultColoringResult,
     decompress,
     decompress!,
     group_by_color,
     matrix_versions,
-    respectful_similar,
-    same_sparsity_pattern
-using StableRNGs
+    respectful_similar
 using Test
-
-rng = StableRNG(63)
 
 algo = GreedyColoringAlgorithm()
 
@@ -31,7 +27,7 @@ algo = GreedyColoringAlgorithm()
         5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:column,false}(A0, color)
+    result = DefaultColoringResult{:nonsymmetric,:column,:direct}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -49,7 +45,7 @@ end;
         4 5 0
     ]
     color = [1, 1, 2]
-    result = SimpleColoringResult{:row,false}(A0, color)
+    result = DefaultColoringResult{:nonsymmetric,:row,:direct}(A0, color)
     @test decompress(B, result) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B, result) == A
@@ -67,7 +63,7 @@ end;
             1,  # green
             1,  # green
         ]
-        result = SimpleColoringResult{:column,true}(A0, color)
+        result = DefaultColoringResult{:symmetric,:column,:direct}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
@@ -92,7 +88,7 @@ end;
             1,  # red
             2,  # blue
         ]
-        result = SimpleColoringResult{:column,true}(A0, color)
+        result = DefaultColoringResult{:symmetric,:column,:direct}(A0, color)
         group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)

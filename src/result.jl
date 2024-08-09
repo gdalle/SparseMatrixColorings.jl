@@ -2,18 +2,21 @@
 
 """
     AbstractColoringResult{
+        structure,
         partition,
-        symmetric,
         decompression,
         M<:AbstractMatrix
     }
 
-Abstract type for the detailed result of a coloring algorithm.
+Abstract type for the result of a coloring algorithm.
+
+!!! warning
+    Concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 
 # Type parameters
 
+- `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
 - `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
-- `symmetric::Bool`: either `true` or `false`
 - `decompression::Symbol`: either `:direct` or `:substitution`
 - `M`: type of the matrix that was colored
 
@@ -22,8 +25,9 @@ Abstract type for the detailed result of a coloring algorithm.
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
 - [`get_matrix`](@ref)
+- decompression utilities
 """
-abstract type AbstractColoringResult{partition,symmetric,decompression,M<:AbstractMatrix} end
+abstract type AbstractColoringResult{structure,partition,decompression,M<:AbstractMatrix} end
 
 """
     get_matrix(result::AbstractColoringResult)
@@ -60,16 +64,6 @@ Return a vector `group` such that for every color `c`, `group[c]` contains the i
 """
 function row_groups end
 
-get_matrix(result::AbstractColoringResult) = result.matrix
-
-column_colors(result::AbstractColoringResult{:column}) = result.color
-column_groups(result::AbstractColoringResult{:column}) = result.group
-
-row_colors(result::AbstractColoringResult{:row}) = result.color
-row_groups(result::AbstractColoringResult{:row}) = result.group
-
-## Concrete subtypes
-
 """
     group_by_color(color::Vector{Int})
 
@@ -87,31 +81,27 @@ function group_by_color(color::AbstractVector{<:Integer})
     return group
 end
 
-struct SimpleColoringResult{partition,symmetric,M} <:
-       AbstractColoringResult{partition,symmetric,:direct,M}
+## Concrete subtypes
+
+struct DefaultColoringResult{structure,partition,decompression,M} <:
+       AbstractColoringResult{structure,partition,decompression,M}
     matrix::M
     color::Vector{Int}
     group::Vector{Vector{Int}}
 end
 
-function SimpleColoringResult{partition,symmetric}(
+function DefaultColoringResult{structure,partition,decompression}(
     matrix::M, color::Vector{Int}
-) where {partition,symmetric,M}
-    return SimpleColoringResult{partition,symmetric,M}(matrix, color, group_by_color(color))
-end
-
-struct SparseColoringResult{partition,symmetric,M} <:
-       AbstractColoringResult{partition,symmetric,:direct,M}
-    matrix::M
-    color::Vector{Int}
-    group::Vector{Vector{Int}}
-    compressed_indices::Vector{Int}
-end
-
-function SparseColoringResult{partition,symmetric}(
-    matrix::M, color::Vector{Int}, compressed_indices::Vector{Int}
-) where {partition,symmetric,M}
-    return SparseColoringResult{partition,symmetric,M}(
-        matrix, color, group_by_color(color), compressed_indices
+) where {structure,partition,decompression,M}
+    return DefaultColoringResult{structure,partition,decompression,M}(
+        matrix, color, group_by_color(color)
     )
 end
+
+get_matrix(result::DefaultColoringResult) = result.matrix
+
+column_colors(result::DefaultColoringResult{s,:column}) where {s} = result.color
+column_groups(result::DefaultColoringResult{s,:column}) where {s} = result.group
+
+row_colors(result::DefaultColoringResult{s,:row}) where {s} = result.color
+row_groups(result::DefaultColoringResult{s,:row}) where {s} = result.group
