@@ -46,6 +46,7 @@ include("interface.jl")
 include("decompression.jl")
 include("check.jl")
 include("sparsematrixcsc.jl")
+include("examples.jl")
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public decompress, decompress!

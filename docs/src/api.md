@@ -101,3 +101,12 @@ SparseMatrixColorings.structurally_orthogonal_columns
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
 ```
+
+### Examples
+
+```@docs
+SparseMatrixColorings.Example
+SparseMatrixColorings.what_fig_41
+SparseMatrixColorings.what_fig_61
+SparseMatrixColorings.efficient_fig_61
+```
