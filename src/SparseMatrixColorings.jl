@@ -2,13 +2,17 @@
     SparseMatrixColorings
 
 $README
+
+## Exports
+
+$EXPORTS
 """
 module SparseMatrixColorings
 
 using ADTypes:
     ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
 using Compat: @compat, stack
-using DocStringExtensions: README
+using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
     Diagonal,
@@ -41,14 +45,14 @@ include("matrices.jl")
 include("interface.jl")
 include("decompression.jl")
 include("check.jl")
+include("sparsematrixcsc.jl")
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public decompress, decompress!
 
-export GreedyColoringAlgorithm
-export AbstractColoringResult
+export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
+export coloring
 export column_coloring, row_coloring, symmetric_coloring
-export column_coloring_detailed, row_coloring_detailed, symmetric_coloring_detailed
 export column_colors, row_colors
 export column_groups, row_groups
 

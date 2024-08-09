@@ -4,7 +4,6 @@ using LinearAlgebra: I, Symmetric
 using SparseArrays: sprand
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    GreedyColoringAlgorithm,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
     directly_recoverable_columns,
@@ -30,10 +29,13 @@ symmetric_params = vcat(
 )
 
 @testset "Column coloring & decompression" begin
+    problem = ColoringProblem(;
+        structure=:nonsymmetric, partition=:column, decompression=:direct
+    )
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            result = column_coloring_detailed(A, algo)
+            result = coloring(A, problem, algo)
             color = column_colors(result)
             group = column_groups(result)
             @test color == column_coloring(A, algo)
@@ -49,10 +51,13 @@ symmetric_params = vcat(
 end;
 
 @testset "Row coloring & decompression" begin
+    problem = ColoringProblem(;
+        structure=:nonsymmetric, partition=:row, decompression=:direct
+    )
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            result = row_coloring_detailed(A, algo)
+            result = coloring(A, problem, algo)
             color = row_colors(result)
             group = row_groups(result)
             @test color == row_coloring(A, algo)
@@ -68,11 +73,14 @@ end;
 end;
 
 @testset "Symmetric coloring & decompression" begin
+    problem = ColoringProblem(;
+        structure=:symmetric, partition=:column, decompression=:direct
+    )
     @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             # Naive decompression
-            result = symmetric_coloring_detailed(A, algo)
+            result = coloring(A, problem, algo)
             color = column_colors(result)
             group = column_groups(result)
             @test color == symmetric_coloring(A, algo)
