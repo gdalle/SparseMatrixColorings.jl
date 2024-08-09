@@ -14,7 +14,6 @@ using SparseMatrixColorings:
     matrix_versions,
     respectful_similar,
     what_fig_41,
-    what_fig_61,
     efficient_fig_1
 using Test
 
