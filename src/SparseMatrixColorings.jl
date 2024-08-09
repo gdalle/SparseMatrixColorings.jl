@@ -9,8 +9,7 @@ $EXPORTS
 """
 module SparseMatrixColorings
 
-using ADTypes:
-    ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
+using ADTypes: ADTypes
 using Compat: @compat, stack
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
@@ -53,7 +52,6 @@ include("examples.jl")
 
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
-export column_coloring, row_coloring, symmetric_coloring
 export column_colors, row_colors
 export column_groups, row_groups
 
