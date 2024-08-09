@@ -28,6 +28,9 @@ degree(g::Graph, v::Integer) = length(g.colptr[v]:(g.colptr[v + 1] - 1))
 maximum_degree(g::Graph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
 
+nvertices(g::Graph) = length(g)
+nedges(g::Graph) = nnz(g) ÷ 2
+
 ## Bipartite graph
 
 """

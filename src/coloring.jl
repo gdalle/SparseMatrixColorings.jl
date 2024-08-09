@@ -76,11 +76,11 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nvertices = length(g)
-    color = zeros(Int, nvertices)
-    forbidden_colors = zeros(Int, nvertices)
-    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
-    treated = zeros(Int, nvertices)
+    nv = nvertices(g)
+    color = zeros(Int, nv)
+    forbidden_colors = zeros(Int, nv)
+    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    treated = zeros(Int, nv)
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
     vertices_in_order = vertices(g, order)
@@ -129,7 +129,7 @@ Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algor
 $TYPEDFIELDS
 """
 struct StarSet
-    "a mapping from edges (pair of vertices) their to star index"
+    "a mapping from edges (pair of vertices) to their star index"
     star::Dict{Tuple{Int,Int},Int}
     "a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)"
     hub::Vector{Int}
@@ -280,14 +280,14 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function acyclic_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nvertices = length(g)
-    color = zeros(Int, nvertices)
-    forbidden_colors = zeros(Int, nvertices)
-    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
-    first_visit_to_tree = fill((0, 0), nnz(g))  # Could we use less than nnz(g) values?
-    disjoint_sets = DisjointSets{Tuple{Int,Int}}()
+    nv = nvertices(g)
+    ne = nedges(g)
+    color = zeros(Int, nv)
+    forbidden_colors = zeros(Int, nv)
+    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((0, 0), ne)
+    forest = DisjointSets{Tuple{Int,Int}}()
     vertices_in_order = vertices(g, order)
-    parent = Int[]  # Could be a vector of Bool
 
     for v in vertices_in_order
         for w in neighbors(g, v)
@@ -300,7 +300,7 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
                 iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
                     _prevent_cycle!(
-                        v, w, x, color, first_visit_to_tree, forbidden_colors, disjoint_sets
+                        v, w, x, color, first_visit_to_tree, forbidden_colors, forest
                     )
                 end
             end
@@ -313,19 +313,19 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
         end
         for w in neighbors(g, v)  # grow two-colored stars around the vertex v
             iszero(color[w]) && continue
-            _grow_star!(v, w, color, first_neighbor, disjoint_sets, parent)
+            _grow_star!(v, w, color, first_neighbor, forest)
         end
         for w in neighbors(g, v)
             iszero(color[w]) && continue
             for x in neighbors(g, w)
                 (x == v || iszero(color[x])) && continue
                 if color[x] == color[v]
-                    _merge_trees!(v, w, x, disjoint_sets)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                    _merge_trees!(v, w, x, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
     end
-    return color, TreeSet(disjoint_sets, parent)
+    return color, TreeSet(forest)
 end
 
 function _prevent_cycle!(
@@ -337,11 +337,11 @@ function _prevent_cycle!(
     # modified
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
-    disjoint_sets::DisjointSets{<:Tuple{Int,Int}},
+    forest::DisjointSets{<:Tuple{Int,Int}},
 )
     wx = _sort(w, x)
-    root = find_root!(disjoint_sets, wx)  # edge wx belongs to the 2-colored tree T represented by edge "root"
-    id = disjoint_sets.intmap[root] # ID of the representative edge "root" of a two-colored tree.
+    root = find_root!(forest, wx)  # edge wx belongs to the 2-colored tree represented by edge "root"
+    id = forest.intmap[root] # ID of the representative edge "root" of a two-colored tree.
     (p, q) = first_visit_to_tree[id]
     if p != v  # T is being visited from vertex v for the first time
         vw = _sort(v, w)
@@ -359,21 +359,19 @@ function _grow_star!(
     color::AbstractVector{<:Integer},
     # modified
     first_neighbor::AbstractVector{<:Tuple},
-    disjoint_sets::DisjointSets{Tuple{Int,Int}},
-    parent::Vector{Int},
+    forest::DisjointSets{Tuple{Int,Int}},
 )
     vw = _sort(v, w)
-    push!(disjoint_sets, vw)  # Create a new tree T_{vw} consisting only of edge vw
-    push!(parent, v)  # the vertex v is the parent of the vertex w in tree T_{vw} -- parent[disjoint_sets.intmap[vw]] == v
+    push!(forest, vw)  # Create a new tree T_{vw} consisting only of edge vw
     (p, q) = first_neighbor[color[w]]
     if p != v  # a neighbor of v with color[w] encountered for the first time
         first_neighbor[color[w]] = (v, w)
     else  # merge T_{vw} with a two-colored star being grown around v
         vw = _sort(v, w)
         pq = _sort(p, q)
-        root1 = find_root!(disjoint_sets, vw)
-        root2 = find_root!(disjoint_sets, pq)
-        root_union!(disjoint_sets, root1, root2)
+        root1 = find_root!(forest, vw)
+        root2 = find_root!(forest, pq)
+        root_union!(forest, root1, root2)
     end
     return nothing
 end
@@ -384,14 +382,14 @@ function _merge_trees!(
     w::Integer,
     x::Integer,
     # modified
-    disjoint_sets::DisjointSets{Tuple{Int,Int}},
+    forest::DisjointSets{Tuple{Int,Int}},
 )
     vw = _sort(v, w)
     wx = _sort(w, x)
-    root1 = find_root!(disjoint_sets, vw)
-    root2 = find_root!(disjoint_sets, wx)
+    root1 = find_root!(forest, vw)
+    root2 = find_root!(forest, wx)
     if root1 != root2
-        root_union!(disjoint_sets, root1, root2)
+        root_union!(forest, root1, root2)
     end
     return nothing
 end
@@ -399,19 +397,13 @@ end
 """
     TreeSet
 
-Encode a set of 2-colored trees resulting from the acyclic coloring algorithm.
+Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) algorithm.
 
 # Fields
 
 $TYPEDFIELDS
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct TreeSet
-    "set of 2-colored trees"
-    disjoint_sets::DisjointSets{Tuple{Int,Int}}
-    "???"  # TODO: fill this
-    parent::Vector{Int}
+    "a forest of two-colored trees"
+    forest::DisjointSets{Tuple{Int,Int}}
 end
