@@ -76,10 +76,11 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    color = zeros(Int, length(g))
-    forbidden_colors = zeros(Int, length(g))
-    first_neighbor = fill((0, 0), length(g))  # at first no neighbors have been encountered
-    treated = zeros(Int, length(g))
+    nvertices = length(g)
+    color = zeros(Int, nvertices)
+    forbidden_colors = zeros(Int, nvertices)
+    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
+    treated = zeros(Int, nvertices)
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
     vertices_in_order = vertices(g, order)
@@ -119,17 +120,13 @@ function star_coloring(g::Graph, order::AbstractOrder)
 end
 
 """
-$TYPEDEF
+    StarSet
 
-Encode a set of 2-colored stars resulting from the star coloring algorithm.
+Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algorithm.
 
 # Fields
 
 $TYPEDFIELDS
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct StarSet
     "a mapping from edges (pair of vertices) their to star index"
@@ -261,4 +258,160 @@ function symmetric_coefficient(
         # j is the spoke
         return j, color[h]
     end
+end
+
+"""
+    acyclic_coloring(g::Graph, order::AbstractOrder)
+
+Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
+
+An _acyclic coloring_ is a distance-1 coloring with the further restriction that every cycle uses at least 3 colors.
+
+The vertices are colored in a greedy fashion, following the `order` supplied.
+
+# See also
+
+- [`Graph`](@ref)
+- [`AbstractOrder`](@ref)
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
+"""
+function acyclic_coloring(g::Graph, order::AbstractOrder)
+    # Initialize data structures
+    nvertices = length(g)
+    color = zeros(Int, nvertices)
+    forbidden_colors = zeros(Int, nvertices)
+    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((0, 0), nnz(g))  # Could we use less than nnz(g) values?
+    disjoint_sets = DisjointSets{Tuple{Int,Int}}()
+    vertices_in_order = vertices(g, order)
+    parent = Int[]  # Could be a vector of Bool
+
+    for v in vertices_in_order
+        for w in neighbors(g, v)
+            iszero(color[w]) && continue
+            forbidden_colors[color[w]] = v
+        end
+        for w in neighbors(g, v)
+            iszero(color[w]) && continue
+            for x in neighbors(g, w)
+                iszero(color[x]) && continue
+                if forbidden_colors[color[x]] != v
+                    _prevent_cycle!(
+                        v, w, x, color, first_visit_to_tree, forbidden_colors, disjoint_sets
+                    )
+                end
+            end
+        end
+        for i in eachindex(forbidden_colors)
+            if forbidden_colors[i] != v
+                color[v] = i
+                break
+            end
+        end
+        for w in neighbors(g, v)  # grow two-colored stars around the vertex v
+            iszero(color[w]) && continue
+            _grow_star!(v, w, color, first_neighbor, disjoint_sets, parent)
+        end
+        for w in neighbors(g, v)
+            iszero(color[w]) && continue
+            for x in neighbors(g, w)
+                (x == v || iszero(color[x])) && continue
+                if color[x] == color[v]
+                    _merge_trees!(v, w, x, disjoint_sets)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                end
+            end
+        end
+    end
+    return color, TreeSet(disjoint_sets, parent)
+end
+
+function _prevent_cycle!(
+    # not modified
+    v::Integer,
+    w::Integer,
+    x::Integer,
+    color::AbstractVector{<:Integer},
+    # modified
+    first_visit_to_tree::AbstractVector{<:Tuple},
+    forbidden_colors::AbstractVector{<:Integer},
+    disjoint_sets::DisjointSets{<:Tuple{Int,Int}},
+)
+    wx = _sort(w, x)
+    root = find_root!(disjoint_sets, wx)  # edge wx belongs to the 2-colored tree T represented by edge "root"
+    id = disjoint_sets.intmap[root] # ID of the representative edge "root" of a two-colored tree.
+    (p, q) = first_visit_to_tree[id]
+    if p != v  # T is being visited from vertex v for the first time
+        vw = _sort(v, w)
+        first_visit_to_tree[id] = (v, w)
+    elseif q != w  # T is connected to vertex v via at least two edges
+        forbidden_colors[color[x]] = v
+    end
+    return nothing
+end
+
+function _grow_star!(
+    # not modified
+    v::Integer,
+    w::Integer,
+    color::AbstractVector{<:Integer},
+    # modified
+    first_neighbor::AbstractVector{<:Tuple},
+    disjoint_sets::DisjointSets{Tuple{Int,Int}},
+    parent::Vector{Int},
+)
+    vw = _sort(v, w)
+    push!(disjoint_sets, vw)  # Create a new tree T_{vw} consisting only of edge vw
+    push!(parent, v)  # the vertex v is the parent of the vertex w in tree T_{vw} -- parent[disjoint_sets.intmap[vw]] == v
+    (p, q) = first_neighbor[color[w]]
+    if p != v  # a neighbor of v with color[w] encountered for the first time
+        first_neighbor[color[w]] = (v, w)
+    else  # merge T_{vw} with a two-colored star being grown around v
+        vw = _sort(v, w)
+        pq = _sort(p, q)
+        root1 = find_root!(disjoint_sets, vw)
+        root2 = find_root!(disjoint_sets, pq)
+        root_union!(disjoint_sets, root1, root2)
+    end
+    return nothing
+end
+
+function _merge_trees!(
+    # not modified
+    v::Integer,
+    w::Integer,
+    x::Integer,
+    # modified
+    disjoint_sets::DisjointSets{Tuple{Int,Int}},
+)
+    vw = _sort(v, w)
+    wx = _sort(w, x)
+    root1 = find_root!(disjoint_sets, vw)
+    root2 = find_root!(disjoint_sets, wx)
+    if root1 != root2
+        root_union!(disjoint_sets, root1, root2)
+    end
+    return nothing
+end
+
+"""
+    TreeSet
+
+Encode a set of 2-colored trees resulting from the acyclic coloring algorithm.
+
+# Fields
+
+$TYPEDFIELDS
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+"""
+struct TreeSet
+    "set of 2-colored trees"
+    disjoint_sets::DisjointSets{Tuple{Int,Int}}
+    "???"  # TODO: fill this
+    parent::Vector{Int}
 end

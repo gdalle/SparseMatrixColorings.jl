@@ -54,7 +54,6 @@ function what_fig_41()
     return Example(A, B, color)
 end
 
-#=
 """
     what_fig_61()
 
@@ -98,7 +97,6 @@ function what_fig_61()
     )
     return Example(A, B, color)
 end
-=#
 
 """
     efficient_fig_1()
@@ -146,7 +144,6 @@ function efficient_fig_1()
     return Example(A, B, color)
 end
 
-#=
 """
     efficient_fig_4()
 
@@ -190,4 +187,3 @@ function efficient_fig_4()
     )
     return Example(A, B, color)
 end
-=#

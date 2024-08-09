@@ -9,6 +9,7 @@ $EXPORTS
 """
 module SparseMatrixColorings
 
+using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using ADTypes: ADTypes
 using Compat: @compat, stack
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
