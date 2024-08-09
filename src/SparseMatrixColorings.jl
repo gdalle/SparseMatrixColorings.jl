@@ -10,8 +10,7 @@ $EXPORTS
 module SparseMatrixColorings
 
 using DataStructures: DisjointSets, find_root!, root_union!, num_groups
-using ADTypes:
-    ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
+using ADTypes: ADTypes
 using Compat: @compat, stack
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
@@ -47,13 +46,13 @@ include("interface.jl")
 include("decompression.jl")
 include("check.jl")
 include("sparsematrixcsc.jl")
+include("examples.jl")
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public decompress, decompress!
 
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
-export column_coloring, row_coloring, symmetric_coloring
 export column_colors, row_colors
 export column_groups, row_groups
 

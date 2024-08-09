@@ -2,7 +2,9 @@ using LinearAlgebra
 using SparseMatrixColorings:
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
-    directly_recoverable_columns
+    directly_recoverable_columns,
+    what_fig_41,
+    efficient_fig_1
 using Test
 
 @testset "Structurally orthogonal columns" begin
@@ -77,7 +79,7 @@ end
 end
 
 @testset "Symmetrically orthogonal" begin
-    A = what_fig_41()
+    A = what_fig_41().A
     @test issymmetric(A)
 
     # success
@@ -103,7 +105,7 @@ For coefficient (i=2, j=3) with column colors (ci=3, cj=1):
 """,
     ) symmetrically_orthogonal_columns(A, [1, 3, 1, 3, 1, 1]; verbose=true)
 
-    A = efficient_fig_1()
+    A = efficient_fig_1().A
     @test issymmetric(A)
 
     # success

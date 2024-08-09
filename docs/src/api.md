@@ -11,7 +11,7 @@ CurrentModule = SparseMatrixColorings
 SparseMatrixColorings
 ```
 
-### Entry point
+### Main function
 
 ```@docs
 coloring
@@ -27,14 +27,6 @@ column_colors
 row_colors
 column_groups
 row_groups
-```
-
-### ADTypes interface
-
-```@docs
-column_coloring
-row_coloring
-symmetric_coloring
 ```
 
 ## Public, not exported
@@ -74,6 +66,7 @@ SparseMatrixColorings.bipartite_graph
 SparseMatrixColorings.partial_distance2_coloring
 SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
+SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
 SparseMatrixColorings.get_matrix
 SparseMatrixColorings.StarSet
@@ -101,4 +94,14 @@ SparseMatrixColorings.structurally_orthogonal_columns
 ```@docs
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
+```
+
+### Examples
+
+```@docs
+SparseMatrixColorings.Example
+SparseMatrixColorings.what_fig_41
+SparseMatrixColorings.what_fig_61
+SparseMatrixColorings.efficient_fig_1
+SparseMatrixColorings.efficient_fig_4
 ```

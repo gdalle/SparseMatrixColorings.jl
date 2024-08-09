@@ -1,3 +1,4 @@
+using ADTypes: column_coloring, row_coloring, symmetric_coloring
 using Base.Iterators: product
 using Compat
 using LinearAlgebra: I, Symmetric
@@ -38,12 +39,12 @@ symmetric_params = vcat(
             result = coloring(A, problem, algo)
             color = column_colors(result)
             group = column_groups(result)
-            @test color == column_coloring(A, algo)
-            @test structurally_orthogonal_columns(A, color)
-            @test directly_recoverable_columns(A, color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
+            @test color == column_coloring(A, algo)
+            @test structurally_orthogonal_columns(A, color)
+            @test directly_recoverable_columns(A, color)
             @test decompress(B, result) == A
             @test decompress!(respectful_similar(A), B, result) == A
         end
@@ -60,12 +61,12 @@ end;
             result = coloring(A, problem, algo)
             color = row_colors(result)
             group = row_groups(result)
-            @test color == row_coloring(A, algo)
-            @test structurally_orthogonal_columns(transpose(A), color)
-            @test directly_recoverable_columns(transpose(A), color)
             B = stack(group; dims=1) do g
                 dropdims(sum(A[g, :]; dims=1); dims=1)
             end
+            @test color == row_coloring(A, algo)
+            @test structurally_orthogonal_columns(transpose(A), color)
+            @test directly_recoverable_columns(transpose(A), color)
             @test decompress(B, result) == A
             @test decompress!(respectful_similar(A), B, result) == A
         end
@@ -83,12 +84,12 @@ end;
             result = coloring(A, problem, algo)
             color = column_colors(result)
             group = column_groups(result)
-            @test color == symmetric_coloring(A, algo)
-            @test symmetrically_orthogonal_columns(A, color)
-            @test directly_recoverable_columns(A, color)
             B = stack(group; dims=2) do g
                 dropdims(sum(A[:, g]; dims=2); dims=2)
             end
+            @test color == symmetric_coloring(A, algo)
+            @test symmetrically_orthogonal_columns(A, color)
+            @test directly_recoverable_columns(A, color)
             @test decompress(B, result) == A
             @test decompress!(respectful_similar(A), B, result) == A
         end

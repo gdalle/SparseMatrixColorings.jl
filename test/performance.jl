@@ -1,3 +1,4 @@
+using ADTypes: column_coloring, row_coloring, symmetric_coloring
 using Chairmarks
 using JET
 using LinearAlgebra

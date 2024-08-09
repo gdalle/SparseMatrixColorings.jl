@@ -28,10 +28,6 @@ Decompress `B` in-place into an existing matrix `A`, given a coloring `result` o
 # See also
 
 - [`AbstractColoringResult`](@ref)
-
-# References
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
 """
 function decompress!(
     A::AbstractMatrix{R},

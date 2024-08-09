@@ -120,17 +120,13 @@ function star_coloring(g::Graph, order::AbstractOrder)
 end
 
 """
-$TYPEDEF
+    StarSet
 
-Encode a set of 2-colored stars resulting from the star coloring algorithm.
+Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algorithm.
 
 # Fields
 
 $TYPEDFIELDS
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct StarSet
     "a mapping from edges (pair of vertices) their to star index"
@@ -265,27 +261,6 @@ function symmetric_coefficient(
 end
 
 """
-    TreeSet
-
-Encode a set of 2-colored trees resulting from the acyclic coloring algorithm.
-
-# Fields
-
-The fields are not part of the public API, even though the type is.
-
-- `disjoint_sets::DisjointSets{Tuple{Int, Int}}`: a set of 2-colored trees
-- `stored_values::Vector{Float64}`: storage of edge values that will be substituted in the determination of other edges during the decompression
-
-# References
-
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
-"""
-struct TreeSet
-    disjoint_sets::DisjointSets{Tuple{Int,Int}}
-    parent::Vector{Int}
-end
-
-"""
     acyclic_coloring(g::Graph, order::AbstractOrder)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
@@ -301,7 +276,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 # References
 
-> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
@@ -419,4 +394,24 @@ function _merge_trees!(
         root_union!(disjoint_sets, root1, root2)
     end
     return nothing
+end
+
+"""
+    TreeSet
+
+Encode a set of 2-colored trees resulting from the acyclic coloring algorithm.
+
+# Fields
+
+$TYPEDFIELDS
+
+# References
+
+> [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
+"""
+struct TreeSet
+    "set of 2-colored trees"
+    disjoint_sets::DisjointSets{Tuple{Int,Int}}
+    "???"  # TODO: fill this
+    parent::Vector{Int}
 end

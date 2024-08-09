@@ -5,8 +5,6 @@ using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
-include("reference/figures.jl")
-
 @testset verbose = true "SparseMatrixColorings" begin
     @testset verbose = true "Code quality" begin
         if VERSION >= v"1.10"
