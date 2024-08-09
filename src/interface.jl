@@ -45,7 +45,7 @@ end
 """
     GreedyColoringAlgorithm <: ADTypes.AbstractColoringAlgorithm
 
-Greedy coloring algorithm for sparse matrices, which colors columns or rows one after the other, following a configurable order.
+Greedy coloring algorithm for sparse matrices which colors columns or rows one after the other, following a configurable order.
 
 It is used inside the main function [`coloring`](@ref).
 
