@@ -83,10 +83,26 @@ end
 
 ## Concrete subtypes
 
+"""
+$TYPEDEF
+
+Default storage for the result of a coloring algorithm, containing minimal information.
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
 struct DefaultColoringResult{structure,partition,decompression,M} <:
        AbstractColoringResult{structure,partition,decompression,M}
+    "matrix that was colored"
     matrix::M
+    "one integer color for each column or row (depending on `partition`)"
     color::Vector{Int}
+    "color groups for columns or rows (depending on `partition`)"
     group::Vector{Vector{Int}}
 end
 

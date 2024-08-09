@@ -79,6 +79,13 @@ SparseMatrixColorings.group_by_color
 SparseMatrixColorings.get_matrix
 ```
 
+### Concrete coloring results
+
+```@docs
+SparseMatrixColorings.DefaultColoringResult
+SparseMatrixColorings.DirectSparseColoringResult
+```
+
 ### Testing
 
 ```@docs

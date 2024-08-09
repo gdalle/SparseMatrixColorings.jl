@@ -119,23 +119,22 @@ function star_coloring(g::Graph, order::AbstractOrder)
 end
 
 """
-    StarSet
+$TYPEDEF
 
 Encode a set of 2-colored stars resulting from the star coloring algorithm.
 
 # Fields
 
-The fields are not part of the public API, even though the type is.
-
-- `star::Dict{Tuple{Int,Int},Int}`: a mapping from edges (pair of vertices) their to star index
-- `hub::Vector{Int}`: a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)
+$TYPEDFIELDS
 
 # References
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 struct StarSet
+    "a mapping from edges (pair of vertices) their to star index"
     star::Dict{Tuple{Int,Int},Int}
+    "a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)"
     hub::Vector{Int}
 end
 

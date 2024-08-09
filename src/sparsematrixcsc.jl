@@ -1,10 +1,27 @@
 ## Result
 
+"""
+$TYPEDEF
+
+Storage for the result of a coloring algorithm when the decompression target is a `SparseMatrixCSC`.
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
 struct DirectSparseColoringResult{structure,partition,M} <:
        AbstractColoringResult{structure,partition,:direct,M}
+    "matrix that was colored"
     matrix::M
+    "one integer color for each column or row (depending on `partition`)"
     color::Vector{Int}
+    "color groups for columns or rows (depending on `partition`)"
     group::Vector{Vector{Int}}
+    "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A`: they satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
     compressed_indices::Vector{Int}
 end
 

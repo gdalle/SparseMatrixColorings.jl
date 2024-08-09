@@ -2,13 +2,17 @@
     SparseMatrixColorings
 
 $README
+
+## Exports
+
+$EXPORTS
 """
 module SparseMatrixColorings
 
 using ADTypes:
     ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
 using Compat: @compat, stack
-using DocStringExtensions: README
+using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
     Diagonal,
