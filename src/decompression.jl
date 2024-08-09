@@ -98,9 +98,10 @@ function decompress_aux!(
     result::AbstractColoringResult{:symmetric,:column,:substitution},
 ) where {R<:Real}
     # build T such that T * upper_nonzeros(A) = B and invert the linear system
-    # only consider the upper triangle of A because of symmetry    
+    # only consider the upper triangle of A because of symmetry
+    # TODO: make more efficient
     A .= zero(R)
-    S = get_matrix(result)
+    S = sparse(get_matrix(result))
     color = column_colors(result)
 
     n = checksquare(S)

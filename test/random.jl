@@ -74,24 +74,35 @@ end;
 end;
 
 @testset "Symmetric coloring & decompression" begin
-    problem = ColoringProblem(;
-        structure=:symmetric, partition=:column, decompression=:direct
+    problems = Dict(
+        :direct => ColoringProblem(;
+            structure=:symmetric, partition=:column, decompression=:direct
+        ),
+        :substitution => ColoringProblem(;
+            structure=:symmetric, partition=:column, decompression=:substitution
+        ),
     )
-    @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
-        A0 = Symmetric(sprand(rng, n, n, p))
-        @testset "A::$(typeof(A))" for A in matrix_versions(A0)
-            # Naive decompression
-            result = coloring(A, problem, algo)
-            color = column_colors(result)
-            group = column_groups(result)
-            B = stack(group; dims=2) do g
-                dropdims(sum(A[:, g]; dims=2); dims=2)
+    @testset "$key" for (key, problem) in pairs(problems)
+        @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
+            A0 = Symmetric(sprand(rng, n, n, p))
+            @testset "A::$(typeof(A))" for A in matrix_versions(A0)
+                result = coloring(A, problem, algo)
+                color = column_colors(result)
+                group = column_groups(result)
+                B = stack(group; dims=2) do g
+                    dropdims(sum(A[:, g]; dims=2); dims=2)
+                end
+                if key == :direct
+                    @test color == symmetric_coloring(A, algo)
+                    @test symmetrically_orthogonal_columns(A, color)
+                    @test directly_recoverable_columns(A, color)
+                    @test decompress(B, result) == A
+                    @test decompress!(respectful_similar(A), B, result) == A
+                elseif key == :substitution
+                    @test decompress(B, result) ≈ A
+                    @test decompress!(respectful_similar(A), B, result) ≈ A
+                end
             end
-            @test color == symmetric_coloring(A, algo)
-            @test symmetrically_orthogonal_columns(A, color)
-            @test directly_recoverable_columns(A, color)
-            @test decompress(B, result) == A
-            @test decompress!(respectful_similar(A), B, result) == A
         end
     end
 end;
