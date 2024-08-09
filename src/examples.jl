@@ -172,13 +172,13 @@ function efficient_fig_4()
         1,  # 1. red
         2,  # 2. cyan
         1,  # 3. red
-        3,  # 4. cyan
+        2,  # 4. cyan
         1,  # 5. red
-        4,  # 6. yellow
-        3,  # 7. cyan
-        5,  # 8. yellow
-        1,  # 9. cyan
-        2,  # 10. red
+        3,  # 6. yellow
+        2,  # 7. cyan
+        3,  # 8. yellow
+        2,  # 9. cyan
+        1,  # 10. red
     ]
     B = hcat(
         A[:, 1] .+ A[:, 3] .+ A[:, 5] .+ A[:, 10], # red
