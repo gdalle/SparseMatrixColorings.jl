@@ -37,7 +37,7 @@ function what_fig_41()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = sparse(Symmetric(M))
+    A = float.(sparse(Symmetric(M)))
     color = [
         1,  # 1. green
         2,  # 2. red
@@ -77,7 +77,7 @@ function what_fig_61()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = sparse(Symmetric(M))
+    A = float.(sparse(Symmetric(M)))
     color = [
         1,  # 1. red
         2,  # 2. blue
@@ -90,10 +90,12 @@ function what_fig_61()
         2,  # 9. blue
         3,  # 10. green
     ]
-    B = hcat(
-        A[:, 1] .+ A[:, 3] .+ A[:, 5],  # red
-        A[:, 2] .+ A[:, 4] .+ A[:, 7] .+ A[:, 9],  # blue
-        A[:, 6] .+ A[:, 8] .+ A[:, 10],  # green
+    B = Matrix(
+        hcat(
+            A[:, 1] .+ A[:, 3] .+ A[:, 5],  # red
+            A[:, 2] .+ A[:, 4] .+ A[:, 7] .+ A[:, 9],  # blue
+            A[:, 6] .+ A[:, 8] .+ A[:, 10],  # green
+        ),
     )
     return Example(A, B, color)
 end
@@ -121,7 +123,7 @@ function efficient_fig_1()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = sparse(Symmetric(M))
+    A = float.(sparse(Symmetric(M)))
     color = [
         1,  # 1. red
         2,  # 2. cyan
@@ -134,12 +136,14 @@ function efficient_fig_1()
         1,  # 9. red
         2,  # 10. cyan
     ]
-    B = hcat(
-        A[:, 1] .+ A[:, 3] .+ A[:, 5] .+ A[:, 9], # red
-        A[:, 2] .+ A[:, 10],  # cyan
-        A[:, 4] .+ A[:, 7],  # yellow
-        A[:, 6],  # green
-        A[:, 8],  # navy blue
+    B = Matrix(
+        hcat(
+            A[:, 1] .+ A[:, 3] .+ A[:, 5] .+ A[:, 9], # red
+            A[:, 2] .+ A[:, 10],  # cyan
+            A[:, 4] .+ A[:, 7],  # yellow
+            A[:, 6],  # green
+            A[:, 8],  # navy blue
+        ),
     )
     return Example(A, B, color)
 end
@@ -167,7 +171,7 @@ function efficient_fig_4()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = sparse(Symmetric(M))
+    A = float.(sparse(Symmetric(M)))
     color = [
         1,  # 1. red
         2,  # 2. cyan
@@ -180,10 +184,12 @@ function efficient_fig_4()
         2,  # 9. cyan
         1,  # 10. red
     ]
-    B = hcat(
-        A[:, 1] .+ A[:, 3] .+ A[:, 5] .+ A[:, 10], # red
-        A[:, 2] .+ A[:, 4] .+ A[:, 7] .+ A[:, 9],  # cyan
-        A[:, 6] .+ A[:, 8],  # yellow
+    B = Matrix(
+        hcat(
+            A[:, 1] .+ A[:, 3] .+ A[:, 5] .+ A[:, 10], # red
+            A[:, 2] .+ A[:, 4] .+ A[:, 7] .+ A[:, 9],  # cyan
+            A[:, 6] .+ A[:, 8],  # yellow
+        ),
     )
     return Example(A, B, color)
 end

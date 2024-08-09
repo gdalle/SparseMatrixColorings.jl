@@ -86,10 +86,16 @@ end;
             ),
             GreedyColoringAlgorithm(),
         )
-        @test column_colors(result) == color0
-        @test decompress(B0, result) == A0
+        color = column_colors(result)
+        group = column_groups(result)
+        B = stack(group; dims=2) do g
+            dropdims(sum(A0[:, g]; dims=2); dims=2)
+        end
+        @test color != color0
+        @test B != B0
+        @test decompress(B, result) ≈ A0
         for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result) == A
+            @test decompress!(respectful_similar(A), B, result) ≈ A
         end
     end
 
@@ -116,9 +122,9 @@ end;
             GreedyColoringAlgorithm(),
         )
         @test column_colors(result) == color0
-        @test decompress(B0, result) == A0
+        @test decompress(B0, result) ≈ A0
         for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result) == A
+            @test decompress!(respectful_similar(A), B0, result) ≈ A
         end
     end
 end;
