@@ -1,31 +1,20 @@
 ## Abstract type
 
 """
-    AbstractColoringResult{
-        structure,
-        partition,
-        decompression,
-        M<:AbstractMatrix
-    }
+    AbstractColoringResult
 
 Abstract type for the result of a coloring algorithm.
 
-!!! warning
-    Concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
-
-# Type parameters
-
-- `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
-- `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
-- `decompression::Symbol`: either `:direct` or `:substitution`
-- `M`: type of the matrix that was colored
+It is the supertype of the object returned by the main function [`coloring`](@ref).
 
 # Applicable methods
 
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
-- [`get_matrix`](@ref)
-- decompression utilities
+- [`decompress`](@ref) and [`decompress!`](@ref)
+
+!!! warning
+    Unlike the methods above, the concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 """
 abstract type AbstractColoringResult{structure,partition,decompression,M<:AbstractMatrix} end
 
