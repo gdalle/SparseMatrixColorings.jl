@@ -63,6 +63,8 @@ It defaults to [`NaturalOrder`](@ref) for reproducibility, but [`LargestFirst`](
 - [`ADTypes.column_coloring`](@extref ADTypes.column_coloring)
 - [`ADTypes.row_coloring`](@extref ADTypes.row_coloring)
 - [`ADTypes.symmetric_coloring`](@extref ADTypes.symmetric_coloring)
+
+See their respective docstrings for details.
 """
 struct GreedyColoringAlgorithm{O<:AbstractOrder} <: ADTypes.AbstractColoringAlgorithm
     order::O
@@ -111,6 +113,7 @@ julia> column_groups(result)
  [1, 2, 4]
  [3, 5]
  [6]
+```
 
 # See also
 

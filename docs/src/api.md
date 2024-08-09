@@ -11,7 +11,7 @@ CurrentModule = SparseMatrixColorings
 SparseMatrixColorings
 ```
 
-### Entry point
+### Main function
 
 ```@docs
 coloring
