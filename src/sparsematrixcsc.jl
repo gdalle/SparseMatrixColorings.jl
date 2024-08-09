@@ -65,7 +65,7 @@ function coloring(
     return DirectSparseColoringResult{:nonsymmetric,:row}(S, color, compressed_indices)
 end
 
-function symmetric_coloring_detailed(
+function coloring(
     S::SparseMatrixCSC,
     ::ColoringProblem{:symmetric,:column,:direct},
     algo::GreedyColoringAlgorithm,
