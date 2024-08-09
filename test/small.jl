@@ -139,7 +139,7 @@ end;
         )
         @test column_colors(result) == color
 
-        group = color_groups(color)
+        group = group_by_color(color)
         B = stack(group; dims=2) do g
             dropdims(sum(A0[:, g]; dims=2); dims=2)
         end
