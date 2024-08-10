@@ -99,7 +99,7 @@ function decompress_aux!(
 ) where {R<:Real}
     # build T such that T * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
-    # only consider the strict lower triangle of A because of symmetry
+    # only consider the strict upper triangle of A because of symmetry
     # TODO: make more efficient
     A .= zero(R)
     S = sparse(get_matrix(result))
