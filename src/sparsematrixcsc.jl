@@ -33,14 +33,6 @@ function DirectSparseColoringResult{structure,partition}(
     )
 end
 
-get_matrix(result::DirectSparseColoringResult) = result.matrix
-
-column_colors(result::DirectSparseColoringResult{s,:column}) where {s} = result.color
-column_groups(result::DirectSparseColoringResult{s,:column}) where {s} = result.group
-
-row_colors(result::DirectSparseColoringResult{s,:row}) where {s} = result.color
-row_groups(result::DirectSparseColoringResult{s,:row}) where {s} = result.group
-
 ## Coloring
 
 function coloring(
