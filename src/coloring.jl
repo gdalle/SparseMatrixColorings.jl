@@ -76,7 +76,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nv = nvertices(g)
+    nv = length(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
@@ -280,8 +280,8 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function acyclic_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nv = nvertices(g)
-    ne = nedges(g)
+    nv = length(g)
+    ne = nnz(g) ÷ 2  # symmetric sparse matrix with empty diagonal
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
