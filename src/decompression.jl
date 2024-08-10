@@ -1,7 +1,34 @@
 """
+    compress(A, result::AbstractColoringResult)
+
+Compress `A` into a new matrix `B`, given a coloring `result` of the sparsity pattern of `A`.
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+function compress end
+
+function compress(A, result::AbstractColoringResult{structure,:column}) where {structure}
+    group = column_groups(result)
+    B = stack(group; dims=2) do g
+        dropdims(sum(A[:, g]; dims=2); dims=2)
+    end
+    return B
+end
+
+function compress(A, result::AbstractColoringResult{structure,:row}) where {structure}
+    group = row_groups(result)
+    B = stack(group; dims=1) do g
+        dropdims(sum(A[g, :]; dims=1); dims=1)
+    end
+    return B
+end
+
+"""
     decompress(B::AbstractMatrix, result::AbstractColoringResult)
 
-Decompress `B` out-of-place into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
+Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 
 # See also
 
@@ -19,7 +46,7 @@ end
         result::AbstractColoringResult,
     )
 
-Decompress `B` in-place into an existing matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
+Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
 
 # See also
 
