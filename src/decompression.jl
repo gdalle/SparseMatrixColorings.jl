@@ -3,6 +3,37 @@
 
 Compress `A` into a new matrix `B`, given a coloring `result` of the sparsity pattern of `A`.
 
+Compression means summing either the columns or the rows of `A` which share the same color.
+It is undone by calling [`decompress`](@ref).
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> A = sparse([
+           0 0 4 6 0 9
+           1 0 0 0 7 0
+           0 2 0 0 8 0
+           0 3 5 0 0 0
+       ]);
+
+julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
+
+julia> column_groups(result)
+3-element Vector{Vector{Int64}}:
+ [1, 2, 4]
+ [3, 5]
+ [6]
+
+julia> B = compress(A, result)
+4×3 Matrix{Int64}:
+ 6  4  9
+ 1  7  0
+ 2  8  0
+ 3  5  0
+```
+
 # See also
 
 - [`AbstractColoringResult`](@ref)
@@ -30,6 +61,47 @@ end
 
 Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 
+Compression means summing either the columns or the rows of `A` which share the same color.
+It is done by calling [`compress`](@ref).
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> A = sparse([
+           0 0 4 6 0 9
+           1 0 0 0 7 0
+           0 2 0 0 8 0
+           0 3 5 0 0 0
+       ]);
+
+julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
+
+julia> column_groups(result)
+3-element Vector{Vector{Int64}}:
+ [1, 2, 4]
+ [3, 5]
+ [6]
+
+julia> B = compress(A, result)
+4×3 Matrix{Int64}:
+ 6  4  9
+ 1  7  0
+ 2  8  0
+ 3  5  0
+
+julia> decompress(B, result)
+4×6 SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+ ⋅  ⋅  4  6  ⋅  9
+ 1  ⋅  ⋅  ⋅  7  ⋅
+ ⋅  2  ⋅  ⋅  8  ⋅
+ ⋅  3  5  ⋅  ⋅  ⋅
+
+julia> decompress(B, result) == A
+true
+```
+
 # See also
 
 - [`AbstractColoringResult`](@ref)
@@ -47,6 +119,49 @@ end
     )
 
 Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
+
+Compression means summing either the columns or the rows of `A` which share the same color.
+It is done by calling [`compress`](@ref).
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> A = sparse([
+           0 0 4 6 0 9
+           1 0 0 0 7 0
+           0 2 0 0 8 0
+           0 3 5 0 0 0
+       ]);
+
+julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
+
+julia> column_groups(result)
+3-element Vector{Vector{Int64}}:
+ [1, 2, 4]
+ [3, 5]
+ [6]
+
+julia> B = compress(A, result)
+4×3 Matrix{Int64}:
+ 6  4  9
+ 1  7  0
+ 2  8  0
+ 3  5  0
+
+julia> A2 = similar(A);
+
+julia> decompress!(A2, B, result)
+4×6 SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+ ⋅  ⋅  4  6  ⋅  9
+ 1  ⋅  ⋅  ⋅  7  ⋅
+ ⋅  2  ⋅  ⋅  8  ⋅
+ ⋅  3  5  ⋅  ⋅  ⋅
+
+julia> A2 == A
+true
+```
 
 # See also
 
