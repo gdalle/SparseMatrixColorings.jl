@@ -1,11 +1,19 @@
 ## Abstract type
 
 """
-    AbstractColoringResult
+    AbstractColoringResult{structure,partition,decompression}
 
 Abstract type for the result of a coloring algorithm.
 
 It is the supertype of the object returned by the main function [`coloring`](@ref).
+
+# Type parameters
+
+Same as those of the [`ColoringProblem`](@ref) that was solved to obtain the result:
+
+- `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
+- `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
+- `decompression::Symbol`: either `:direct` or `:substitution`
 
 # Applicable methods
 

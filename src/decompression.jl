@@ -1,10 +1,16 @@
 """
     compress(A, result::AbstractColoringResult)
 
-Compress `A` into a new matrix `B`, given a coloring `result` of the sparsity pattern of `A`.
+Compress `A` given a coloring `result` of the sparsity pattern of `A`.
+
+- If `result` comes from a `:column` (resp. `:row`) partition, the output is a single matrix `B` compressed by column (resp. by row).
+- If `result` comes from a `:bidirectional` partition, the output is a tuple of matrices `(Br, Bc)`, where `Br` is compressed by row and `Bc` by column.
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is undone by calling [`decompress`](@ref).
+
+!!! warning
+    At the moment, `:bidirectional` partitions are not implemented.
 
 # Example
 
@@ -36,6 +42,7 @@ julia> B = compress(A, result)
 
 # See also
 
+- [`ColoringProblem`](@ref)
 - [`AbstractColoringResult`](@ref)
 """
 function compress end
@@ -104,6 +111,7 @@ true
 
 # See also
 
+- [`ColoringProblem`](@ref)
 - [`AbstractColoringResult`](@ref)
 """
 function decompress(B::AbstractMatrix{R}, result::AbstractColoringResult) where {R<:Real}
@@ -165,6 +173,7 @@ true
 
 # See also
 
+- [`ColoringProblem`](@ref)
 - [`AbstractColoringResult`](@ref)
 """
 function decompress!(

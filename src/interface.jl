@@ -3,7 +3,7 @@
 
 Selector type for the coloring problem to solve, enabling multiple dispatch.
 
-It is used inside the main function [`coloring`](@ref).
+It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructor
 
@@ -23,11 +23,15 @@ It is used inside the main function [`coloring`](@ref).
 
 Matrix coloring is often used in automatic differentiation, and here is the translation guide:
 
-| matrix   | mode                 | `structure`     | `partition` |
-| -------- | -------------------- | --------------- | ----------- |
-| Jacobian | forward              | `:nonsymmetric` | `:column`   |
-| Jacobian | reverse              | `:nonsymmetric` | `:row`      |
-| Hessian  | forward-over-reverse | `:symmetric`    | `:column`   |
+| matrix   | mode                 | `structure`     | `partition`      |
+| -------- | -------------------- | --------------- | -----------------|
+| Jacobian | forward              | `:nonsymmetric` | `:column`        |
+| Jacobian | reverse              | `:nonsymmetric` | `:row`           |
+| Jacobian | forward + reverse    | `:nonsymmetric` | `:bidirectional` |
+| Hessian  | any                  | `:symmetric`    | `:column`        |
+
+!!! warning
+    At the moment, `:bidirectional` partitions are not implemented.
 """
 struct ColoringProblem{structure,partition,decompression} end
 
@@ -47,7 +51,7 @@ end
 
 Greedy coloring algorithm for sparse matrices which colors columns or rows one after the other, following a configurable order.
 
-It is used inside the main function [`coloring`](@ref).
+It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructor
 
