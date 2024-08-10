@@ -93,6 +93,20 @@ function decompress_aux!(
 end
 
 function decompress_aux!(
+    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::StarSetColoringResult{:column}
+) where {R<:Real}
+    A .= zero(R)
+    S = get_matrix(result)
+    color = column_colors(result)
+    for ij in findall(!iszero, S)
+        i, j = Tuple(ij)
+        k, l = symmetric_coefficient(i, j, color, result.star_set)
+        A[i, j] = B[k, l]
+    end
+    return A
+end
+
+function decompress_aux!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:symmetric,:column,:substitution},

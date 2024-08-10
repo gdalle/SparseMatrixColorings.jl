@@ -70,6 +70,14 @@ function group_by_color(color::AbstractVector{<:Integer})
     return group
 end
 
+get_matrix(result::AbstractColoringResult) = result.matrix
+
+column_colors(result::AbstractColoringResult{s,:column}) where {s} = result.color
+column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.group
+
+row_colors(result::AbstractColoringResult{s,:row}) where {s} = result.color
+row_groups(result::AbstractColoringResult{s,:row}) where {s} = result.group
+
 ## Concrete subtypes
 
 """
@@ -103,10 +111,64 @@ function DefaultColoringResult{structure,partition,decompression}(
     )
 end
 
-get_matrix(result::DefaultColoringResult) = result.matrix
+"""
+$TYPEDEF
 
-column_colors(result::DefaultColoringResult{s,:column}) where {s} = result.color
-column_groups(result::DefaultColoringResult{s,:column}) where {s} = result.group
+Storage for the result of a symmetric coloring algorithm with direct decompression.
 
-row_colors(result::DefaultColoringResult{s,:row}) where {s} = result.color
-row_groups(result::DefaultColoringResult{s,:row}) where {s} = result.group
+Similar to [`DefaultColoringResult`](@ref) but contains an additional [`StarSet`](@ref).
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct StarSetColoringResult{partition,M} <:
+       AbstractColoringResult{:symmetric,partition,:direct,M}
+    matrix::M
+    color::Vector{Int}
+    group::Vector{Vector{Int}}
+    star_set::StarSet
+end
+
+function StarSetColoringResult{partition}(
+    matrix::M, color::Vector{Int}, star_set::StarSet
+) where {partition,M}
+    return StarSetColoringResult{partition,M}(
+        matrix, color, group_by_color(color), star_set
+    )
+end
+
+"""
+$TYPEDEF
+
+Storage for the result of a symmetric coloring algorithm with decompression by substitution.
+
+Similar to [`DefaultColoringResult`](@ref) but contains an additional [`TreeSet`](@ref).
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct TreeSetColoringResult{partition,M} <:
+       AbstractColoringResult{:symmetric,partition,:substitution,M}
+    matrix::M
+    color::Vector{Int}
+    group::Vector{Vector{Int}}
+    tree_set::TreeSet
+end
+
+function TreeSetColoringResult{partition}(
+    matrix::M, color::Vector{Int}, tree_set::TreeSet
+) where {partition,M}
+    return TreeSetColoringResult{partition,M}(
+        matrix, color, group_by_color(color), tree_set
+    )
+end
