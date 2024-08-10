@@ -35,6 +35,8 @@ SparseMatrixColorings.TreeSet
 
 ```@docs
 SparseMatrixColorings.DefaultColoringResult
+SparseMatrixColorings.StarSetColoringResult
+SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.DirectSparseColoringResult
 ```
 
