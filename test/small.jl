@@ -20,7 +20,10 @@ using Test
 
 algo = GreedyColoringAlgorithm()
 
-@testset "Column decompression" begin
+@testset "Column coloring & decompression" begin
+    problem = ColoringProblem(;
+        structure=:nonsymmetric, partition=:column, decompression=:direct
+    )
     A0 = sparse([
         1 0 2
         0 3 4
@@ -32,17 +35,15 @@ algo = GreedyColoringAlgorithm()
         5 0
     ]
     color0 = [1, 1, 2]
-    result0 = DefaultColoringResult{:nonsymmetric,:column,:direct}(A0, color0)
     @test structurally_orthogonal_columns(A0, color0)
     @test directly_recoverable_columns(A0, color0)
-    @test compress(A0, result0) == B0
-    @test decompress(B0, result0) == A0
-    for A in matrix_versions(A0)
-        @test decompress!(respectful_similar(A), B0, result0) == A
-    end
+    test_coloring_decompression(A0, problem, algo; B0, color0)
 end;
 
-@testset "Row decompression" begin
+@testset "Row coloring & decompression" begin
+    problem = ColoringProblem(;
+        structure=:nonsymmetric, partition=:row, decompression=:direct
+    )
     A0 = sparse([
         1 0 3
         0 2 0
@@ -53,85 +54,46 @@ end;
         4 5 0
     ]
     color0 = [1, 1, 2]
-    result0 = DefaultColoringResult{:nonsymmetric,:row,:direct}(A0, color0)
     @test structurally_orthogonal_columns(transpose(A0), color0)
     @test directly_recoverable_columns(transpose(A0), color0)
-    @test compress(A0, result0) == B0
-    @test decompress(B0, result0) == A0
-    for A in matrix_versions(A0)
-        @test decompress!(respectful_similar(A), B0, result0) == A
+    test_coloring_decompression(A0, problem, algo; B0, color0)
+end;
+
+@testset "Symmetric coloring & direct decompression" begin
+    problem = ColoringProblem(;
+        structure=:symmetric, partition=:column, decompression=:direct
+    )
+    @testset "Fig 4.1 from 'What color is your Jacobian'" begin
+        example = what_fig_41()
+        A0, B0, color0 = example.A, example.B, example.color
+        @test symmetrically_orthogonal_columns(A0, color0)
+        @test directly_recoverable_columns(A0, color0)
+        test_coloring_decompression(A0, problem, algo; B0, color0)
+    end
+
+    @testset "Fig 1 from 'Efficient computation of sparse hessians using coloring and AD'" begin
+        example = efficient_fig_1()
+        A0, B0, color0 = example.A, example.B, example.color
+        @test symmetrically_orthogonal_columns(A0, color0)
+        @test directly_recoverable_columns(A0, color0)
+        test_coloring_decompression(A0, problem, algo; B0, color0)
     end
 end;
 
-@testset "Symmetric decompression" begin
-    @testset "Direct - Fig 4.1 from 'What color is your Jacobian'" begin
-        example = what_fig_41()
-        A0, B0, color0 = example.A, example.B, example.color
-        result0 = DefaultColoringResult{:symmetric,:column,:direct}(A0, color0)
-        @test symmetrically_orthogonal_columns(A0, color0)
-        @test directly_recoverable_columns(A0, color0)
-        @test compress(A0, result0) == B0
-        @test decompress(B0, result0) == A0
-        for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result0) == A
-        end
-    end
-
-    @testset "Substitution - Fig 6.1 from 'What color is your Jacobian'" begin
+@testset "Symmetric coloring & substitution decompression" begin
+    problem = ColoringProblem(;
+        structure=:symmetric, partition=:column, decompression=:substitution
+    )
+    @testset "Fig 6.1 from 'What color is your Jacobian'" begin
         example = what_fig_61()
         A0, B0, color0 = example.A, example.B, example.color
-        result0 = DefaultColoringResult{:symmetric,:column,:substitution}(A0, color0)
-        result = coloring(
-            A0,
-            ColoringProblem(;
-                structure=:symmetric, partition=:column, decompression=:substitution
-            ),
-            GreedyColoringAlgorithm(),
-        )
-        B = compress(A0, result)
-        @test column_colors(result) != color0
-        @test B != B0
-        @test compress(A0, result0) == B0
-        @test decompress(B, result) ≈ A0
-        @test decompress(B0, result0) ≈ A0
-        for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result0) ≈ A
-            @test decompress!(respectful_similar(A), B, result) ≈ A
-        end
+        # our coloring doesn't give the color0 from the example, but that's okay
+        test_coloring_decompression(A0, problem, algo)
     end
 
-    @testset "Direct - Fig 1 from 'Efficient computation of sparse hessians using coloring and AD'" begin
-        example = efficient_fig_1()
-        A0, B0, color0 = example.A, example.B, example.color
-        result0 = DefaultColoringResult{:symmetric,:column,:direct}(A0, color0)
-        @test symmetrically_orthogonal_columns(A0, color0)
-        @test directly_recoverable_columns(A0, color0)
-        @test compress(A0, result0) == B0
-        @test decompress(B0, result0) == A0
-        for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result0) == A
-        end
-    end
-
-    @testset "Substitution - Fig 4 from 'Efficient computation of sparse hessians using coloring and AD'" begin
+    @testset "Fig 4 from 'Efficient computation of sparse hessians using coloring and AD'" begin
         example = efficient_fig_4()
         A0, B0, color0 = example.A, example.B, example.color
-        result0 = DefaultColoringResult{:symmetric,:column,:substitution}(A0, color0)
-        result = coloring(
-            A0,
-            ColoringProblem(;
-                structure=:symmetric, partition=:column, decompression=:substitution
-            ),
-            GreedyColoringAlgorithm(),
-        )
-        @test column_colors(result) == color0
-        @test compress(A0, result0) == B0
-        @test compress(A0, result) == B0
-        @test decompress(B0, result0) ≈ A0
-        @test decompress(B0, result) ≈ A0
-        for A in matrix_versions(A0)
-            @test decompress!(respectful_similar(A), B0, result0) ≈ A
-            @test decompress!(respectful_similar(A), B0, result) ≈ A
-        end
+        test_coloring_decompression(A0, problem, algo; B0, color0)
     end
 end;
