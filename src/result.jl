@@ -116,7 +116,7 @@ $TYPEDEF
 
 Storage for the result of a symmetric coloring algorithm with direct decompression.
 
-Similar to [`DefaultColoringResult`](@ref) but contains an additional [`StarSet`](@ref) to speed up direct decompression.
+Similar to [`DefaultColoringResult`](@ref) but contains an additional [`StarSet`](@ref).
 
 # Fields
 
@@ -145,9 +145,9 @@ end
 """
 $TYPEDEF
 
-Storage for the result of a symmetric coloring algorithm with direct decompression.
+Storage for the result of a symmetric coloring algorithm with decompression by substitution.
 
-Similar to [`DefaultColoringResult`](@ref) but contains an additional [`StarSet`](@ref) to speed up direct decompression.
+Similar to [`DefaultColoringResult`](@ref) but contains an additional [`TreeSet`](@ref).
 
 # Fields
 
