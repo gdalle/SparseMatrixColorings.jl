@@ -111,6 +111,22 @@ function DefaultColoringResult{structure,partition,decompression}(
     )
 end
 
+function DefaultColoringResult(
+    result::AbstractColoringResult{structure,:column,decompression}
+) where {structure,decompression}
+    return DefaultColoringResult{structure,:column,decompression}(
+        get_matrix(result), column_colors(result)
+    )
+end
+
+function DefaultColoringResult(
+    result::AbstractColoringResult{structure,:row,decompression}
+) where {structure,decompression}
+    return DefaultColoringResult{structure,:row,decompression}(
+        get_matrix(result), row_colors(result)
+    )
+end
+
 """
 $TYPEDEF
 
