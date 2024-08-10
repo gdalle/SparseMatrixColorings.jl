@@ -5,11 +5,7 @@ using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    adjacency_graph,
-    bipartite_graph,
-    decompress!,
-    partial_distance2_coloring!,
-    respectful_similar
+    adjacency_graph, bipartite_graph, partial_distance2_coloring!, respectful_similar
 using StableRNGs
 using Test
 
