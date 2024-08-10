@@ -49,11 +49,11 @@ include("sparsematrixcsc.jl")
 include("examples.jl")
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
-@compat public decompress, decompress!
 
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
+export decompress, decompress!
 
 end

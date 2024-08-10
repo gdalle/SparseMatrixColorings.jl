@@ -6,8 +6,6 @@ using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
     DefaultColoringResult,
-    decompress,
-    decompress!,
     group_by_color,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
