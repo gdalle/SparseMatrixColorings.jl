@@ -35,6 +35,7 @@ algo = GreedyColoringAlgorithm()
     result0 = DefaultColoringResult{:nonsymmetric,:column,:direct}(A0, color0)
     @test structurally_orthogonal_columns(A0, color0)
     @test directly_recoverable_columns(A0, color0)
+    @test compress(A0, result0) == B0
     @test decompress(B0, result0) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B0, result0) == A
@@ -55,6 +56,7 @@ end;
     result0 = DefaultColoringResult{:nonsymmetric,:row,:direct}(A0, color0)
     @test structurally_orthogonal_columns(transpose(A0), color0)
     @test directly_recoverable_columns(transpose(A0), color0)
+    @test compress(A0, result0) == B0
     @test decompress(B0, result0) == A0
     for A in matrix_versions(A0)
         @test decompress!(respectful_similar(A), B0, result0) == A
@@ -68,6 +70,7 @@ end;
         result0 = DefaultColoringResult{:symmetric,:column,:direct}(A0, color0)
         @test symmetrically_orthogonal_columns(A0, color0)
         @test directly_recoverable_columns(A0, color0)
+        @test compress(A0, result0) == B0
         @test decompress(B0, result0) == A0
         for A in matrix_versions(A0)
             @test decompress!(respectful_similar(A), B0, result0) == A
@@ -84,13 +87,11 @@ end;
                 structure=:symmetric, partition=:column, decompression=:substitution
             ),
             GreedyColoringAlgorithm(),
-        )  # returns a TreeSetColoringResult
-        group = column_groups(result)
-        B = stack(group; dims=2) do g
-            dropdims(sum(A0[:, g]; dims=2); dims=2)
-        end
+        )
+        B = compress(A0, result)
         @test column_colors(result) != color0
         @test B != B0
+        @test compress(A0, result0) == B0
         @test decompress(B, result) ≈ A0
         @test decompress(B0, result0) ≈ A0
         for A in matrix_versions(A0)
@@ -105,6 +106,7 @@ end;
         result0 = DefaultColoringResult{:symmetric,:column,:direct}(A0, color0)
         @test symmetrically_orthogonal_columns(A0, color0)
         @test directly_recoverable_columns(A0, color0)
+        @test compress(A0, result0) == B0
         @test decompress(B0, result0) == A0
         for A in matrix_versions(A0)
             @test decompress!(respectful_similar(A), B0, result0) == A
@@ -121,8 +123,10 @@ end;
                 structure=:symmetric, partition=:column, decompression=:substitution
             ),
             GreedyColoringAlgorithm(),
-        )  # returns a TreeSetColoringResult
+        )
         @test column_colors(result) == color0
+        @test compress(A0, result0) == B0
+        @test compress(A0, result) == B0
         @test decompress(B0, result0) ≈ A0
         @test decompress(B0, result) ≈ A0
         for A in matrix_versions(A0)

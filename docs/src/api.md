@@ -32,6 +32,7 @@ row_groups
 ## Decompression
 
 ```@docs
+compress
 decompress
 decompress!
 ```

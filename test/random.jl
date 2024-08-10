@@ -38,10 +38,7 @@ symmetric_params = vcat(
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             result = coloring(A, problem, algo)
             color = column_colors(result)
-            group = column_groups(result)
-            B = stack(group; dims=2) do g
-                dropdims(sum(A[:, g]; dims=2); dims=2)
-            end
+            B = compress(A, result)
             @test color == column_coloring(A, algo)
             @test structurally_orthogonal_columns(A, color)
             @test directly_recoverable_columns(A, color)
@@ -60,10 +57,7 @@ end;
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             result = coloring(A, problem, algo)
             color = row_colors(result)
-            group = row_groups(result)
-            B = stack(group; dims=1) do g
-                dropdims(sum(A[g, :]; dims=1); dims=1)
-            end
+            B = compress(A, result)
             @test color == row_coloring(A, algo)
             @test structurally_orthogonal_columns(transpose(A), color)
             @test directly_recoverable_columns(transpose(A), color)
@@ -88,10 +82,7 @@ end;
             @testset "A::$(typeof(A))" for A in matrix_versions(A0)
                 result = coloring(A, problem, algo)
                 color = column_colors(result)
-                group = column_groups(result)
-                B = stack(group; dims=2) do g
-                    dropdims(sum(A[:, g]; dims=2); dims=2)
-                end
+                B = compress(A, result)
                 if key == :direct
                     @test color == symmetric_coloring(A, algo)
                     @test symmetrically_orthogonal_columns(A, color)
