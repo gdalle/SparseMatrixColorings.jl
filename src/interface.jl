@@ -150,8 +150,7 @@ function coloring(
 )
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
-    # TODO: handle star_set
-    return DefaultColoringResult{:symmetric,:column,:direct}(S, color)
+    return StarSetColoringResult{:column}(S, color, star_set)
 end
 
 function coloring(
@@ -161,8 +160,7 @@ function coloring(
 )
     ag = adjacency_graph(S)
     color, tree_set = acyclic_coloring(ag, algo.order)
-    # TODO: handle tree_set
-    return DefaultColoringResult{:symmetric,:column,:substitution}(S, color)
+    return TreeSetColoringResult{:column}(S, color, tree_set)
 end
 
 ## ADTypes interface
