@@ -97,7 +97,7 @@ function decompress_aux!(
     B::AbstractMatrix{R},
     result::AbstractColoringResult{:symmetric,:column,:substitution},
 ) where {R<:Real}
-    # build T such that T * strict_lower_nonzeros(A) = B
+    # build T such that T * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
     # only consider the strict lower triangle of A because of symmetry
     # TODO: make more efficient
@@ -106,15 +106,15 @@ function decompress_aux!(
     color = column_colors(result)
 
     n = checksquare(S)
-    nonzero_inds = Tuple{Int,Int}[]
+    strict_upper_nonzero_inds = Tuple{Int,Int}[]
     I, J, _ = findnz(S)
     for (i, j) in zip(I, J)
-        (i > j) && push!(nonzero_inds, (i, j))
+        (i < j) && push!(strict_upper_nonzero_inds, (i, j))
         (i == j) && (A[i, i] = B[i, color[i]])
     end
 
-    T = spzeros(float(R), length(B), length(nonzero_inds))
-    for (l, (i, j)) in enumerate(nonzero_inds)
+    T = spzeros(float(R), length(B), length(strict_upper_nonzero_inds))
+    for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
         cj = color[j]
         ki = (ci - 1) * n + j  # A[i, j] appears in B[j, ci]
@@ -123,11 +123,10 @@ function decompress_aux!(
         T[kj, l] = one(float(R))
     end
 
-    # Solve a least-squares problem!
-    strict_lower_nonzeros_A = T \ vec(B)
-    for (l, (i, j)) in enumerate(nonzero_inds)
-        A[i, j] = strict_lower_nonzeros_A[l]
-        A[j, i] = strict_lower_nonzeros_A[l]
+    strict_upper_nonzeros_A = T \ vec(B)
+    for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
+        A[i, j] = strict_upper_nonzeros_A[l]
+        A[j, i] = strict_upper_nonzeros_A[l]
     end
     return A
 end
