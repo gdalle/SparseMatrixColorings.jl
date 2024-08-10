@@ -76,11 +76,11 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nv = length(g)
-    color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
-    treated = zeros(Int, nv)
+    nvertices = length(g)
+    color = zeros(Int, nvertices)
+    forbidden_colors = zeros(Int, nvertices)
+    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
+    treated = zeros(Int, nvertices)
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
     vertices_in_order = vertices(g, order)
@@ -263,7 +263,10 @@ end
 """
     acyclic_coloring(g::Graph, order::AbstractOrder)
 
-Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a vector of integer colors.
+Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
+
+- `color` is the vector of integer colors
+- `tree_set` is a [`TreeSet`](@ref) encoding the set of 2-colored trees
 
 An _acyclic coloring_ is a distance-1 coloring with the further restriction that every cycle uses at least 3 colors.
 
@@ -280,12 +283,12 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function acyclic_coloring(g::Graph, order::AbstractOrder)
     # Initialize data structures
-    nv = length(g)
-    ne = nnz(g) ÷ 2  # symmetric sparse matrix with empty diagonal
-    color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
-    first_visit_to_tree = fill((0, 0), ne)
+    nvertices = length(g)
+    nedges = nnz(g) ÷ 2  # symmetric sparse matrix with empty diagonal
+    color = zeros(Int, nvertices)
+    forbidden_colors = zeros(Int, nvertices)
+    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((0, 0), nedges)
     forest = DisjointSets{Tuple{Int,Int}}()
     vertices_in_order = vertices(g, order)
 
