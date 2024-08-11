@@ -22,10 +22,12 @@ function test_coloring_decompression(
         B = compress(A, result)
         !isnothing(color0) && @test color == color0
         !isnothing(B0) && @test B == B0
-        @test decompress(B, result) ≈ A0
         @test decompress(B, default_result) ≈ A0
-        @test decompress!(respectful_similar(A), B, result) ≈ A0
+        @test decompress(B, result) ≈ A0
+        @test decompress(B, result) ≈ A0  # check result wasn't modified
         @test decompress!(respectful_similar(A), B, default_result) ≈ A0
+        @test decompress!(respectful_similar(A), B, result) ≈ A0
+        @test decompress!(respectful_similar(A), B, result) ≈ A0
     end
     @test all(color_vec .== Ref(color_vec[1]))
 end
