@@ -315,7 +315,7 @@ function decompress_aux!(
     trees = [Int[] for i in 1:ntrees]
 
     # dictionary that maps a tree's root to the index of the tree
-    roots = Dict{Int, Int}()
+    roots = Dict{Int,Int}()
 
     k = 0
     for edge in forest.revmap
@@ -359,7 +359,7 @@ function decompress_aux!(
                         degree[i] -= 1  # decrease the degree of vertex i
                         degree[j] -= 1  # decrease the degree of vertex j
                         tree[t] = 0  # remove the edge (i,j)
-                        push!(dfs_orders[k], (i,j))
+                        push!(dfs_orders[k], (i, j))
                     end
                 end
             end
