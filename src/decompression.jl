@@ -343,6 +343,29 @@ function decompress_aux!(
         end
     end
 
+    # depth-first search (DFS) traversal order for each tree in the forest
+    dfs_orders = [Vector{Tuple{Int,Int}}() for k in 1:ntrees]
+    for k in 1:ntrees
+        tree = trees[k]
+        degree = degrees[k]
+        while sum(values(degree)) != 0
+            for (t, edge_index) in enumerate(tree)
+                if edge_index != 0
+                    i, j = forest.revmap[edge_index]
+                    if (degree[i] == 1) || (degree[j] == 1)  # leaf vertex
+                        if degree[i] > degree[j]  # vertex i is the parent of vertex j
+                            i, j = j, i  # ensure that i always denotes a leaf vertex
+                        end
+                        degree[i] -= 1  # decrease the degree of vertex i
+                        degree[j] -= 1  # decrease the degree of vertex j
+                        tree[t] = 0  # remove the edge (i,j)
+                        push!(dfs_orders[k], (i,j))
+                    end
+                end
+            end
+        end
+    end
+
     # stored_values holds the sum of edge values for subtrees in a tree.
     # For each vertex i, stored_values[i] is the sum of edge values in the subtree rooted at i.
     stored_values = Vector{R}(undef, n)
@@ -356,42 +379,17 @@ function decompress_aux!(
 
     # Recover the off-diagonal coefficients of A
     for k in 1:ntrees
-        tree = trees[k]
-        degree = degrees[k]
+        vertices = keys(degrees[k])
+        for vertex in vertices
+            stored_values[vertex] = zero(R)
+        end
 
-        nedges = length(tree)
-        if nedges == 1
-            edge_index = tree[1]
-            i, j = forest.revmap[edge_index]
-            val = B[i, color[j]]
+        tree = dfs_orders[k]
+        for (i, j) in tree
+            val = B[i, color[j]] - stored_values[i]
+            stored_values[j] = stored_values[j] + val
             A[i, j] = val
             A[j, i] = val
-        else
-            for edge_index in tree
-                i, j = forest.revmap[edge_index]
-                stored_values[i] = zero(R)
-                stored_values[j] = zero(R)
-            end
-
-            while sum(values(degree)) != 0
-                for (t, edge_index) in enumerate(tree)
-                    if edge_index != 0
-                        i, j = forest.revmap[edge_index]
-                        if (degree[i] == 1) || (degree[j] == 1)  # leaf vertex
-                            if degree[i] > degree[j]  # vertex i is the parent of vertex j
-                                i, j = j, i  # ensure that i always denotes a leaf vertex
-                            end
-                            degree[i] -= 1  # decrease the degree of vertex i
-                            degree[j] -= 1  # decrease the degree of vertex j
-                            tree[t] = 0  # remove the edge (i,j)
-                            val = B[i, color[j]] - stored_values[i]
-                            stored_values[j] = stored_values[j] + val
-                            A[i, j] = val
-                            A[j, i] = val
-                        end
-                    end
-                end
-            end
         end
     end
     return A
