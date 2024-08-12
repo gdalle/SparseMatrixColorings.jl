@@ -5,25 +5,18 @@ using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    DefaultColoringResult,
-    group_by_color,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
     directly_recoverable_columns,
-    matrix_versions,
-    respectful_similar,
     what_fig_41,
     what_fig_61,
     efficient_fig_1,
     efficient_fig_4
 using Test
 
-algo = GreedyColoringAlgorithm()
-
 @testset "Column coloring & decompression" begin
-    problem = ColoringProblem(;
-        structure=:nonsymmetric, partition=:column, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     A0 = sparse([
         1 0 2
         0 3 4
@@ -41,9 +34,8 @@ algo = GreedyColoringAlgorithm()
 end;
 
 @testset "Row coloring & decompression" begin
-    problem = ColoringProblem(;
-        structure=:nonsymmetric, partition=:row, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     A0 = sparse([
         1 0 3
         0 2 0
@@ -60,9 +52,9 @@ end;
 end;
 
 @testset "Symmetric coloring & direct decompression" begin
-    problem = ColoringProblem(;
-        structure=:symmetric, partition=:column, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
+
     @testset "Fig 4.1 from 'What color is your Jacobian'" begin
         example = what_fig_41()
         A0, B0, color0 = example.A, example.B, example.color
@@ -81,9 +73,9 @@ end;
 end;
 
 @testset "Symmetric coloring & substitution decompression" begin
-    problem = ColoringProblem(;
-        structure=:symmetric, partition=:column, decompression=:substitution
-    )
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:substitution)
+
     @testset "Fig 6.1 from 'What color is your Jacobian'" begin
         example = what_fig_61()
         A0, B0, color0 = example.A, example.B, example.color

@@ -5,18 +5,13 @@ using LinearAlgebra: I, Symmetric
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    DefaultColoringResult,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
-    directly_recoverable_columns,
-    matrix_versions,
-    respectful_similar
+    directly_recoverable_columns
 using StableRNGs
 using Test
 
 rng = StableRNG(63)
-
-algo = GreedyColoringAlgorithm()
 
 asymmetric_params = vcat(
     [(10, 20, p) for p in (0.1:0.1:0.5)],
@@ -31,9 +26,8 @@ symmetric_params = vcat(
 )
 
 @testset "Column coloring & decompression" begin
-    problem = ColoringProblem(;
-        structure=:nonsymmetric, partition=:column, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
@@ -44,9 +38,8 @@ symmetric_params = vcat(
 end;
 
 @testset "Row coloring & decompression" begin
-    problem = ColoringProblem(;
-        structure=:nonsymmetric, partition=:row, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
@@ -57,9 +50,8 @@ end;
 end;
 
 @testset "Symmetric coloring & direct decompression" begin
-    problem = ColoringProblem(;
-        structure=:symmetric, partition=:column, decompression=:direct
-    )
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
         color0 = symmetric_coloring(A0, algo)
@@ -70,9 +62,8 @@ end;
 end;
 
 @testset "Symmetric coloring & substitution decompression" begin
-    problem = ColoringProblem(;
-        structure=:symmetric, partition=:column, decompression=:substitution
-    )
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:substitution)
     @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
         color0 = column_colors(coloring(A0, problem, algo))
