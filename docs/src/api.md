@@ -49,4 +49,5 @@ LargestFirst
 SmallestLast
 IncidenceDegree
 DynamicLargestFirst
+DynamicDegreeBasedOrder
 ```

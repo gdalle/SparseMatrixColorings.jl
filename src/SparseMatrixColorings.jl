@@ -56,6 +56,6 @@ export column_groups, row_groups
 export compress, decompress, decompress!
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
-@compat public SmallestLast, IncidenceDegree, DynamicLargestFirst
+@compat public DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 
 end
