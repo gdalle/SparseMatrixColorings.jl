@@ -78,12 +78,11 @@ end;
 end;
 
 @testset "Dynamic degree-based orders" begin
-    A = sparse(Symmetric(sprand(rng, Bool, 10, 10, 0.3)))
-    g = Graph(A - Diagonal(A))
+    A = sparse(Symmetric(sprand(rng, Bool, 100, 100, 0.05)))
+    g = adjacency_graph(A)
 
     @testset "$order" for order in
                           [SmallestLast(), IncidenceDegree(), DynamicLargestFirst()]
-        @test endswith(string(order), "()")
         @test length(vertices(g, order)) == length(g)
         @test length(unique(vertices(g, order))) == length(g)
     end

@@ -5,19 +5,41 @@ CollapsedDocStrings = true
 CurrentModule = SparseMatrixColorings
 ```
 
-## Public, exported
-
 ```@docs
 SparseMatrixColorings
-GreedyColoringAlgorithm
-column_coloring
-row_coloring
-symmetric_coloring
 ```
 
-## Public, not exported
+The docstrings on this page define the public API of the package.
 
-### Orders
+## Main function
+
+```@docs
+coloring
+ColoringProblem
+GreedyColoringAlgorithm
+```
+
+## Result analysis
+
+```@docs
+AbstractColoringResult
+column_colors
+row_colors
+column_groups
+row_groups
+```
+
+## Decompression
+
+```@docs
+compress
+decompress
+decompress!
+```
+
+## Orders
+
+These symbols are not exported but they are still part of the public API.
 
 ```@docs
 AbstractOrder
@@ -27,53 +49,4 @@ LargestFirst
 SmallestLast
 IncidenceDegree
 DynamicLargestFirst
-```
-
-### Decompression
-
-```@docs
-color_groups
-decompress_columns
-decompress_columns!
-decompress_rows
-decompress_rows!
-decompress_symmetric
-decompress_symmetric!
-```
-
-## Private
-
-### Matrices
-
-```@docs
-matrix_versions
-respectful_similar
-same_sparsity_pattern
-```
-
-### Graphs
-
-```@docs
-Graph
-BipartiteGraph
-adjacency_graph
-bipartite_graph
-neighbors
-vertices
-DynamicDegreeBasedOrder
-```
-
-### Coloring
-
-```@docs
-partial_distance2_coloring
-star_coloring
-```
-
-### Testing
-
-```@docs
-structurally_orthogonal_columns
-symmetrically_orthogonal_columns
-directly_recoverable_columns
 ```

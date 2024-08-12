@@ -1,7 +1,10 @@
 """
     AbstractOrder
 
-Abstract supertype for vertex ordering schemes.
+Abstract supertype for the vertex order used inside [`GreedyColoringAlgorithm`](@ref).
+
+In this algorithm, the rows and columns of a matrix form a graph, and the vertices are colored one after the other in a greedy fashion.
+Depending on how the vertices are ordered, the number of colors necessary may vary.
 
 # Subtypes
 
@@ -14,7 +17,7 @@ abstract type AbstractOrder end
 """
     NaturalOrder()
 
-Order vertices as they come in the graph.
+Instance of [`AbstractOrder`](@ref) which sorts vertices using their index in the provided graph.
 """
 struct NaturalOrder <: AbstractOrder end
 
@@ -29,7 +32,7 @@ end
 """
     RandomOrder(rng=default_rng())
 
-Order vertices with a random permutation.
+Instance of [`AbstractOrder`](@ref) which sorts vertices using a random permutation.
 """
 struct RandomOrder{R<:AbstractRNG} <: AbstractOrder
     rng::R
@@ -48,7 +51,7 @@ end
 """
     LargestFirst()
 
-Order vertices by decreasing degree.
+Instance of [`AbstractOrder`](@ref) which sorts vertices using their degree in the provided graph: the largest degree comes first.
 """
 struct LargestFirst <: AbstractOrder end
 
@@ -159,8 +162,6 @@ Order vertices with the incidence degree heuristic.
 """
 const IncidenceDegree = DynamicDegreeBasedOrder{:back,:up}
 
-Base.show(io::IO, ::IncidenceDegree) = print(io, "IncidenceDegree()")
-
 """
     SmallestLast()
 
@@ -172,8 +173,6 @@ Order vertices with the smallest last heuristic.
 """
 const SmallestLast = DynamicDegreeBasedOrder{:back,:down}
 
-Base.show(io::IO, ::SmallestLast) = print(io, "SmallestLast()")
-
 """
     DynamicLargestFirst()
 
@@ -184,5 +183,3 @@ Order vertices with the dynamic largest first heuristic.
 - [`DynamicDegreeBasedOrder`](@ref)
 """
 const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:up}
-
-Base.show(io::IO, ::DynamicLargestFirst) = print(io, "DynamicLargestFirst()")

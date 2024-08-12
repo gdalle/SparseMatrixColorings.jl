@@ -2,13 +2,17 @@
     SparseMatrixColorings
 
 $README
+
+## Exports
+
+$EXPORTS
 """
 module SparseMatrixColorings
 
-using ADTypes:
-    ADTypes, AbstractColoringAlgorithm, column_coloring, row_coloring, symmetric_coloring
+using DataStructures: DisjointSets, find_root!, root_union!, num_groups
+using ADTypes: ADTypes
 using Compat: @compat, stack
-using DocStringExtensions: README
+using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
     Diagonal,
@@ -16,7 +20,9 @@ using LinearAlgebra:
     Transpose,
     adjoint,
     checksquare,
+    factorize,
     issymmetric,
+    ldiv!,
     parent,
     transpose
 using Random: AbstractRNG, default_rng, randperm
@@ -25,6 +31,7 @@ using SparseArrays:
     SparseMatrixCSC,
     dropzeros,
     dropzeros!,
+    findnz,
     nnz,
     nonzeros,
     nzrange,
@@ -35,22 +42,20 @@ using SparseArrays:
 include("graph.jl")
 include("order.jl")
 include("coloring.jl")
-include("groups.jl")
-include("adtypes.jl")
+include("result.jl")
 include("matrices.jl")
+include("interface.jl")
 include("decompression.jl")
 include("check.jl")
+include("examples.jl")
 
-@compat public GreedyColoringAlgorithm
+export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
+export coloring
+export column_colors, row_colors
+export column_groups, row_groups
+export compress, decompress, decompress!
+
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public SmallestLast, IncidenceDegree, DynamicLargestFirst
-@compat public color_groups
-@compat public decompress_columns, decompress_columns!
-@compat public decompress_rows, decompress_rows!
-@compat public decompress_symmetric, decompress_symmetric!
-@compat public column_coloring, row_coloring, symmetric_coloring
-
-export GreedyColoringAlgorithm
-export column_coloring, row_coloring, symmetric_coloring
 
 end

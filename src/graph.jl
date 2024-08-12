@@ -15,8 +15,7 @@ struct Graph{T<:Integer}
     rowval::Vector{T}
 end
 
-Graph(A::SparseMatrixCSC) = Graph(A.colptr, A.rowval)
-Graph(A::AbstractMatrix) = Graph(sparse(A))
+Graph(S::SparseMatrixCSC) = Graph(S.colptr, S.rowval)
 
 Base.length(g::Graph) = length(g.colptr) - 1
 SparseArrays.nnz(g::Graph) = length(g.rowval)
@@ -24,9 +23,6 @@ SparseArrays.nnz(g::Graph) = length(g.rowval)
 vertices(g::Graph) = 1:length(g)
 neighbors(g::Graph, v::Integer) = view(g.rowval, g.colptr[v]:(g.colptr[v + 1] - 1))
 degree(g::Graph, v::Integer) = length(g.colptr[v]:(g.colptr[v + 1] - 1))
-
-maximum_degree(g::Graph) = maximum(Base.Fix1(degree, g), vertices(g))
-minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 ## Bipartite graph
 
@@ -94,7 +90,6 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 adjacency_graph(H::SparseMatrixCSC) = Graph(H - Diagonal(H))
-adjacency_graph(H::AbstractMatrix) = adjacency_graph(sparse(H))
 
 """
     bipartite_graph(J::AbstractMatrix)
@@ -112,9 +107,7 @@ The bipartite graph of a matrix `A ∈ ℝ^{m × n}` is `Gb(A) = (V₁, V₂, E)
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function bipartite_graph(J::SparseMatrixCSC)
-    g1 = Graph(transpose(J))  # rows to columns
+    g1 = Graph(sparse(transpose(J)))  # rows to columns
     g2 = Graph(J)  # columns to rows
     return BipartiteGraph(g1, g2)
 end
-
-bipartite_graph(J::AbstractMatrix) = bipartite_graph(sparse(J))

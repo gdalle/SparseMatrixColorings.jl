@@ -1,11 +1,12 @@
 name = "SparseMatrixColorings"
 uuid = "0a514795-09f3-496d-8182-132a7b665d35"
 authors = ["Guillaume Dalle <22795598+gdalle@users.noreply.github.com>"]
-version = "0.3.3"
+version = "0.4.0"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -13,8 +14,9 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 ADTypes = "1.2.1"
-Compat = "3,4"
-DocStringExtensions = "0.9"
+Compat = "3.46,4.2"
+DocStringExtensions = "0.8,0.9"
+DataStructures = "0.18"
 LinearAlgebra = "<0.0.1, 1"
 Random = "<0.0.1, 1"
 SparseArrays = "<0.0.1, 1"
