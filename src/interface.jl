@@ -1,5 +1,5 @@
 """
-    ColoringProblem{structure,partition,decompression}
+    ColoringProblem{structure,partition}
 
 Selector type for the coloring problem to solve, enabling multiple dispatch.
 
@@ -7,17 +7,10 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructor
 
-    ColoringProblem(;
-        structure::Symbol=:nonsymmetric,
-        partition::Symbol=:column,
-        decompression::Symbol=:direct,
-    )
-
-# Type parameters
+    ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:column)
 
 - `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
 - `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
-- `decompression::Symbol`: either `:direct` or `:substitution`
 
 #  Link to automatic differentiation
 
@@ -31,23 +24,21 @@ Matrix coloring is often used in automatic differentiation, and here is the tran
 | Hessian  | any                  | `:symmetric`    | `:column`        |
 
 !!! warning
+    With a `:symmetric` structure, you have to use a `:column` partition.
+
+!!! warning
     At the moment, `:bidirectional` partitions are not implemented.
 """
-struct ColoringProblem{structure,partition,decompression} end
+struct ColoringProblem{structure,partition} end
 
-function ColoringProblem(;
-    structure::Symbol=:nonsymmetric,
-    partition::Symbol=:column,
-    decompression::Symbol=:direct,
-)
+function ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:column)
     @assert structure in (:nonsymmetric, :symmetric)
     @assert partition in (:column, :row, :bidirectional)
-    @assert decompression in (:direct, :substitution)
-    return ColoringProblem{structure,partition,decompression}()
+    return ColoringProblem{structure,partition}()
 end
 
 """
-    GreedyColoringAlgorithm <: ADTypes.AbstractColoringAlgorithm
+    GreedyColoringAlgorithm{decompression} <: ADTypes.AbstractColoringAlgorithm
 
 Greedy coloring algorithm for sparse matrices which colors columns or rows one after the other, following a configurable order.
 
@@ -55,10 +46,13 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructor
 
-    GreedyColoringAlgorithm(order::AbstractOrder=NaturalOrder())
+    GreedyColoringAlgorithm(
+        order::AbstractOrder=NaturalOrder();
+        decompression::Symbol=:direct
+    )
 
-The choice of [`AbstractOrder`](@ref) impacts the resulting number of colors.
-It defaults to [`NaturalOrder`](@ref) for reproducibility, but [`LargestFirst`](@ref) can sometimes be a better option.
+- `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
+- `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 # ADTypes coloring interface
 
@@ -69,21 +63,36 @@ It defaults to [`NaturalOrder`](@ref) for reproducibility, but [`LargestFirst`](
 - [`ADTypes.symmetric_coloring`](@extref ADTypes.symmetric_coloring)
 
 See their respective docstrings for details.
+
+# See also
+
+- [`AbstractOrder`](@ref)
+- [`decompress`](@ref)
 """
-struct GreedyColoringAlgorithm{O<:AbstractOrder} <: ADTypes.AbstractColoringAlgorithm
+struct GreedyColoringAlgorithm{decompression,O<:AbstractOrder} <:
+       ADTypes.AbstractColoringAlgorithm
     order::O
 end
 
-GreedyColoringAlgorithm() = GreedyColoringAlgorithm(NaturalOrder())
+function GreedyColoringAlgorithm(
+    order::AbstractOrder=NaturalOrder(); decompression::Symbol=:direct
+)
+    @assert decompression in (:direct, :substitution)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(order)
+end
 
 """
     coloring(
         S::AbstractMatrix,
         problem::ColoringProblem,
-        algo::GreedyColoringAlgorithm
+        algo::GreedyColoringAlgorithm;
+        [decompression_eltype=Float64]
     )
 
 Solve a [`ColoringProblem`](@ref) on the matrix `S` with a [`GreedyColoringAlgorithm`](@ref) and return an [`AbstractColoringResult`](@ref).
+
+The result can be used to [`compress`](@ref) and [`decompress`](@ref) a matrix `A` with the same sparsity pattern as `S`.
+If `eltype(A) == decompression_eltype`, decompression might be faster.
 
 # Example
 
@@ -124,64 +133,77 @@ julia> column_groups(result)
 - [`ColoringProblem`](@ref)
 - [`GreedyColoringAlgorithm`](@ref)
 - [`AbstractColoringResult`](@ref)
+- [`compress`](@ref)
+- [`decompress`](@ref)
 """
 function coloring end
 
 function coloring(
-    S::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,:column,:direct},
-    algo::GreedyColoringAlgorithm,
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:column},
+    algo::GreedyColoringAlgorithm;
+    decompression_eltype=Float64,
 )
+    S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return DefaultColoringResult{:nonsymmetric,:column,:direct}(S, color)
+    return NonSymmetricColoringResult{:column}(S, color)
 end
 
 function coloring(
-    S::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,:row,:direct},
-    algo::GreedyColoringAlgorithm,
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:row},
+    algo::GreedyColoringAlgorithm;
+    decompression_eltype=Float64,
 )
+    S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return DefaultColoringResult{:nonsymmetric,:row,:direct}(S, color)
+    return NonSymmetricColoringResult{:row}(S, color)
 end
 
 function coloring(
-    S::AbstractMatrix,
-    ::ColoringProblem{:symmetric,:column,:direct},
-    algo::GreedyColoringAlgorithm,
+    A::AbstractMatrix,
+    ::ColoringProblem{:symmetric,:column},
+    algo::GreedyColoringAlgorithm{:direct};
+    decompression_eltype=Float64,
 )
+    S = sparse(A)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
-    return StarSetColoringResult{:column}(S, color, star_set)
+    return StarSetColoringResult(S, color, star_set)
 end
 
 function coloring(
-    S::AbstractMatrix,
-    ::ColoringProblem{:symmetric,:column,:substitution},
-    algo::GreedyColoringAlgorithm,
+    A::AbstractMatrix,
+    ::ColoringProblem{:symmetric,:column},
+    algo::GreedyColoringAlgorithm{:substitution};
+    decompression_eltype=Float64,
 )
+    S = sparse(A)
     ag = adjacency_graph(S)
     color, tree_set = acyclic_coloring(ag, algo.order)
-    return TreeSetColoringResult{:column}(S, color, tree_set)
+    return TreeSetColoringResult(S, color, tree_set, decompression_eltype)
 end
 
 ## ADTypes interface
 
-function ADTypes.column_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return color
 end
 
-function ADTypes.row_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return color
 end
 
-function ADTypes.symmetric_coloring(S::AbstractMatrix, algo::GreedyColoringAlgorithm)
+function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
+    S = sparse(A)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
     return color

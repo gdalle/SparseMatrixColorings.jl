@@ -20,7 +20,9 @@ using LinearAlgebra:
     Transpose,
     adjoint,
     checksquare,
+    factorize,
     issymmetric,
+    ldiv!,
     parent,
     transpose
 using Random: AbstractRNG, default_rng, randperm
@@ -45,7 +47,6 @@ include("matrices.jl")
 include("interface.jl")
 include("decompression.jl")
 include("check.jl")
-include("sparsematrixcsc.jl")
 include("examples.jl")
 
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult

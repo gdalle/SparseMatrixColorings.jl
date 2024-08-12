@@ -34,10 +34,10 @@ SparseMatrixColorings.TreeSet
 ## Concrete coloring results
 
 ```@docs
-SparseMatrixColorings.DefaultColoringResult
+SparseMatrixColorings.NonSymmetricColoringResult
 SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
-SparseMatrixColorings.DirectSparseColoringResult
+SparseMatrixColorings.LinearSystemColoringResult
 ```
 
 ## Testing

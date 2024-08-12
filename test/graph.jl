@@ -6,11 +6,11 @@ using Test
 ## Standard graph
 
 @testset "Graph" begin
-    g = Graph([
+    g = Graph(sparse([
         1 0 1
         1 1 0
         0 0 0
-    ])
+    ]))
 
     @test length(g) == 3
     @test neighbors(g, 1) == [1, 2]
