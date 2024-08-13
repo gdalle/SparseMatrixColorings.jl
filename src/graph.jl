@@ -24,6 +24,9 @@ vertices(g::Graph) = 1:length(g)
 neighbors(g::Graph, v::Integer) = view(g.rowval, g.colptr[v]:(g.colptr[v + 1] - 1))
 degree(g::Graph, v::Integer) = length(g.colptr[v]:(g.colptr[v + 1] - 1))
 
+maximum_degree(g::Graph) = maximum(Base.Fix1(degree, g), vertices(g))
+minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
+
 ## Bipartite graph
 
 """
