@@ -198,10 +198,9 @@ struct TreeSetColoringResult{M,R} <:
     S::M
     color::Vector{Int}
     group::Vector{Vector{Int}}
-    trees::Vector{Dict{Int,Vector{Int}}}
-    reverse_bfs_orders::Vector{Vector{Int}}
+    vertices::Vector{Vector{Int}}
+    reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
     stored_values::Vector{R}
-    passed::BitVector
 end
 
 function TreeSetColoringResult(
@@ -256,8 +255,12 @@ function TreeSetColoringResult(
     # degrees is a vector of integers that stores the degree of each vertex in a tree
     degrees = tree_set.degrees
 
+    # list of vertices for each tree in the forest
+    vertices = [Int[] for i in 1:ntrees]
+
     # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = [Int[] for k in 1:ntrees]
+    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
+
     for k in 1:ntrees
         tree = trees[k]
 
@@ -278,15 +281,25 @@ function TreeSetColoringResult(
         # continue until all leaves are treated
         while !isempty(queue)
             leaf = pop!(queue)
-            push!(reverse_bfs_orders[k], leaf)
+
+            # Convenient way to specify that the vertex is removed
+            degrees[leaf] = 0
+
+            # leaf is a vertex of the tree
+            push!(vertices[k], leaf)
 
             for neighbor in tree[leaf]
-                 # reduce the degree of all neighbors
-                degrees[neighbor] -= 1
+                if degrees[neighbor] != 0
+                    # (leaf, neighbor) represents the next edge to visit during decompression
+                    push!(reverse_bfs_orders[k], (leaf, neighbor))
 
-                # check if the neighbor is now a leaf
-                if degrees[neighbor] == 1
-                    push!(queue, neighbor)
+                    # reduce the degree of all neighbors
+                    degrees[neighbor] -= 1
+
+                    # check if the neighbor is now a leaf
+                    if degrees[neighbor] == 1
+                        push!(queue, neighbor)
+                    end
                 end
             end
         end
@@ -295,10 +308,9 @@ function TreeSetColoringResult(
     # stored_values holds the sum of edge values for subtrees in a tree.
     # For each vertex i, stored_values[i] is the sum of edge values in the subtree rooted at i.
     stored_values = Vector{R}(undef, nvertices)
-    passed = BitVector(undef, nvertices)
 
     return TreeSetColoringResult(
-        S, color, group, trees, reverse_bfs_orders, stored_values, passed
+        S, color, group, vertices, reverse_bfs_orders, stored_values
     )
 end
 

@@ -288,7 +288,7 @@ function decompress_aux!(
     A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
-    @compat (; trees, reverse_bfs_orders, stored_values, passed) = result
+    @compat (; vertices, reverse_bfs_orders, stored_values) = result
 
     if eltype(stored_values) == R
         buffer = stored_values
@@ -304,24 +304,16 @@ function decompress_aux!(
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(trees, reverse_bfs_orders)
-        vertices = reverse_bfs_orders[k]
-        for vertex in vertices
+    for k in eachindex(vertices, reverse_bfs_orders)
+        for vertex in vertices[k]
             buffer[vertex] = zero(R)
-            passed[vertex] = false
         end
 
-        tree = trees[k]
-        for i in vertices
-            for j in tree[i]
-                if !passed[j] && !passed[i]
-                    val = B[i, color[j]] - buffer[i]
-                    buffer[j] = buffer[j] + val
-                    A[i, j] = val
-                    A[j, i] = val
-                    passed[i] = true
-                end
-            end
+        for (i, j) in reverse_bfs_orders[k]
+            val = B[i, color[j]] - buffer[i]
+            buffer[j] = buffer[j] + val
+            A[i, j] = val
+            A[j, i] = val
         end
     end
     return A
