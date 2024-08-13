@@ -80,7 +80,7 @@ function test_noallocs_sparse_decompression(
         bench1 = @be respectful_similar(A) decompress!(_, B, result) evals = 1
         @test minimum(bench1).allocs == 0
         bench2 = @be similar(Matrix(A)) decompress!(_, B, result) evals = 1
-        @test_skip minimum(bench2).allocs == 0
+        @test minimum(bench2).allocs == 0
     end
 end
 
