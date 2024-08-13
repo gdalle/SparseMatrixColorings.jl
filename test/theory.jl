@@ -1,7 +1,4 @@
-using CSV
-using DataFrames
-using LinearAlgebra
-using SparseArray
+using SparseArrays
 using SparseMatrixColorings
 using Test
 
