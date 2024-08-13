@@ -200,7 +200,7 @@ struct TreeSetColoringResult{M,R} <:
     group::Vector{Vector{Int}}
     vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
-    stored_values::Vector{R}
+    buffer::Vector{R}
 end
 
 function TreeSetColoringResult(
@@ -226,8 +226,9 @@ function TreeSetColoringResult(
     k = 0
     for edge in forest.revmap
         i, j = edge
-        # forest has already been compressed
-        root_edge = find_root(forest, edge)
+        # forest has already been compressed so this doesn't change its state
+        # I wanted to use find_root but it is deprecated
+        root_edge = find_root!(forest, edge)
         root = forest.intmap[root_edge]
 
         # Update roots
@@ -304,12 +305,12 @@ function TreeSetColoringResult(
         end
     end
 
-    # stored_values holds the sum of edge values for subtrees in a tree.
-    # For each vertex i, stored_values[i] is the sum of edge values in the subtree rooted at i.
-    stored_values = Vector{R}(undef, nvertices)
+    # buffer holds the sum of edge values for subtrees in a tree.
+    # For each vertex i, buffer[i] is the sum of edge values in the subtree rooted at i.
+    buffer = Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
-        S, color, group, vertices_by_tree, reverse_bfs_orders, stored_values
+        S, color, group, vertices_by_tree, reverse_bfs_orders, buffer
     )
 end
 
