@@ -198,15 +198,16 @@ struct TreeSetColoringResult{M,R} <:
     S::M
     color::Vector{Int}
     group::Vector{Vector{Int}}
-    tree_set::TreeSet
-    degrees::Vector{Dict{Int,Int}}
-    dfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    trees::Vector{Dict{Int,Vector{Int}}}
+    reverse_bfs_orders::Vector{Vector{Int}}
     stored_values::Vector{R}
+    passed::BitVector
 end
 
 function TreeSetColoringResult(
     S::SparseMatrixCSC, color::Vector{Int}, tree_set::TreeSet, decompression_eltype::Type{R}
 ) where {R}
+    nvertices = length(color)
     group = group_by_color(color)
 
     # forest is a structure DisjointSets from DataStructures.jl
@@ -216,66 +217,88 @@ function TreeSetColoringResult(
     forest = tree_set.forest
     ntrees = forest.internal.ngroups
 
-    # vector of trees where each tree contains the indices of its edges
-    trees = [Int[] for i in 1:ntrees]
-
     # dictionary that maps a tree's root to the index of the tree
     roots = Dict{Int,Int}()
 
+    # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
+    trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
+
     k = 0
     for edge in forest.revmap
+        i, j = edge
         root_edge = find_root!(forest, edge)
         root = forest.intmap[root_edge]
+
+        # Update roots
         if !haskey(roots, root)
             k += 1
             roots[root] = k
         end
-        index_tree = roots[root]
-        push!(trees[index_tree], forest.intmap[edge])
-    end
 
-    # vector of dictionaries where each dictionary stores the degree of each vertex in a tree
-    degrees = [Dict{Int,Int}() for k in 1:ntrees]
-    for k in 1:ntrees
-        tree = trees[k]
-        degree = degrees[k]
-        for edge_index in tree
-            i, j = forest.revmap[edge_index]
-            !haskey(degree, i) && (degree[i] = 0)
-            !haskey(degree, j) && (degree[j] = 0)
-            degree[i] += 1
-            degree[j] += 1
+        # index of the tree T that contains this edge
+        index_tree = roots[root]
+
+        # Update the neighbors of i in the tree T
+        if !haskey(trees[index_tree], i)
+            trees[index_tree][i] = [j]
+        else
+            push!(trees[index_tree][i], j)
+        end
+
+        # Update the neighbors of j in the tree T
+        if !haskey(trees[index_tree], j)
+            trees[index_tree][j] = [i]
+        else
+            push!(trees[index_tree][j], i)
         end
     end
 
-    # depth-first search (DFS) traversal order for each tree in the forest
-    dfs_orders = [Vector{Tuple{Int,Int}}() for k in 1:ntrees]
+    # degrees is a vector of integers that stores the degree of each vertex in a tree
+    degrees = tree_set.degrees
+
+    # reverse breadth first (BFS) traversal order for each tree in the forest
+    reverse_bfs_orders = [Int[] for k in 1:ntrees]
     for k in 1:ntrees
         tree = trees[k]
-        degree = degrees[k]
-        while sum(values(degree)) != 0
-            for (t, edge_index) in enumerate(tree)
-                if edge_index != 0
-                    i, j = forest.revmap[edge_index]
-                    if (degree[i] == 1) || (degree[j] == 1)  # leaf vertex
-                        if degree[i] > degree[j]  # vertex i is the parent of vertex j
-                            i, j = j, i  # ensure that i always denotes a leaf vertex
-                        end
-                        degree[i] -= 1  # decrease the degree of vertex i
-                        degree[j] -= 1  # decrease the degree of vertex j
-                        tree[t] = 0  # remove the edge (i,j)
-                        push!(dfs_orders[k], (i, j))
-                    end
+
+        # queue to store the leaves
+        queue = Int[]
+
+        # compute the degree of each vertex in the tree
+        for (vertex, neighbors) in trees[k]
+            degree = length(neighbors)
+            degrees[vertex] = degree
+
+            # the vertex is a leaf
+            if degree == 1
+                push!(queue, vertex)
+            end
+        end
+
+        # continue until all leaves are treated
+        while !isempty(queue)
+            leaf = pop!(queue)
+            push!(reverse_bfs_orders[k], leaf)
+
+            for neighbor in tree[leaf]
+                 # reduce the degree of all neighbors
+                degrees[neighbor] -= 1
+
+                # check if the neighbor is now a leaf
+                if degrees[neighbor] == 1
+                    push!(queue, neighbor)
                 end
             end
         end
     end
 
-    n = checksquare(S)
-    stored_values = Vector{R}(undef, n)
+    # stored_values holds the sum of edge values for subtrees in a tree.
+    # For each vertex i, stored_values[i] is the sum of edge values in the subtree rooted at i.
+    stored_values = Vector{R}(undef, nvertices)
+    passed = BitVector(undef, nvertices)
 
     return TreeSetColoringResult(
-        S, color, group, tree_set, degrees, dfs_orders, stored_values
+        S, color, group, trees, reverse_bfs_orders, stored_values, passed
     )
 end
 

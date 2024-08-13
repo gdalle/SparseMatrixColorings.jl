@@ -288,14 +288,12 @@ function decompress_aux!(
     A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
-    @compat (; degrees, dfs_orders, stored_values) = result
+    @compat (; trees, reverse_bfs_orders, stored_values, passed) = result
 
-    # stored_values holds the sum of edge values for subtrees in a tree.
-    # For each vertex i, stored_values[i] is the sum of edge values in the subtree rooted at i.
-    stored_values_right_type = if R == Float64
-        stored_values
+    if eltype(stored_values) == R
+        buffer = stored_values
     else
-        similar(stored_values, R)
+        buffer = similar(stored_values, R)
     end
 
     # Recover the diagonal coefficients of A
@@ -306,18 +304,24 @@ function decompress_aux!(
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(degrees, dfs_orders)
-        vertices = keys(degrees[k])
+    for k in eachindex(trees, reverse_bfs_orders)
+        vertices = reverse_bfs_orders[k]
         for vertex in vertices
-            stored_values_right_type[vertex] = zero(R)
+            buffer[vertex] = zero(R)
+            passed[vertex] = false
         end
 
-        tree = dfs_orders[k]
-        for (i, j) in tree
-            val = B[i, color[j]] - stored_values_right_type[i]
-            stored_values_right_type[j] = stored_values_right_type[j] + val
-            A[i, j] = val
-            A[j, i] = val
+        tree = trees[k]
+        for i in vertices
+            for j in tree[i]
+                if !passed[j] && !passed[i]
+                    val = B[i, color[j]] - buffer[i]
+                    buffer[j] = buffer[j] + val
+                    A[i, j] = val
+                    A[j, i] = val
+                    passed[i] = true
+                end
+            end
         end
     end
     return A

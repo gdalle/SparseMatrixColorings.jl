@@ -328,7 +328,12 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
             end
         end
     end
-    return color, TreeSet(forest)
+
+    # repurpose forbidden_colors to store the degree of each vertex in the trees.
+    degrees = forbidden_colors
+    tree_set = TreeSet(forest, degrees)
+
+    return color, tree_set
 end
 
 function _prevent_cycle!(
@@ -343,8 +348,8 @@ function _prevent_cycle!(
     forest::DisjointSets{<:Tuple{Int,Int}},
 )
     wx = _sort(w, x)
-    root = find_root!(forest, wx)  # edge wx belongs to the 2-colored tree represented by edge "root"
-    id = forest.intmap[root] # ID of the representative edge "root" of a two-colored tree.
+    root = find_root!(forest, wx)  # edge wx belongs to the 2-colored tree T represented by edge "root"
+    id = forest.intmap[root] # ID of the representative edge "root" of a two-colored tree T.
     (p, q) = first_visit_to_tree[id]
     if p != v  # T is being visited from vertex v for the first time
         vw = _sort(v, w)
@@ -409,4 +414,6 @@ $TYPEDFIELDS
 struct TreeSet
     "a forest of two-colored trees"
     forest::DisjointSets{Tuple{Int,Int}}
+    "a workspace to store the degree of each vertex in the trees"
+    degrees::Vector{Int}
 end
