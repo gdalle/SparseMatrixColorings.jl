@@ -290,7 +290,7 @@ function decompress_aux!(
     color = column_colors(result)
     @compat (; vertices_by_tree, reverse_bfs_orders, buffer) = result
 
-    if eltype(stored_values) == R
+    if eltype(buffer) == R
         buffer_right_type = buffer
     else
         buffer_right_type = similar(buffer, R)
