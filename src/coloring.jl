@@ -329,10 +329,10 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
         end
     end
 
-    # repurpose forbidden_colors to store the degree of each vertex in the trees.
+    # repurpose forbidden_colors to store the degree of each vertex in the trees
     degrees = forbidden_colors
-    tree_set = TreeSet(forest, degrees)
 
+    tree_set = TreeSet(forest, degrees)
     return color, tree_set
 end
 

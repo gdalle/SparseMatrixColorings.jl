@@ -222,6 +222,7 @@ function TreeSetColoringResult(
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
     trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
 
+    # counter of the number of roots found
     k = 0
     for edge in forest.revmap
         i, j = edge
@@ -256,7 +257,7 @@ function TreeSetColoringResult(
     degrees = tree_set.degrees
 
     # list of vertices for each tree in the forest
-    vertices = [Int[] for i in 1:ntrees]
+    vertices = [[vertex for vertex in keys(trees[i])] for i in 1:ntrees]
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
@@ -284,9 +285,6 @@ function TreeSetColoringResult(
 
             # Convenient way to specify that the vertex is removed
             degrees[leaf] = 0
-
-            # leaf is a vertex of the tree
-            push!(vertices[k], leaf)
 
             for neighbor in tree[leaf]
                 if degrees[neighbor] != 0
