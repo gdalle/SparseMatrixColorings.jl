@@ -203,12 +203,13 @@ function decompress_aux!(
     A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
-    for j in axes(A, 2)
-        cj = color[j]
-        rows_j = (!iszero).(view(S, :, j))
-        Aj = view(A, rows_j, j)
-        Bj = view(B, rows_j, cj)
-        copyto!(Aj, Bj)
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            cj = color[j]
+            A[i, j] = B[i, cj]
+        end
     end
     return A
 end
@@ -219,12 +220,13 @@ function decompress_aux!(
     A .= zero(R)
     S = get_matrix(result)
     color = row_colors(result)
-    for i in axes(A, 1)
-        ci = color[i]
-        cols_i = (!iszero).(view(S, i, :))
-        Ai = view(A, i, cols_i)
-        Bi = view(B, ci, cols_i)
-        copyto!(Ai, Bi)
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            ci = color[i]
+            A[i, j] = B[ci, j]
+        end
     end
     return A
 end
@@ -259,10 +261,13 @@ function decompress_aux!(
     A .= zero(R)
     S = get_matrix(result)
     color = column_colors(result)
-    for ij in findall(!iszero, S)
-        i, j = Tuple(ij)
-        k, l = symmetric_coefficient(i, j, color, result.star_set)
-        A[i, j] = B[k, l]
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            k, c = symmetric_coefficient(i, j, color, result.star_set)
+            A[i, j] = B[k, c]
+        end
     end
     return A
 end
