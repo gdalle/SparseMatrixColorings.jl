@@ -47,6 +47,9 @@ include("utils.jl")
         @testset "Random instances" begin
             include("random.jl")
         end
+        @testset "Instances with known colorings" begin
+            include("theory.jl")
+        end
     end
     @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
