@@ -1,4 +1,3 @@
-using ADTypes: column_coloring, row_coloring, symmetric_coloring
 using CSV
 using DataFrames
 using LinearAlgebra
@@ -79,3 +78,24 @@ what_table_31_32 = CSV.read(
 end;
 
 ## Star coloring
+
+what_table_41_42 = CSV.read(
+    joinpath(@__DIR__, "reference", "what_table_41_42.csv"), DataFrame
+)
+
+@testset "Star coloring (survey paper)" begin
+    @testset "$(row[:name])" for row in eachrow(what_table_41_42)
+        ismissing(row[:group]) && continue
+        @info "Testing star coloring for $(row[:name]) against survey paper"
+        original_mat = matrixdepot("$(row[:group])/$(row[:name])")
+        mat = dropzeros(sparse(original_mat))
+        ag = adjacency_graph(mat)
+        bg = bipartite_graph(mat)
+        @test length(ag) == row[:V]
+        @test nnz(ag) ÷ 2 == row[:E]
+        @test maximum_degree(ag) == row[:Δ]
+        @test minimum_degree(ag) == row[:δ]
+        color_N, _ = star_coloring(ag, NaturalOrder())
+        @test row[:KS1] <= length(unique(color_N)) <= row[:KS2]  # TODO: find better
+    end
+end;
