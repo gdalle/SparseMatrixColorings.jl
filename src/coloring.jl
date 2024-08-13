@@ -329,11 +329,12 @@ function acyclic_coloring(g::Graph, order::AbstractOrder)
         end
     end
 
-    # repurpose forbidden_colors to store the degree of each vertex in the trees
-    degrees = forbidden_colors
+    # compress forest
+    for edge in forest.revmap
+        find_root!(forest, edge)
+    end
 
-    tree_set = TreeSet(forest, degrees)
-    return color, tree_set
+    return color, TreeSet(forest)
 end
 
 function _prevent_cycle!(
@@ -414,6 +415,4 @@ $TYPEDFIELDS
 struct TreeSet
     "a forest of two-colored trees"
     forest::DisjointSets{Tuple{Int,Int}}
-    "a workspace to store the degree of each vertex in the trees"
-    degrees::Vector{Int}
 end

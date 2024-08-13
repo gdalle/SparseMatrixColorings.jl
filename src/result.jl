@@ -198,7 +198,7 @@ struct TreeSetColoringResult{M,R} <:
     S::M
     color::Vector{Int}
     group::Vector{Vector{Int}}
-    vertices::Vector{Vector{Int}}
+    vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
     stored_values::Vector{R}
 end
@@ -226,7 +226,8 @@ function TreeSetColoringResult(
     k = 0
     for edge in forest.revmap
         i, j = edge
-        root_edge = find_root!(forest, edge)
+        # forest has already been compressed
+        root_edge = find_root(forest, edge)
         root = forest.intmap[root_edge]
 
         # Update roots
@@ -254,10 +255,10 @@ function TreeSetColoringResult(
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
-    degrees = tree_set.degrees
+    degrees = Vector{Int}(undef, nvertices)
 
     # list of vertices for each tree in the forest
-    vertices = [[vertex for vertex in keys(trees[i])] for i in 1:ntrees]
+    vertices_by_tree = [collect(keys(trees[i])) for i in 1:ntrees]
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
@@ -308,7 +309,7 @@ function TreeSetColoringResult(
     stored_values = Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
-        S, color, group, vertices, reverse_bfs_orders, stored_values
+        S, color, group, vertices_by_tree, reverse_bfs_orders, stored_values
     )
 end
 
