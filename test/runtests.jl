@@ -50,18 +50,13 @@ include("utils.jl")
         @testset "Instances with known colorings" begin
             include("theory.jl")
         end
+        @testset "SuiteSparse" begin
+            include("suitesparse.jl")
+        end
     end
     @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
             include("performance.jl")
-        end
-    end
-    @testset verbose = true "Comparison" begin
-        @testset "ColPack.jl" begin
-            include("colpack.jl")
-        end
-        @testset "SuiteSparse" begin
-            include("suitesparse.jl")
         end
     end
 end
