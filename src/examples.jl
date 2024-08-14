@@ -37,7 +37,7 @@ function what_fig_41()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = float.(sparse(Symmetric(M)))
+    A = sparse(Symmetric(M))
     color = [
         1,  # 1. green
         2,  # 2. red
@@ -77,7 +77,7 @@ function what_fig_61()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = float.(sparse(Symmetric(M)))
+    A = sparse(Symmetric(M))
     color = [
         1,  # 1. red
         2,  # 2. blue
@@ -123,7 +123,7 @@ function efficient_fig_1()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = float.(sparse(Symmetric(M)))
+    A = sparse(Symmetric(M))
     color = [
         1,  # 1. red
         2,  # 2. cyan
@@ -171,7 +171,7 @@ function efficient_fig_4()
     #! format: on
     @assert M == transpose(M)
     nonzeros(M) .= 1:length(nonzeros(M))
-    A = float.(sparse(Symmetric(M)))
+    A = sparse(Symmetric(M))
     color = [
         1,  # 1. red
         2,  # 2. cyan
