@@ -133,7 +133,7 @@ The out-of-place alternative is [`decompress`](@ref).
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
 
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which triangle of the matrix `A` should be updated: the Upper one, the Lower one, or the Full matrix.
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 
 !!! note
     In-place decompression is faster when `A isa SparseMatrixCSC`.
@@ -197,7 +197,7 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 - If `result` comes from a `:nonsymmetric` structure with `:row` partition, this will update the rows of `A` that share color `c` (whose sum makes up `b`).
 - If `result` comes from a `:symmetric` structure with `:column` partition, this will update the coefficients of `A` whose value is deduced from color `c`.
 
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
