@@ -198,6 +198,46 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
 
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, SparseArrays
+
+julia> A = sparse([
+           0 0 4 6 0 9
+           1 0 0 0 7 0
+           0 2 0 0 8 0
+           0 3 5 0 0 0
+       ]);
+
+julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
+
+julia> column_groups(result)
+3-element Vector{Vector{Int64}}:
+ [1, 2, 4]
+ [3, 5]
+ [6]
+
+julia> B = compress(A, result)
+4×3 Matrix{Int64}:
+ 6  4  9
+ 1  7  0
+ 2  8  0
+ 3  5  0
+
+julia> A2 = similar(A); A2 .= 0;
+
+julia> decompress!(A2, B, result)
+4×6 SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+ ⋅  ⋅  4  0  ⋅  0
+ 0  ⋅  ⋅  ⋅  7  ⋅
+ ⋅  0  ⋅  ⋅  8  ⋅
+ ⋅  0  5  ⋅  ⋅  ⋅
+
+julia> A2[:, [3, 5]] == A[:, [3, 5]]
+true
+```
+
 # See also
 
 - [`ColoringProblem`](@ref)
