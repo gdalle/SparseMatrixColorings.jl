@@ -337,12 +337,13 @@ Storage for the result of a symmetric coloring with any decompression.
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct LinearSystemColoringResult{M,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
