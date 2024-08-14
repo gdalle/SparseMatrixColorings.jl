@@ -46,7 +46,7 @@ end
     n = 10
     A0 = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
 
-    @testset "$((; structure, partition, decompression))" for (
+    @testset "$structure - $partition - $decompression" for (
         structure, partition, decompression
     ) in [
         (:nonsymmetric, :column, :direct),
