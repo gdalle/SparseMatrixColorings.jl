@@ -124,7 +124,7 @@ end
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult,
+        result::AbstractColoringResult, [uplo=:UL]
     )
 
 Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -132,6 +132,8 @@ The out-of-place alternative is [`decompress`](@ref).
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
+
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :UL)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
 
 !!! note
     In-place decompression is faster when `A isa SparseMatrixCSC`.
@@ -186,7 +188,7 @@ function decompress! end
 """
     decompress_single_color!(
         A::AbstractMatrix, b::AbstractVector, c::Integer,
-        result::AbstractColoringResult,
+        result::AbstractColoringResult, [uplo=:UL]
     )
 
 Decompress the vector `b` corresponding to color `c` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -194,6 +196,8 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 - If `result` comes from a `:nonsymmetric` structure with `:column` partition, this will update the columns of `A` that share color `c` (whose sum makes up `b`).
 - If `result` comes from a `:nonsymmetric` structure with `:row` partition, this will update the rows of `A` that share color `c` (whose sum makes up `b`).
 - If `result` comes from a `:symmetric` structure with `:column` partition, this will update the coefficients of `A` whose value is deduced from color `c`.
+
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :UL)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
@@ -246,6 +250,16 @@ true
 """
 function decompress_single_color! end
 
+function in_triangle(i::Integer, j::Integer, uplo::Symbol)
+    if uplo == :UL
+        return true
+    elseif uplo == :U
+        return i <= j
+    else
+        return i >= j
+    end
+end
+
 ## ColumnColoringResult
 
 function decompress!(
@@ -289,6 +303,22 @@ function decompress!(
     nzA = nonzeros(A)
     for k in eachindex(nzA, compressed_indices)
         nzA[k] = B[compressed_indices[k]]
+    end
+    return A
+end
+
+function decompress_single_color!(
+    A::SparseMatrixCSC{R}, b::AbstractVector{R}, c::Integer, result::ColumnColoringResult
+) where {R<:Real}
+    @compat (; S, group) = result
+    check_same_pattern(A, S)
+    rvS = rowvals(S)
+    nzA = nonzeros(A)
+    for j in group[c]
+        for k in nzrange(S, j)
+            i = rvS[k]
+            nzA[k] = b[i]
+        end
     end
     return A
 end
@@ -343,7 +373,10 @@ end
 ## StarSetColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::StarSetColoringResult
+    A::AbstractMatrix{R},
+    B::AbstractMatrix{R},
+    result::StarSetColoringResult,
+    uplo::Symbol=:UL,
 ) where {R<:Real}
     @compat (; S, color, star_set) = result
     @compat (; star, hub, spokes) = star_set
@@ -356,16 +389,25 @@ function decompress!(
     end
     for s in eachindex(hub, spokes)
         j = abs(hub[s])
+        cj = color[j]
         for i in spokes[s]
-            A[i, j] = B[i, color[j]]
-            A[j, i] = B[i, color[j]]
+            if in_triangle(i, j, uplo)
+                A[i, j] = B[i, cj]
+            end
+            if in_triangle(j, i, uplo)
+                A[j, i] = B[i, cj]
+            end
         end
     end
     return A
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix{R}, b::AbstractVector{R}, c::Integer, result::StarSetColoringResult
+    A::AbstractMatrix{R},
+    b::AbstractVector{R},
+    c::Integer,
+    result::StarSetColoringResult,
+    uplo::Symbol=:UL,
 ) where {R<:Real}
     @compat (; S, color, group, star_set) = result
     @compat (; hub, spokes) = star_set
@@ -379,8 +421,12 @@ function decompress_single_color!(
         j = abs(hub[s])
         if color[j] == c
             for i in spokes[s]
-                A[i, j] = b[i]
-                A[j, i] = b[i]
+                if in_triangle(i, j, uplo)
+                    A[i, j] = b[i]
+                end
+                if in_triangle(j, i, uplo)
+                    A[j, i] = b[i]
+                end
             end
         end
     end
@@ -399,12 +445,33 @@ function decompress!(
     return A
 end
 
+function decompress!(
+    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult, uplo::Symbol
+) where {R<:Real}
+    @compat (; S, compressed_indices) = result
+    check_same_pattern(A, S)
+    rvA = rowvals(A)
+    nzA = nonzeros(A)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvA[k]
+            if in_triangle(i, j, uplo)
+                nzA[k] = B[compressed_indices[k]]
+            end
+        end
+    end
+    return A
+end
+
 ## TreeSetColoringResult
 
 # TODO: add method for A::SparseMatrixCSC
 
 function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::TreeSetColoringResult
+    A::AbstractMatrix{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:UL,
 ) where {R<:Real}
     @compat (; S, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
     check_same_pattern(A, S)
@@ -432,8 +499,12 @@ function decompress!(
         for (i, j) in reverse_bfs_orders[k]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
-            A[i, j] = val
-            A[j, i] = val
+            if in_triangle(i, j, uplo)
+                A[i, j] = val
+            end
+            if in_triangle(j, i, uplo)
+                A[j, i] = val
+            end
         end
     end
     return A
@@ -442,7 +513,7 @@ end
 ## MatrixInverseColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult
+    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult; uplo=:UL
 ) where {R<:Real}
     @compat (;
         S, color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A
@@ -458,8 +529,12 @@ function decompress!(
         end
     end
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
-        A[i, j] = strict_upper_nonzeros_A[l]
-        A[j, i] = strict_upper_nonzeros_A[l]
+        if in_triangle(i, j, uplo)
+            A[i, j] = strict_upper_nonzeros_A[l]
+        end
+        if in_triangle(j, i, uplo)
+            A[j, i] = strict_upper_nonzeros_A[l]
+        end
     end
     return A
 end

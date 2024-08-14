@@ -1,5 +1,3 @@
-using Compat
-using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:

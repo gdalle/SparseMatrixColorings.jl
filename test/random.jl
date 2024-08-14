@@ -1,6 +1,5 @@
 using ADTypes: column_coloring, row_coloring, symmetric_coloring
-using Compat
-using LinearAlgebra: I, Symmetric
+using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
@@ -27,7 +26,7 @@ symmetric_params = vcat(
 @testset "Column coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    for (m, n, p) in asymmetric_params
+    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
         @test structurally_orthogonal_columns(A0, color0)
@@ -39,7 +38,7 @@ end;
 @testset "Row coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    for (m, n, p) in asymmetric_params
+    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
         @test structurally_orthogonal_columns(transpose(A0), color0)
@@ -51,8 +50,8 @@ end;
 @testset "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    for (n, p) in symmetric_params
-        A0 = Symmetric(sprand(rng, n, n, p))
+    @testset "$((; n, p))" for (n, p) in symmetric_params
+        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         color0 = symmetric_coloring(A0, algo)
         @test symmetrically_orthogonal_columns(A0, color0)
         @test directly_recoverable_columns(A0, color0)
@@ -63,8 +62,8 @@ end;
 @testset "Symmetric coloring & substitution decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:substitution)
-    for (n, p) in symmetric_params
-        A0 = Symmetric(sprand(rng, n, n, p))
+    @testset "$((; n, p))" for (n, p) in symmetric_params
+        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         # TODO: find tests for recoverability
         test_coloring_decompression(A0, problem, algo)
     end
