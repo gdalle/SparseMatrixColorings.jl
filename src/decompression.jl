@@ -124,7 +124,7 @@ end
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult, [uplo=:UL]
+        result::AbstractColoringResult, [uplo=:F]
     )
 
 Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -133,7 +133,7 @@ The out-of-place alternative is [`decompress`](@ref).
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
 
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :UL)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which triangle of the matrix `A` should be updated: the Upper one, the Lower one, or the Full matrix.
 
 !!! note
     In-place decompression is faster when `A isa SparseMatrixCSC`.
@@ -188,7 +188,7 @@ function decompress! end
 """
     decompress_single_color!(
         A::AbstractMatrix, b::AbstractVector, c::Integer,
-        result::AbstractColoringResult, [uplo=:UL]
+        result::AbstractColoringResult, [uplo=:F]
     )
 
 Decompress the vector `b` corresponding to color `c` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -197,7 +197,7 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 - If `result` comes from a `:nonsymmetric` structure with `:row` partition, this will update the rows of `A` that share color `c` (whose sum makes up `b`).
 - If `result` comes from a `:symmetric` structure with `:column` partition, this will update the coefficients of `A` whose value is deduced from color `c`.
 
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :UL)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
+For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which triangle of the matrix `A` should be updated: the upper one, the lower one, or both.
 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
@@ -251,7 +251,7 @@ true
 function decompress_single_color! end
 
 function in_triangle(i::Integer, j::Integer, uplo::Symbol)
-    if uplo == :UL
+    if uplo == :F
         return true
     elseif uplo == :U
         return i <= j
@@ -376,7 +376,7 @@ function decompress!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
     result::StarSetColoringResult,
-    uplo::Symbol=:UL,
+    uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (; S, color, star_set) = result
     @compat (; star, hub, spokes) = star_set
@@ -407,7 +407,7 @@ function decompress_single_color!(
     b::AbstractVector{R},
     c::Integer,
     result::StarSetColoringResult,
-    uplo::Symbol=:UL,
+    uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (; S, color, group, star_set) = result
     @compat (; hub, spokes) = star_set
@@ -471,7 +471,7 @@ function decompress!(
     A::AbstractMatrix{R},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
-    uplo::Symbol=:UL,
+    uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (; S, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
     check_same_pattern(A, S)
@@ -513,7 +513,7 @@ end
 ## MatrixInverseColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult; uplo=:UL
+    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult; uplo=:F
 ) where {R<:Real}
     @compat (;
         S, color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A
