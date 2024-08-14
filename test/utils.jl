@@ -60,7 +60,7 @@ function test_coloring_decompression(
 
                 decompress!(A3upper, B, result, :U)
                 decompress!(A3lower, B, result, :L)
-                decompress!(A3both, B, result, :UL)
+                decompress!(A3both, B, result, :F)
 
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
@@ -80,7 +80,7 @@ function test_coloring_decompression(
                 for c in unique(color)
                     decompress_single_color!(A4upper, B[:, c], c, result, :U)
                     decompress_single_color!(A4lower, B[:, c], c, result, :L)
-                    decompress_single_color!(A4both, B[:, c], c, result, :UL)
+                    decompress_single_color!(A4both, B[:, c], c, result, :F)
                 end
 
                 @test A4upper ≈ triu(A0)
