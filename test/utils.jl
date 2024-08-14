@@ -28,13 +28,12 @@ function test_coloring_decompression(
         if decompression == :direct
             A2 = respectful_similar(A)
             A2 .= zero(eltype(A2))
-            bs = if partition == :column
-                eachcol(B)
-            else
-                eachrow(B)
-            end
             for c in unique(color)
-                decompress_single_color!(A2, bs[c], c, result)
+                if partition == :column
+                    decompress_single_color!(A2, B[:, c], c, result)
+                elseif partition == :row
+                    decompress_single_color!(A2, B[c, :], c, result)
+                end
             end
             @test A2 ≈ A0
         end
