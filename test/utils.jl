@@ -33,7 +33,7 @@ function test_coloring_decompression(
             else
                 eachrow(B)
             end
-            for c in color
+            for c in unique(color)
                 decompress_single_color!(A2, bs[c], c, result)
             end
             @test A2 ≈ A0

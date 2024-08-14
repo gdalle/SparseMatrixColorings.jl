@@ -236,10 +236,7 @@ function symmetric_coefficient(
         i, j = j, i
     end
     star_id = star[i, j]
-    h = hub[star_id]
-    if h < 0
-        h = -h
-    end
+    h = abs(hub[star_id])
     if h == j
         # i is the spoke
         return i, color[h]
