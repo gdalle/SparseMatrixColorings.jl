@@ -371,7 +371,7 @@ function LinearSystemColoringResult(
         (i < j) && push!(strict_upper_nonzero_inds, (i, j))
     end
 
-    T = spzeros(Float64, n * C, length(strict_upper_nonzero_inds))
+    T = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
         cj = color[j]
@@ -382,7 +382,7 @@ function LinearSystemColoringResult(
     end
     T_factorization = factorize(T)
 
-    strict_upper_nonzeros_A = Vector{R}(undef, size(T, 2))
+    strict_upper_nonzeros_A = Vector{float(R)}(undef, size(T, 2))
 
     return LinearSystemColoringResult(
         S, color, group, strict_upper_nonzero_inds, strict_upper_nonzeros_A, T_factorization
