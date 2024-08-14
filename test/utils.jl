@@ -21,55 +21,84 @@ function test_coloring_decompression(
         push!(color_vec, color)
 
         B = compress(A, result)
-        !isnothing(color0) && @test color == color0
-        !isnothing(B0) && @test B == B0
 
-        # Full decompression
-        @test decompress(B, result) ≈ A0
-        @test decompress(B, result) ≈ A0  # check result wasn't modified
-        @test decompress!(respectful_similar(A), B, result) ≈ A0
-        @test decompress!(respectful_similar(A), B, result) ≈ A0
+        @testset "Reference" begin
+            !isnothing(color0) && @test color == color0
+            !isnothing(B0) && @test B == B0
+        end
 
-        # Colorwise decompression
-        if decompression == :direct  # TODO: implement for :substitution too
-            A2 = respectful_similar(A)
-            A2 .= zero(eltype(A2))
-            for c in unique(color)
-                if partition == :column
-                    decompress_single_color!(A2, B[:, c], c, result)
-                elseif partition == :row
-                    decompress_single_color!(A2, B[c, :], c, result)
+        @testset "Full decompression" begin
+            @test decompress(B, result) ≈ A0
+            @test decompress(B, result) ≈ A0  # check result wasn't modified
+            @test decompress!(respectful_similar(A), B, result) ≈ A0
+            @test decompress!(respectful_similar(A), B, result) ≈ A0
+        end
+
+        @testset "Single-color decompression" begin
+            if decompression == :direct  # TODO: implement for :substitution too
+                A2 = respectful_similar(A)
+                A2 .= zero(eltype(A2))
+                for c in unique(color)
+                    if partition == :column
+                        decompress_single_color!(A2, B[:, c], c, result)
+                    elseif partition == :row
+                        decompress_single_color!(A2, B[c, :], c, result)
+                    end
                 end
+                @test A2 ≈ A0
             end
-            @test A2 ≈ A0
         end
 
-        # Triangle decompression
-        if structure == :symmetric
-            A3upper = respectful_similar(A)
-            A3lower = respectful_similar(A)
-            A3both = respectful_similar(A)
-            A3upper .= zero(eltype(A))
-            A3lower .= zero(eltype(A))
-            A3both .= zero(eltype(A))
+        @testset "Triangle decompression" begin
+            if structure == :symmetric
+                A3upper = respectful_similar(A)
+                A3lower = respectful_similar(A)
+                A3both = respectful_similar(A)
+                A3upper .= zero(eltype(A))
+                A3lower .= zero(eltype(A))
+                A3both .= zero(eltype(A))
 
-            decompress!(A3upper, B, result, :U)
-            decompress!(A3lower, B, result, :L)
-            decompress!(A3both, B, result, :UL)
+                decompress!(A3upper, B, result, :U)
+                decompress!(A3lower, B, result, :L)
+                decompress!(A3both, B, result, :UL)
 
-            @test A3upper ≈ triu(A0)
-            @test A3lower ≈ tril(A0)
-            @test A3both ≈ A0
+                @test A3upper ≈ triu(A0)
+                @test A3lower ≈ tril(A0)
+                @test A3both ≈ A0
+            end
         end
 
-        # Linear system decompression
-        if structure == :symmetric
-            linresult = LinearSystemColoringResult(sparse(A), color, eltype(A))
-            @test decompress(B, linresult) ≈ A0
-            @test decompress!(respectful_similar(A), B, linresult) ≈ A0
+        @testset "Single-color triangle decompression" begin
+            if structure == :symmetric && decompression == :direct
+                A4upper = respectful_similar(A)
+                A4lower = respectful_similar(A)
+                A4both = respectful_similar(A)
+                A4upper .= zero(eltype(A))
+                A4lower .= zero(eltype(A))
+                A4both .= zero(eltype(A))
+
+                for c in unique(color)
+                    decompress_single_color!(A4upper, B[:, c], c, result, :U)
+                    decompress_single_color!(A4lower, B[:, c], c, result, :L)
+                    decompress_single_color!(A4both, B[:, c], c, result, :UL)
+                end
+
+                @test A4upper ≈ triu(A0)
+                @test A4lower ≈ tril(A0)
+                @test A4both ≈ A0
+            end
+        end
+
+        @testset "Linear system decompression" begin
+            if structure == :symmetric
+                linresult = LinearSystemColoringResult(sparse(A), color, eltype(A))
+                @test decompress(B, linresult) ≈ A0
+                @test decompress!(respectful_similar(A), B, linresult) ≈ A0
+            end
         end
     end
 
-    # Coherence between all colorings
-    @test all(color_vec .== Ref(color_vec[1]))
+    @testset "Coherence between all colorings" begin
+        @test all(color_vec .== Ref(color_vec[1]))
+    end
 end
