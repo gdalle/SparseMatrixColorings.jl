@@ -1,3 +1,28 @@
+function check_valid_problem(structure::Symbol, partition::Symbol)
+    valid = (
+        (structure == :nonsymmetric && partition in (:column, :row)) ||
+        (structure == :symmetric && partition == :column)
+    )
+    if !valid
+        throw(
+            ArgumentError(
+                "The combination `($(repr(structure)), $(repr(partition)))` is not supported by `ColoringProblem`.",
+            ),
+        )
+    end
+end
+
+function check_valid_algorithm(decompression::Symbol)
+    valid = decompression in (:direct, :substitution)
+    if !valid
+        throw(
+            ArgumentError(
+                "The setting `decompression=$(repr(decompression))` is not supported by `GreedyColoringAlgorithm`.",
+            ),
+        )
+    end
+end
+
 """
     ColoringProblem{structure,partition}
 
@@ -5,35 +30,33 @@ Selector type for the coloring problem to solve, enabling multiple dispatch.
 
 It is passed as an argument to the main function [`coloring`](@ref).
 
-# Constructor
+# Constructors
 
-    ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:column)
+    ColoringProblem{structure,partition}()
+    ColoringProblem(; structure=:nonsymmetric, partition=:column)
 
 - `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
 - `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
+
+!!! warning
+    The second constructor (based on keyword arguments) is type-unstable.
 
 #  Link to automatic differentiation
 
 Matrix coloring is often used in automatic differentiation, and here is the translation guide:
 
-| matrix   | mode                 | `structure`     | `partition`      |
-| -------- | -------------------- | --------------- | -----------------|
-| Jacobian | forward              | `:nonsymmetric` | `:column`        |
-| Jacobian | reverse              | `:nonsymmetric` | `:row`           |
-| Jacobian | forward + reverse    | `:nonsymmetric` | `:bidirectional` |
-| Hessian  | any                  | `:symmetric`    | `:column`        |
-
-!!! warning
-    With a `:symmetric` structure, you have to use a `:column` partition.
-
-!!! warning
-    At the moment, `:bidirectional` partitions are not implemented.
+| matrix   | mode    | `structure`     | `partition`      | implemented |
+| -------- | ------- | --------------- | ---------------- | ----------- |
+| Jacobian | forward | `:nonsymmetric` | `:column`        | yes         |
+| Jacobian | reverse | `:nonsymmetric` | `:row`           | yes         |
+| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | no          |
+| Hessian  | -       | `:symmetric`    | `:column`        | yes         |
+| Hessian  | -       | `:symmetric`    | `:row`           | no          |
 """
 struct ColoringProblem{structure,partition} end
 
 function ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:column)
-    @assert structure in (:nonsymmetric, :symmetric)
-    @assert partition in (:column, :row, :bidirectional)
+    check_valid_problem(structure, partition)
     return ColoringProblem{structure,partition}()
 end
 
@@ -44,15 +67,16 @@ Greedy coloring algorithm for sparse matrices which colors columns or rows one a
 
 It is passed as an argument to the main function [`coloring`](@ref).
 
-# Constructor
+# Constructors
 
-    GreedyColoringAlgorithm(
-        order::AbstractOrder=NaturalOrder();
-        decompression::Symbol=:direct
-    )
+    GreedyColoringAlgorithm{decompression}(order=NaturalOrder())
+    GreedyColoringAlgorithm(order=NaturalOrder(); decompression=:direct)
 
 - `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
+
+!!! warning
+    The second constructor (based on keyword arguments) is type-unstable.
 
 # ADTypes coloring interface
 
@@ -74,10 +98,17 @@ struct GreedyColoringAlgorithm{decompression,O<:AbstractOrder} <:
     order::O
 end
 
+function GreedyColoringAlgorithm{decompression}(
+    order::AbstractOrder=NaturalOrder()
+) where {decompression}
+    check_valid_algorithm(decompression)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(order)
+end
+
 function GreedyColoringAlgorithm(
     order::AbstractOrder=NaturalOrder(); decompression::Symbol=:direct
 )
-    @assert decompression in (:direct, :substitution)
+    check_valid_algorithm(decompression)
     return GreedyColoringAlgorithm{decompression,typeof(order)}(order)
 end
 
@@ -106,9 +137,9 @@ julia> S = sparse([
            0 1 1 0 0 0
        ]);
 
-julia> problem = ColoringProblem(structure=:nonsymmetric, partition=:column);
+julia> problem = ColoringProblem(; structure=:nonsymmetric, partition=:column);
 
-julia> algo = GreedyColoringAlgorithm();
+julia> algo = GreedyColoringAlgorithm(; decompression=:direct);
 
 julia> result = coloring(S, problem, algo);
 

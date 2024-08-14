@@ -1,5 +1,7 @@
+using LinearAlgebra
 using SparseArrays
-using SparseMatrixColorings: matrix_versions, respectful_similar, same_sparsity_pattern
+using SparseMatrixColorings:
+    check_same_pattern, matrix_versions, respectful_similar, same_pattern
 using StableRNGs
 using Test
 
@@ -29,4 +31,22 @@ same_view(::Adjoint, ::Adjoint) = true
         B = respectful_similar(A)
         size(B) == size(A) && same_view(A, B)
     end
+end
+
+@testset "Sparsity pattern" begin
+    S = sparse([
+        0 1 1
+        0 1 0
+        1 1 0
+    ])
+
+    A1 = copy(S)
+    A2 = copy(S)
+    A2[1, 1] = 1
+
+    @test same_pattern(A1, S)
+    @test !same_pattern(A2, S)
+    @test same_pattern(Matrix(A2), S)
+
+    @test_throws DimensionMismatch check_same_pattern(A2, S)
 end

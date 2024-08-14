@@ -5,11 +5,11 @@ CollapsedDocStrings = true
 CurrentModule = SparseMatrixColorings
 ```
 
+The docstrings on this page define the public API of the package.
+
 ```@docs
 SparseMatrixColorings
 ```
-
-The docstrings on this page define the public API of the package.
 
 ## Main function
 
@@ -38,8 +38,6 @@ decompress!
 ```
 
 ## Orders
-
-These symbols are not exported but they are still part of the public API.
 
 ```@docs
 AbstractOrder

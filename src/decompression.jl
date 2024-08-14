@@ -181,27 +181,16 @@ true
 - [`ColoringProblem`](@ref)
 - [`AbstractColoringResult`](@ref)
 """
-function decompress!(
-    A::AbstractMatrix{R},
-    B::AbstractMatrix{R},
-    result::AbstractColoringResult{structure,partition,decompression},
-) where {R<:Real,structure,partition,decompression}
-    # common checks
-    S = get_matrix(result)
-    structure == :symmetric && checksquare(A)
-    if !same_sparsity_pattern(A, S)
-        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
-    end
-    return decompress_aux!(A, B, result)
-end
+function decompress! end
 
 ## NonSymmetricColoringResult
 
-function decompress_aux!(
+function decompress!(
     A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::NonSymmetricColoringResult{:column}
 ) where {R<:Real}
-    A .= zero(R)
     S = get_matrix(result)
+    check_same_pattern(A, S)
+    A .= zero(R)
     color = column_colors(result)
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -214,11 +203,12 @@ function decompress_aux!(
     return A
 end
 
-function decompress_aux!(
+function decompress!(
     A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::NonSymmetricColoringResult{:row}
 ) where {R<:Real}
-    A .= zero(R)
     S = get_matrix(result)
+    check_same_pattern(A, S)
+    A .= zero(R)
     color = row_colors(result)
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -231,9 +221,11 @@ function decompress_aux!(
     return A
 end
 
-function decompress_aux!(
+function decompress!(
     A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::NonSymmetricColoringResult{:column}
 ) where {R<:Real}
+    S = get_matrix(result)
+    check_same_pattern(A, S)
     nzA = nonzeros(A)
     ind = result.compressed_indices
     for i in eachindex(nzA, ind)
@@ -242,9 +234,11 @@ function decompress_aux!(
     return A
 end
 
-function decompress_aux!(
+function decompress!(
     A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::NonSymmetricColoringResult{:row}
 ) where {R<:Real}
+    S = get_matrix(result)
+    check_same_pattern(A, S)
     nzA = nonzeros(A)
     ind = result.compressed_indices
     for i in eachindex(nzA, ind)
@@ -255,11 +249,12 @@ end
 
 ## StarSetColoringResult
 
-function decompress_aux!(
+function decompress!(
     A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::StarSetColoringResult
 ) where {R<:Real}
-    A .= zero(R)
     S = get_matrix(result)
+    check_same_pattern(A, S)
+    A .= zero(R)
     color = column_colors(result)
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -272,9 +267,11 @@ function decompress_aux!(
     return A
 end
 
-function decompress_aux!(
+function decompress!(
     A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult
 ) where {R<:Real}
+    S = get_matrix(result)
+    check_same_pattern(A, S)
     nzA = nonzeros(A)
     ind = result.compressed_indices
     for i in eachindex(nzA, ind)
@@ -287,11 +284,12 @@ end
 
 # TODO: add method for A::SparseMatrixCSC
 
-function decompress_aux!(
+function decompress!(
     A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::TreeSetColoringResult
 ) where {R<:Real}
-    A .= zero(R)
     S = get_matrix(result)
+    check_same_pattern(A, S)
+    A .= zero(R)
     color = column_colors(result)
     @compat (; vertices_by_tree, reverse_bfs_orders, buffer) = result
 
@@ -326,10 +324,11 @@ end
 
 ## MatrixInverseColoringResult
 
-function decompress_aux!(
+function decompress!(
     A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult
 ) where {R<:Real}
     S = get_matrix(result)
+    check_same_pattern(A, S)
     color = column_colors(result)
     @compat (; strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) = result
 

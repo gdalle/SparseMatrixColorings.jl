@@ -49,12 +49,11 @@ include("decompression.jl")
 include("check.jl")
 include("examples.jl")
 
+export NaturalOrder, RandomOrder, LargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
 export compress, decompress, decompress!
-
-@compat public NaturalOrder, RandomOrder, LargestFirst
 
 end
