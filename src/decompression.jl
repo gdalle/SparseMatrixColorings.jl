@@ -513,7 +513,10 @@ end
 ## MatrixInverseColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::LinearSystemColoringResult; uplo=:F
+    A::AbstractMatrix{R},
+    B::AbstractMatrix{R},
+    result::LinearSystemColoringResult,
+    uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (;
         S, color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A
