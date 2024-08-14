@@ -39,6 +39,9 @@ include("utils.jl")
         @testset "Matrices" begin
             include("matrices.jl")
         end
+        @testset "Constructors" begin
+            include("constructors.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Small instances" begin

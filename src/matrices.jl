@@ -46,24 +46,23 @@ function respectful_similar(A::Adjoint, ::Type{T}) where {T}
 end
 
 """
-    same_sparsity_pattern(A::AbstractMatrix, B::AbstractMatrix)
+    same_pattern(A::AbstractMatrix, B::AbstractMatrix)
 
 Perform a partial equality check on the sparsity patterns of `A` and `B`:
 
 - if the return is `true`, they might have the same sparsity pattern but we're not sure
 - if the return is `false`, they definitely don't have the same sparsity pattern
 """
-function same_sparsity_pattern(A::AbstractMatrix, B::AbstractMatrix)
+function same_pattern(A::AbstractMatrix, B::AbstractMatrix)
     return size(A) == size(B)
 end
 
-function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
+function same_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
     return size(A) == size(B) && nnz(A) == nnz(B)
 end
 
-function same_sparsity_pattern(
-    A::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
-    B::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
-)
-    return same_sparsity_pattern(parent(A), parent(B))
+function check_same_pattern(A::AbstractMatrix, S::AbstractMatrix)
+    if !same_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
 end

@@ -43,7 +43,6 @@ SparseMatrixColorings.LinearSystemColoringResult
 ## Testing
 
 ```@docs
-SparseMatrixColorings.same_sparsity_pattern
 SparseMatrixColorings.directly_recoverable_columns
 SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
@@ -54,6 +53,7 @@ SparseMatrixColorings.structurally_orthogonal_columns
 ```@docs
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
+SparseMatrixColorings.same_pattern
 ```
 
 ## Examples
