@@ -191,7 +191,7 @@ function decompress! end
         result::AbstractColoringResult, [uplo=:F]
     )
 
-Decompress the vector `b` corresponding to color `c` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
+Decompress the vector `b` corresponding to color `c` in-place into `A`, given a `:direct` coloring `result` of the sparsity pattern of `A` (it will not work with a `:substitution` coloring).
 
 - If `result` comes from a `:nonsymmetric` structure with `:column` partition, this will update the columns of `A` that share color `c` (whose sum makes up `b`).
 - If `result` comes from a `:nonsymmetric` structure with `:row` partition, this will update the rows of `A` that share color `c` (whose sum makes up `b`).
