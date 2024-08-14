@@ -227,7 +227,7 @@ julia> B = compress(A, result)
 
 julia> A2 = similar(A); A2 .= 0;
 
-julia> decompress!(A2, B, result)
+julia> decompress_single_color!(A2, B[:, 2], 2, result)
 4×6 SparseMatrixCSC{Int64, Int64} with 9 stored entries:
  ⋅  ⋅  4  0  ⋅  0
  0  ⋅  ⋅  ⋅  7  ⋅
