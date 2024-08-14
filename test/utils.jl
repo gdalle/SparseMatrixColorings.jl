@@ -10,7 +10,7 @@ function test_coloring_decompression(
     color0=nothing,
 ) where {structure,partition,decompression}
     color_vec = Vector{Int}[]
-    @testset "A::$(typeof(A))" for A in matrix_versions(A0)
+    for A in matrix_versions(A0)
         result = coloring(A, problem, algo; decompression_eltype=eltype(A))
         color = if partition == :column
             column_colors(result)
@@ -25,6 +25,18 @@ function test_coloring_decompression(
         @test decompress(B, result) ≈ A0  # check result wasn't modified
         @test decompress!(respectful_similar(A), B, result) ≈ A0
         @test decompress!(respectful_similar(A), B, result) ≈ A0
+        if decompression == :direct
+            A2 = respectful_similar(A)
+            A2 .= zero(eltype(A2))
+            for c in unique(color)
+                if partition == :column
+                    decompress_single_color!(A2, B[:, c], c, result)
+                elseif partition == :row
+                    decompress_single_color!(A2, B[c, :], c, result)
+                end
+            end
+            @test A2 ≈ A0
+        end
         if structure == :symmetric
             linresult = LinearSystemColoringResult(sparse(A), color, eltype(A))
             @test decompress(B, linresult) ≈ A0

@@ -19,19 +19,12 @@ Combination between the type parameters of [`ColoringProblem`](@ref) and [`Greed
 
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
-- [`compress`](@ref), [`decompress`](@ref) and [`decompress!`](@ref)
+- [`compress`](@ref), [`decompress`](@ref), [`decompress!`](@ref), [`decompress_single_color!`](@ref)
 
 !!! warning
     Unlike the methods above, the concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 """
 abstract type AbstractColoringResult{structure,partition,decompression,M<:SparseMatrixCSC} end
-
-"""
-    get_matrix(result::AbstractColoringResult)
-
-Return the matrix that was colored.
-"""
-function get_matrix end
 
 """
     column_colors(result::AbstractColoringResult)
@@ -78,8 +71,6 @@ function group_by_color(color::AbstractVector{<:Integer})
     return group
 end
 
-get_matrix(result::AbstractColoringResult) = result.S
-
 column_colors(result::AbstractColoringResult{s,:column}) where {s} = result.color
 column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.group
 
@@ -91,7 +82,7 @@ row_groups(result::AbstractColoringResult{s,:row}) where {s} = result.group
 """
 $TYPEDEF
 
-Storage for the result of a nonsymmetric coloring with direct decompression.
+Storage for the result of a column coloring with direct decompression.
 
 # Fields
 
@@ -101,8 +92,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct NonSymmetricColoringResult{partition,M} <:
-       AbstractColoringResult{:nonsymmetric,partition,:direct,M}
+struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:direct,M}
     "matrix that was colored"
     S::M
     "one integer color for each column or row (depending on `partition`)"
@@ -113,7 +103,7 @@ struct NonSymmetricColoringResult{partition,M} <:
     compressed_indices::Vector{Int}
 end
 
-function NonSymmetricColoringResult{:column}(S::SparseMatrixCSC, color::Vector{Int})
+function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     group = group_by_color(color)
     n = size(S, 1)
     I, J, _ = findnz(S)
@@ -124,12 +114,34 @@ function NonSymmetricColoringResult{:column}(S::SparseMatrixCSC, color::Vector{I
         # A[i, j] = B[i, c]
         compressed_indices[k] = (c - 1) * n + i
     end
-    return NonSymmetricColoringResult{:column,typeof(S)}(
-        S, color, group, compressed_indices
-    )
+    return ColumnColoringResult(S, color, group, compressed_indices)
 end
 
-function NonSymmetricColoringResult{:row}(S::SparseMatrixCSC, color::Vector{Int})
+"""
+$TYPEDEF
+
+Storage for the result of a row coloring with direct decompression.
+
+# Fields
+
+See the docstring of [`ColumnColoringResult`](@ref).
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct,M}
+    S::M
+    Sᵀ::M
+    color::Vector{Int}
+    group::Vector{Vector{Int}}
+    compressed_indices::Vector{Int}
+end
+
+function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
+    Sᵀ = sparse(transpose(S))
     group = group_by_color(color)
     C = maximum(color)
     I, J, _ = findnz(S)
@@ -140,7 +152,7 @@ function NonSymmetricColoringResult{:row}(S::SparseMatrixCSC, color::Vector{Int}
         # A[i, j] = B[c, j]
         compressed_indices[k] = (j - 1) * C + c
     end
-    return NonSymmetricColoringResult{:row,typeof(S)}(S, color, group, compressed_indices)
+    return RowColoringResult(S, Sᵀ, color, group, compressed_indices)
 end
 
 """
@@ -150,12 +162,13 @@ Storage for the result of a symmetric coloring with direct decompression.
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct StarSetColoringResult{M} <: AbstractColoringResult{:symmetric,:column,:direct,M}
     S::M
@@ -186,12 +199,13 @@ Storage for the result of a symmetric coloring with decompression by substitutio
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct TreeSetColoringResult{M,R} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
@@ -323,12 +337,13 @@ Storage for the result of a symmetric coloring with any decompression.
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct LinearSystemColoringResult{M,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}

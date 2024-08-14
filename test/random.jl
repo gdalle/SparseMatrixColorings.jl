@@ -1,5 +1,4 @@
 using ADTypes: column_coloring, row_coloring, symmetric_coloring
-using Base.Iterators: product
 using Compat
 using LinearAlgebra: I, Symmetric
 using SparseArrays
@@ -28,7 +27,7 @@ symmetric_params = vcat(
 @testset "Column coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
+    for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
         @test structurally_orthogonal_columns(A0, color0)
@@ -40,7 +39,7 @@ end;
 @testset "Row coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset "Size ($m, $n) - sparsity $p" for (m, n, p) in asymmetric_params
+    for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
         @test structurally_orthogonal_columns(transpose(A0), color0)
@@ -52,7 +51,7 @@ end;
 @testset "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
+    for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
         color0 = symmetric_coloring(A0, algo)
         @test symmetrically_orthogonal_columns(A0, color0)
@@ -64,10 +63,9 @@ end;
 @testset "Symmetric coloring & substitution decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:substitution)
-    @testset "Size ($n, $n) - sparsity $p" for (n, p) in symmetric_params
+    for (n, p) in symmetric_params
         A0 = Symmetric(sprand(rng, n, n, p))
-        color0 = column_colors(coloring(A0, problem, algo))
         # TODO: find tests for recoverability
-        test_coloring_decompression(A0, problem, algo; color0)
+        test_coloring_decompression(A0, problem, algo)
     end
 end;

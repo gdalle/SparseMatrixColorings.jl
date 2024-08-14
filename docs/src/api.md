@@ -35,6 +35,7 @@ row_groups
 compress
 decompress
 decompress!
+decompress_single_color!
 ```
 
 ## Orders
