@@ -131,7 +131,7 @@ $TYPEDFIELDS
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
     star::Dict{Tuple{Int,Int},Int}
-    "a mapping from star indices to their hub"
+    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
     "a mapping from star indices to the vector of their spokes"
     spokes::Vector{Vector{Int}}
@@ -141,9 +141,9 @@ function StarSet(star, hub)
     spokes = [Int[] for s in eachindex(hub)]
     for ((i, j), s) in pairs(star)
         h = hub[s]
-        if i == h
+        if i == abs(h)
             push!(spokes[s], j)
-        elseif j == h
+        elseif j == abs(h)
             push!(spokes[s], i)
         end
     end
@@ -200,7 +200,7 @@ function _update_stars!(
                 hub[star[vq]] = v  # this may already be true
                 star[vw] = star[vq]
             else  # vw forms a new star
-                push!(hub, max(v, w))  # hub is yet undefined so we can pick either vertex
+                push!(hub, -max(v, w))  # hub is undefined so we set it to a negative value, but it allows us to remember one of the two vertices
                 star[vw] = length(hub)
             end
         end
@@ -237,9 +237,8 @@ function symmetric_coefficient(
     end
     star_id = star[i, j]
     h = hub[star_id]
-    if h == 0
-        # pick arbitrary hub
-        h = i
+    if h < 0
+        h = -h
     end
     if h == j
         # i is the spoke

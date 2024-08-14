@@ -315,7 +315,7 @@ function decompress!(
         end
     end
     for s in eachindex(hub, spokes)
-        j = hub[s]
+        j = abs(hub[s])
         for i in spokes[s]
             A[i, j] = B[i, color[j]]
             A[j, i] = B[i, color[j]]
@@ -336,7 +336,7 @@ function decompress_single_color!(
         end
     end
     for s in eachindex(hub, spokes)
-        j = hub[s]
+        j = abs(hub[s])
         if color[j] == c
             for i in spokes[s]
                 A[i, j] = b[i]
