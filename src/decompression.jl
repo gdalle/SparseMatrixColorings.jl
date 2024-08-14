@@ -284,7 +284,6 @@ function decompress_single_color!(
 ) where {R<:Real}
     @compat (; S, group) = result
     check_same_pattern(A, S)
-    view(A, :, group[c]) .= zero(R)
     rvS = rowvals(S)
     for j in group[c]
         for k in nzrange(S, j)
@@ -347,7 +346,6 @@ function decompress_single_color!(
 ) where {R<:Real}
     @compat (; S, Sᵀ, group) = result
     check_same_pattern(A, S)
-    view(A, group[c], :) .= zero(R)
     rvSᵀ = rowvals(Sᵀ)
     for i in group[c]
         for k in nzrange(Sᵀ, i)

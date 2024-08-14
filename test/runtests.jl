@@ -59,7 +59,12 @@ include("utils.jl")
     end
     @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
-            include("performance.jl")
+            @testset "Type stability" begin
+                include("type_stability.jl")
+            end
+        end
+        @testset "Allocations" begin
+            include("allocations.jl")
         end
     end
 end
