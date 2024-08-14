@@ -26,7 +26,6 @@ SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
-SparseMatrixColorings.get_matrix
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
 ```
@@ -34,7 +33,8 @@ SparseMatrixColorings.TreeSet
 ## Concrete coloring results
 
 ```@docs
-SparseMatrixColorings.NonSymmetricColoringResult
+SparseMatrixColorings.ColumnColoringResult
+SparseMatrixColorings.RowColoringResult
 SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult

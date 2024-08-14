@@ -178,7 +178,7 @@ function coloring(
     S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return NonSymmetricColoringResult{:column}(S, color)
+    return ColumnColoringResult(S, color)
 end
 
 function coloring(
@@ -190,7 +190,7 @@ function coloring(
     S = sparse(A)
     bg = bipartite_graph(S)
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return NonSymmetricColoringResult{:row}(S, color)
+    return RowColoringResult(S, color)
 end
 
 function coloring(

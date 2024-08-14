@@ -54,6 +54,6 @@ export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
-export compress, decompress, decompress!
+export compress, decompress, decompress!, decompress_single_color!
 
 end

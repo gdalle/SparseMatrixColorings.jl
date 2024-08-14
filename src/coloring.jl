@@ -131,8 +131,23 @@ $TYPEDFIELDS
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
     star::Dict{Tuple{Int,Int},Int}
-    "a mapping from star indices to their hub (the hub is `0` if the star only contains one edge)"
+    "a mapping from star indices to their hub"
     hub::Vector{Int}
+    "a mapping from star indices to the vector of their spokes"
+    spokes::Vector{Vector{Int}}
+end
+
+function StarSet(star, hub)
+    spokes = [Int[] for s in eachindex(hub)]
+    for ((i, j), s) in pairs(star)
+        h = hub[s]
+        if i == h
+            push!(spokes[s], j)
+        elseif j == h
+            push!(spokes[s], i)
+        end
+    end
+    return StarSet(star, hub, spokes)
 end
 
 _sort(u, v) = (min(u, v), max(u, v))
@@ -185,7 +200,7 @@ function _update_stars!(
                 hub[star[vq]] = v  # this may already be true
                 star[vw] = star[vq]
             else  # vw forms a new star
-                push!(hub, 0)  # hub is yet undefined
+                push!(hub, max(v, w))  # hub is yet undefined so we can pick either vertex
                 star[vw] = length(hub)
             end
         end
@@ -197,42 +212,17 @@ end
     symmetric_coefficient(
         i::Integer, j::Integer,
         color::AbstractVector{<:Integer},
-        group::AbstractVector{<:AbstractVector{<:Integer}},
-        S::AbstractMatrix{Bool}
-    )
-
-    symmetric_coefficient(
-        i::Integer, j::Integer,
-        color::AbstractVector{<:Integer},
         star_set::StarSet
     )
 
 Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
 
-The first version corresponds to algorithm `DirectRecover1` in the paper, the second to `DirectRecover2`.
+This function corresponds to algorithm `DirectRecover2` in the paper.
 
 # References
 
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figures 2 and 3
+> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
 """
-function symmetric_coefficient end
-
-function symmetric_coefficient(
-    i::Integer,
-    j::Integer,
-    color::AbstractVector{<:Integer},
-    group::AbstractVector{<:AbstractVector{<:Integer}},
-    S::AbstractMatrix,
-)
-    for j2 in group[color[j]]
-        j2 == j && continue
-        if !iszero(S[i, j2])
-            return j, color[i]
-        end
-    end
-    return i, color[j]
-end
-
 function symmetric_coefficient(
     i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
 )
