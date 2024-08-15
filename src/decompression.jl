@@ -448,12 +448,12 @@ function decompress!(
 ) where {R<:Real}
     @compat (; S, compressed_indices) = result
     uplo == :F && check_same_pattern(A, S)
-    rvA = rowvals(A)
+    rvS = rowvals(S)
     nzA = nonzeros(A)
     l = 0  # assume A has the same pattern as the triangle
     for j in axes(S, 2)
         for k in nzrange(S, j)
-            i = rvA[k]
+            i = rvS[k]
             if in_triangle(i, j, uplo)
                 l += 1
                 nzA[l] = B[compressed_indices[k]]
