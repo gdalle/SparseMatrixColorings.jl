@@ -378,7 +378,7 @@ function decompress!(
 ) where {R<:Real}
     @compat (; S, color, star_set) = result
     @compat (; star, hub, spokes) = star_set
-    check_same_pattern(A, S)
+    uplo == :F && check_same_pattern(A, S)
     A .= zero(R)
     for i in axes(A, 1)
         if !iszero(S[i, i])
@@ -409,7 +409,7 @@ function decompress_single_color!(
 ) where {R<:Real}
     @compat (; S, color, group, star_set) = result
     @compat (; hub, spokes) = star_set
-    check_same_pattern(A, S)
+    uplo == :F && check_same_pattern(A, S)
     for i in axes(A, 1)
         if !iszero(S[i, i]) && color[i] == c
             A[i, i] = b[i]
@@ -447,7 +447,7 @@ function decompress!(
     A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult, uplo::Symbol
 ) where {R<:Real}
     @compat (; S, compressed_indices) = result
-    check_same_pattern(A, S)
+    uplo == :F && check_same_pattern(A, S)
     rvA = rowvals(A)
     nzA = nonzeros(A)
     for j in axes(S, 2)
@@ -472,7 +472,7 @@ function decompress!(
     uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (; S, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    check_same_pattern(A, S)
+    uplo == :F && check_same_pattern(A, S)
     A .= zero(R)
 
     if eltype(buffer) == R
@@ -519,7 +519,7 @@ function decompress!(
     @compat (;
         S, color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A
     ) = result
-    check_same_pattern(A, S)
+    uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
     strict_upper_nonzeros_A = T_factorization \ vec(B)
