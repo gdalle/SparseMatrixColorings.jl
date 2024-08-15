@@ -54,7 +54,7 @@ function test_noallocs_decompression(
     end
     @testset "Triangle decompression" begin
         if structure == :symmetric
-            bench1_triangle = @be similar(A) decompress!(_, B, result, :U) evals = 1
+            bench1_triangle = @be similar(triu(A)) decompress!(_, B, result, :U) evals = 1
             bench2_triangle = @be similar(Matrix(A)) decompress!(_, B, result, :U) evals = 1
             @test minimum(bench1_triangle).allocs == 0
             @test minimum(bench2_triangle).allocs == 0
@@ -63,7 +63,7 @@ function test_noallocs_decompression(
     @testset "Single-color triangle decompression" begin
         if structure == :symmetric && decompression == :direct
             b = B[:, 1]
-            bench1_singlecolor_triangle = @be similar(A) decompress_single_color!(
+            bench1_singlecolor_triangle = @be similar(triu(A)) decompress_single_color!(
                 _, b, 1, result, :U
             ) evals = 1
             bench2_singlecolor_triangle = @be similar(Matrix(A)) decompress_single_color!(

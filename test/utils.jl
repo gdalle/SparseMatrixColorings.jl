@@ -51,8 +51,8 @@ function test_coloring_decompression(
 
         @testset "Triangle decompression" begin
             if structure == :symmetric
-                A3upper = respectful_similar(A)
-                A3lower = respectful_similar(A)
+                A3upper = respectful_similar(triu(A))
+                A3lower = respectful_similar(tril(A))
                 A3both = respectful_similar(A)
                 A3upper .= zero(eltype(A))
                 A3lower .= zero(eltype(A))
@@ -70,8 +70,8 @@ function test_coloring_decompression(
 
         @testset "Single-color triangle decompression" begin
             if structure == :symmetric && decompression == :direct
-                A4upper = respectful_similar(A)
-                A4lower = respectful_similar(A)
+                A4upper = respectful_similar(triu(A))
+                A4lower = respectful_similar(tril(A))
                 A4both = respectful_similar(A)
                 A4upper .= zero(eltype(A))
                 A4lower .= zero(eltype(A))

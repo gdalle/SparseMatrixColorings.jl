@@ -79,13 +79,13 @@ end
             end
             @testset "Triangle decompression" begin
                 if structure == :symmetric
-                    @test_opt decompress!(respectful_similar(A), B, result, :U)
+                    @test_opt decompress!(respectful_similar(triu(A)), B, result, :U)
                 end
             end
             @testset "Single-color triangle decompression" begin
                 if structure == :symmetric && decompression == :direct
                     @test_opt decompress_single_color!(
-                        respectful_similar(A), B[:, 1], 1, result, :U
+                        respectful_similar(triu(A)), B[:, 1], 1, result, :U
                     )
                 end
             end
