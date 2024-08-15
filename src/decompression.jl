@@ -450,11 +450,13 @@ function decompress!(
     uplo == :F && check_same_pattern(A, S)
     rvA = rowvals(A)
     nzA = nonzeros(A)
+    l = 0  # assume A has the same pattern as the triangle
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvA[k]
             if in_triangle(i, j, uplo)
-                nzA[k] = B[compressed_indices[k]]
+                l += 1
+                nzA[l] = B[compressed_indices[k]]
             end
         end
     end
