@@ -462,6 +462,7 @@ function decompress!(
             end
         end
     end
+    @assert l == length(nonzeros(A))
     return A
 end
 
