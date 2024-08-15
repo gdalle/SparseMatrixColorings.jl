@@ -456,7 +456,7 @@ function decompress!(
             i = rvS[k]
             if in_triangle(i, j, uplo)
                 l += 1
-                nzA[l] = B[compressed_indices[k]]
+                nzA[k] = B[compressed_indices[k]]  # TODO: flip back to l
             end
         end
     end
