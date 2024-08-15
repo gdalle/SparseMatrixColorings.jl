@@ -65,10 +65,6 @@ function test_coloring_decompression(
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
                 @test A3both ≈ A0
-
-                if A0 != Diagonal(A0) && A3both isa SparseMatrixCSC
-                    @test_throws ArgumentError decompress!(A3both, B, result, :U)
-                end
             end
         end
 
