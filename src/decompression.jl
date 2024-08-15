@@ -462,7 +462,13 @@ function decompress!(
             end
         end
     end
-    @assert l == length(nonzeros(A))
+    if l != length(nonzeros(A))
+        throw(
+            ArgumentError(
+                "The decompression target `A` does not have the right number of nonzeros to store the $(repr(uplo)) triangle.",
+            ),
+        )
+    end
     return A
 end
 
