@@ -143,7 +143,7 @@ end
 function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     Sᵀ = sparse(transpose(S))
     group = group_by_color(color)
-    C = maximum(color)
+    C = length(group)  # ncolors
     I, J, _ = findnz(S)
     compressed_indices = zeros(Int, nnz(S))
     for k in eachindex(I, J, compressed_indices)
@@ -359,7 +359,7 @@ function LinearSystemColoringResult(
     S::SparseMatrixCSC, color::Vector{Int}, decompression_eltype::Type{R}
 ) where {R}
     group = group_by_color(color)
-    C = maximum(color)
+    C = length(group)  # ncolors
 
     # build T such that T * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
