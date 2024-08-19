@@ -5,6 +5,7 @@
 [![Dev Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://gdalle.github.io/SparseMatrixColorings.jl/dev/)
 [![Coverage](https://codecov.io/gh/gdalle/SparseMatrixColorings.jl/branch/main/graph/badge.svg)](https://app.codecov.io/gh/gdalle/SparseMatrixColorings.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/JuliaDiff/BlueStyle)
+[![DOI](https://zenodo.org/badge/801999408.svg)](https://zenodo.org/doi/10.5281/zenodo.11314275)
 
 Coloring algorithms for sparse Jacobian and Hessian matrices.
 
@@ -31,3 +32,8 @@ Some parts of the articles (like definitions) are thus copied verbatim in the do
 
 - [ColPack.jl](https://github.com/michel2323/ColPack.jl): a Julia interface to the C++ library [ColPack](https://github.com/CSCsw/ColPack)
 - [SparseDiffTools.jl](https://github.com/JuliaDiff/SparseDiffTools.jl): contains Julia implementations of some coloring algorithms
+
+## Citing
+
+Please cite this software using the Zenodo DOI of the version you used.
+The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest version.

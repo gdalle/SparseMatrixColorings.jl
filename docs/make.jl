@@ -8,7 +8,7 @@ cp(joinpath(@__DIR__, "..", "README.md"), joinpath(@__DIR__, "src", "index.md");
 
 makedocs(;
     modules=[SparseMatrixColorings],
-    authors="Guillaume Dalle",
+    authors=["Guillaume Dalle", "Alexis Montoison"],
     sitename="SparseMatrixColorings.jl",
     format=Documenter.HTML(),
     pages=["Home" => "index.md", "api.md", "dev.md"],

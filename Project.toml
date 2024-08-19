@@ -1,6 +1,6 @@
 name = "SparseMatrixColorings"
 uuid = "0a514795-09f3-496d-8182-132a7b665d35"
-authors = ["Guillaume Dalle (@gdalle), Alexis Montoison (@amontoison)"]
+authors = ["Guillaume Dalle", "Alexis Montoison"]
 version = "0.4.0"
 
 [deps]
