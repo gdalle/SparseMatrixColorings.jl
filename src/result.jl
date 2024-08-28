@@ -277,7 +277,7 @@ function TreeSetColoringResult(
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
-    
+
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = mapreduce(length, max, vertices_by_tree)
 
