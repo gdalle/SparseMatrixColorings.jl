@@ -278,28 +278,37 @@ function TreeSetColoringResult(
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
 
+    # nvmax is the number of vertices of the biggest tree in the forest
+    nvmax = mapreduce(length, max, vertices_by_tree)
+
+    # Create a queue with a fixed size nvmax
+    queue = Vector{Int}(undef, nvmax)
+
     for k in 1:ntrees
         tree = trees[k]
 
-        # queue to store the leaves
-        queue = Int[]
+        # Initialize the queue to store the leaves
+        queue_start = 1
+        queue_end = 0
 
         # compute the degree of each vertex in the tree
-        for (vertex, neighbors) in trees[k]
+        for (vertex, neighbors) in tree
             degree = length(neighbors)
             degrees[vertex] = degree
 
             # the vertex is a leaf
             if degree == 1
-                push!(queue, vertex)
+                queue_end += 1
+                queue[queue_end] = vertex
             end
         end
 
         # continue until all leaves are treated
-        while !isempty(queue)
-            leaf = pop!(queue)
+        while queue_start <= queue_end
+            leaf = queue[queue_start]
+            queue_start += 1
 
-            # Convenient way to specify that the vertex is removed
+            # Mark the vertex as removed
             degrees[leaf] = 0
 
             for neighbor in tree[leaf]
@@ -307,12 +316,13 @@ function TreeSetColoringResult(
                     # (leaf, neighbor) represents the next edge to visit during decompression
                     push!(reverse_bfs_orders[k], (leaf, neighbor))
 
-                    # reduce the degree of all neighbors
+                    # reduce the degree of the neighbor
                     degrees[neighbor] -= 1
 
                     # check if the neighbor is now a leaf
                     if degrees[neighbor] == 1
-                        push!(queue, neighbor)
+                        queue_end += 1
+                        queue[queue_end] = neighbor
                     end
                 end
             end
