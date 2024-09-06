@@ -69,7 +69,7 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder())
+    GreedyColoringAlgorithm{:decompression}(order=NaturalOrder())
     GreedyColoringAlgorithm(order=NaturalOrder(); decompression=:direct)
 
 - `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
