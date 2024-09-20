@@ -1,21 +1,40 @@
 using LinearAlgebra
 using SparseArrays
-using SparseMatrixColorings: Graph, adjacency_graph, bipartite_graph, neighbors
+using SparseMatrixColorings: Graph, adjacency_graph, bipartite_graph, degree, neighbors
 using Test
 
 ## Standard graph
 
 @testset "Graph" begin
-    g = Graph(sparse([
+    g = Graph{true}(sparse([
         1 0 1
         1 1 0
         0 0 0
     ]))
 
     @test length(g) == 3
+    @test nnz(g) == 4
     @test neighbors(g, 1) == [1, 2]
     @test neighbors(g, 2) == [2]
     @test neighbors(g, 3) == [1]
+    @test degree(g, 1) == 2
+    @test degree(g, 2) == 1
+    @test degree(g, 3) == 1
+
+    g = Graph{false}(sparse([
+        1 0 1
+        1 1 0
+        0 0 0
+    ]))
+
+    @test length(g) == 3
+    @test nnz(g) == 2
+    @test collect(neighbors(g, 1)) == [2]
+    @test collect(neighbors(g, 2)) == Int[]
+    @test collect(neighbors(g, 3)) == [1]
+    @test degree(g, 1) == 1
+    @test degree(g, 2) == 0
+    @test degree(g, 3) == 1
 end;
 
 ## Bipartite graph (fig 3.1 of "What color is your Jacobian?")
@@ -76,12 +95,12 @@ end;
     B = transpose(A) * A
     g = adjacency_graph(B - Diagonal(B))
     @test length(g) == 8
-    @test neighbors(g, 1) == [6, 7, 8]
-    @test neighbors(g, 2) == [5, 7, 8]
-    @test neighbors(g, 3) == [5, 6, 8]
-    @test neighbors(g, 4) == [5, 6, 7]
-    @test neighbors(g, 5) == [2, 3, 4, 6, 7, 8]
-    @test neighbors(g, 6) == [1, 3, 4, 5, 7, 8]
-    @test neighbors(g, 7) == [1, 2, 4, 5, 6, 8]
-    @test neighbors(g, 8) == [1, 2, 3, 5, 6, 7]
+    @test collect(neighbors(g, 1)) == [6, 7, 8]
+    @test collect(neighbors(g, 2)) == [5, 7, 8]
+    @test collect(neighbors(g, 3)) == [5, 6, 8]
+    @test collect(neighbors(g, 4)) == [5, 6, 7]
+    @test collect(neighbors(g, 5)) == [2, 3, 4, 6, 7, 8]
+    @test collect(neighbors(g, 6)) == [1, 3, 4, 5, 7, 8]
+    @test collect(neighbors(g, 7)) == [1, 2, 4, 5, 6, 8]
+    @test collect(neighbors(g, 8)) == [1, 2, 3, 5, 6, 7]
 end
