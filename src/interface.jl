@@ -117,13 +117,17 @@ end
         S::AbstractMatrix,
         problem::ColoringProblem,
         algo::GreedyColoringAlgorithm;
-        [decompression_eltype=Float64]
+        [decompression_eltype=Float64, symmetric_pattern=false]
     )
 
 Solve a [`ColoringProblem`](@ref) on the matrix `S` with a [`GreedyColoringAlgorithm`](@ref) and return an [`AbstractColoringResult`](@ref).
 
 The result can be used to [`compress`](@ref) and [`decompress`](@ref) a matrix `A` with the same sparsity pattern as `S`.
 If `eltype(A) == decompression_eltype`, decompression might be faster.
+
+For a `:nonsymmetric` problem (and only then), setting `symmetric_pattern=true` indicates that the pattern of nonzeros is symmetric.
+This condition is weaker than the symmetry of actual values, so it can happen for some Jacobians.
+Specifying it allows faster construction of the bipartite graph.
 
 # Example
 
@@ -173,10 +177,13 @@ function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:column},
     algo::GreedyColoringAlgorithm;
-    decompression_eltype=Float64,
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
 )
     S = sparse(A)
-    bg = bipartite_graph(S)
+    bg = bipartite_graph(
+        S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return ColumnColoringResult(S, color)
 end
@@ -185,10 +192,13 @@ function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:row},
     algo::GreedyColoringAlgorithm;
-    decompression_eltype=Float64,
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
 )
     S = sparse(A)
-    bg = bipartite_graph(S)
+    bg = bipartite_graph(
+        S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return RowColoringResult(S, color)
 end
@@ -197,7 +207,7 @@ function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct};
-    decompression_eltype=Float64,
+    decompression_eltype::Type=Float64,
 )
     S = sparse(A)
     ag = adjacency_graph(S)
@@ -209,7 +219,7 @@ function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution};
-    decompression_eltype=Float64,
+    decompression_eltype::Type=Float64,
 )
     S = sparse(A)
     ag = adjacency_graph(S)
@@ -221,14 +231,14 @@ end
 
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     S = sparse(A)
-    bg = bipartite_graph(S)
+    bg = bipartite_graph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return color
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     S = sparse(A)
-    bg = bipartite_graph(S)
+    bg = bipartite_graph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return color
 end

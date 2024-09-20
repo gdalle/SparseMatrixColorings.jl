@@ -28,7 +28,8 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    bg = bipartite_graph(A)
+    bg = bipartite_graph(A; symmetric_pattern=false)
+    @test_throws DimensionMismatch bipartite_graph(A; symmetric_pattern=true)
     @test length(bg, Val(1)) == 4
     @test length(bg, Val(2)) == 8
     # neighbors of rows
@@ -45,6 +46,21 @@ end;
     @test neighbors(bg, Val(2), 6) == [1, 3, 4]
     @test neighbors(bg, Val(2), 7) == [1, 2, 4]
     @test neighbors(bg, Val(2), 8) == [1, 2, 3]
+
+    A = sparse([
+        1 0 1 1
+        0 1 0 1
+        1 0 1 0
+        1 1 0 1
+    ])
+    bg = bipartite_graph(A; symmetric_pattern=true)
+    @test length(bg, Val(1)) == 4
+    @test length(bg, Val(2)) == 4
+    # neighbors of rows and columns
+    @test neighbors(bg, Val(1), 1) == neighbors(bg, Val(2), 1) == [1, 3, 4]
+    @test neighbors(bg, Val(1), 2) == neighbors(bg, Val(2), 2) == [2, 4]
+    @test neighbors(bg, Val(1), 3) == neighbors(bg, Val(2), 3) == [1, 3]
+    @test neighbors(bg, Val(1), 4) == neighbors(bg, Val(2), 4) == [1, 2, 4]
 end;
 
 ## Adjacency graph (fig 3.1 of "What color is your Jacobian?")
