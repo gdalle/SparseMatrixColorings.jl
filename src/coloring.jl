@@ -74,7 +74,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
-function star_coloring(g::Graph, order::AbstractOrder)
+function star_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
     nvertices = length(g)
     color = zeros(Int, nvertices)
@@ -267,7 +267,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::Graph, order::AbstractOrder)
+function acyclic_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
     nvertices = length(g)
     nedges = nnz(g) ÷ 2  # symmetric sparse matrix with empty diagonal
