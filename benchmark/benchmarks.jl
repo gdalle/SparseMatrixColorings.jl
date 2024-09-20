@@ -8,8 +8,8 @@ SUITE = BenchmarkGroup()
 for structure in [:nonsymmetric, :symmetric],
     partition in (structure == :nonsymmetric ? [:column, :row] : [:column]),
     decompression in (structure == :nonsymmetric ? [:direct] : [:direct, :substitution]),
-    n in [10^3],
-    p in [2 / n, 5 / n]
+    n in [10^3, 10^5],
+    p in [2 / n, 5 / n, 10 / n]
 
     problem = ColoringProblem(; structure, partition)
     algo = GreedyColoringAlgorithm(; decompression)

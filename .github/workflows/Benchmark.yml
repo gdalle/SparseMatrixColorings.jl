@@ -1,4 +1,4 @@
-name: Benchmark a pull request
+name: Benchmark
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
   pull-requests: write
 
 jobs:
-    generate_plots:
+    Benchmark:
         runs-on: ubuntu-latest
         if: contains(github.event.pull_request.labels.*.name, 'benchmark')
         steps:
