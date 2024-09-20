@@ -12,7 +12,15 @@ function test_coloring_decompression(
 ) where {structure,partition,decompression}
     color_vec = Vector{Int}[]
     @testset "$(typeof(A))" for A in matrix_versions(A0)
-        result = coloring(A, problem, algo; decompression_eltype=Float64)
+        yield()
+
+        if structure == :nonsymmetric && issymmetric(A)
+            result = coloring(
+                A, problem, algo; decompression_eltype=Float64, symmetric_pattern=true
+            )
+        else
+            result = coloring(A, problem, algo; decompression_eltype=Float64)
+        end
         color = if partition == :column
             column_colors(result)
         elseif partition == :row
