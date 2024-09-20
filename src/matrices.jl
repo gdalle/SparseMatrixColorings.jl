@@ -21,9 +21,21 @@ function matrix_versions(A)
         transpose(sparse(transpose(A_sparse))),
         adjoint(sparse(adjoint(A_sparse))),
     ]
-    # if issymmetric(A)
-    #     append!(versions, Symmetric.(versions))
-    # end
+    if issymmetric(A)
+        lower_triangles = [
+            Matrix(LowerTriangular(A_dense)), sparse(LowerTriangular(A_sparse))
+        ]
+        upper_triangles = [
+            Matrix(UpperTriangular(A_dense)), sparse(UpperTriangular(A_sparse))
+        ]
+        symmetric_versions = vcat(
+            Symmetric.(versions),
+            Hermitian.(versions),
+            Symmetric.(lower_triangles, :L),
+            Symmetric.(upper_triangles, :U),
+        )
+        append!(versions, symmetric_versions)
+    end
     return versions
 end
 
@@ -38,11 +50,15 @@ respectful_similar(A::AbstractMatrix) = respectful_similar(A, eltype(A))
 respectful_similar(A::AbstractMatrix, ::Type{T}) where {T} = similar(A, T)
 
 function respectful_similar(A::Transpose, ::Type{T}) where {T}
-    return transpose(similar(parent(A), T))
+    return transpose(respectful_similar(parent(A), T))
 end
 
 function respectful_similar(A::Adjoint, ::Type{T}) where {T}
-    return adjoint(similar(parent(A), T))
+    return adjoint(respectful_similar(parent(A), T))
+end
+
+function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
+    return respectful_similar(sparse(A), T)
 end
 
 """
