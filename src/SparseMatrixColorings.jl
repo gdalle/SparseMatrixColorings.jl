@@ -16,8 +16,11 @@ using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
     Diagonal,
+    Hermitian,
+    LowerTriangular,
     Symmetric,
     Transpose,
+    UpperTriangular,
     adjoint,
     checksquare,
     factorize,
