@@ -14,6 +14,7 @@ SparseMatrixColorings.Graph
 SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
+SparseMatrixColorings.transpose_graph
 SparseMatrixColorings.adjacency_graph
 SparseMatrixColorings.bipartite_graph
 ```
