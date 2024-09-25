@@ -1,6 +1,7 @@
 using LinearAlgebra
 using SparseArrays
-using SparseMatrixColorings: Graph, adjacency_graph, bipartite_graph, degree, neighbors
+using SparseMatrixColorings:
+    Graph, adjacency_graph, bipartite_graph, transpose_graph, degree, neighbors
 using Test
 
 ## Standard graph
@@ -103,4 +104,21 @@ end;
     @test collect(neighbors(g, 6)) == [1, 3, 4, 5, 7, 8]
     @test collect(neighbors(g, 7)) == [1, 2, 4, 5, 6, 8]
     @test collect(neighbors(g, 8)) == [1, 2, 3, 5, 6, 7]
+end
+
+@testset "transpose_graph" begin
+    m = 100
+    n = 50
+    p = 0.02
+    A = sprand(m, n, p)
+    g = transpose_graph(A)
+    B = sparse(transpose(A))
+    @test B.colptr == g.colptr
+    @test B.rowval == g.rowval
+
+    A = sprand(n, m, p)
+    g = transpose_graph(A)
+    B = sparse(transpose(A))
+    @test B.colptr == g.colptr
+    @test B.rowval == g.rowval
 end
