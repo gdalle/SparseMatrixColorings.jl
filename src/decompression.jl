@@ -370,6 +370,22 @@ function decompress!(
     return A
 end
 
+function decompress_single_color!(
+    A::SparseMatrixCSC{R}, b::AbstractVector{R}, c::Integer, result::RowColoringResult
+) where {R<:Real}
+    @compat (; S, Sᵀ, group) = result
+    check_same_pattern(A, S)
+    rvSᵀ = rowvals(Sᵀ)
+    nzA = nonzeros(A)
+    for i in group[c]
+        for k in nzrange(Sᵀ, i)
+            j = rvSᵀ[k]
+            nzA[k] = b[j]
+        end
+    end
+    return A
+end
+
 ## StarSetColoringResult
 
 function decompress!(

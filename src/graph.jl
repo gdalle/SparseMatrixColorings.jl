@@ -148,7 +148,7 @@ function transpose_graph(A::SparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
     A_rowval = A.rowval
 
     # Allocate storage for the column pointers and row indices of B = Aᵀ
-    B_colptr = zeros(Ti, m+1)
+    B_colptr = zeros(Ti, m + 1)
     B_rowval = Vector{Ti}(undef, nnzA)
 
     # Count the number of non-zeros for each row of A.
@@ -165,11 +165,11 @@ function transpose_graph(A::SparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
         B_colptr[col] = counter
         counter += nnz_col
     end
-    B_colptr[m+1] = counter
+    B_colptr[m + 1] = counter
 
     # Store the row indices for each column of B = Aᵀ
     for j in 1:n
-        for index in A_colptr[j]:(A_colptr[j+1] - 1)
+        for index in A_colptr[j]:(A_colptr[j + 1] - 1)
             i = A_rowval[index]
 
             # Update B_rowval for the non-zero B[j,i].
@@ -182,7 +182,7 @@ function transpose_graph(A::SparseMatrixCSC{Tv,Ti}) where {Tv,Ti}
 
     # Fix offsets of B_colptr to restore correct starting positions
     for col in m:-1:2
-        B_colptr[col] = B_colptr[col-1]
+        B_colptr[col] = B_colptr[col - 1]
     end
     B_colptr[1] = 1
 
