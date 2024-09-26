@@ -30,6 +30,7 @@ function Graph{loops}(S::SparseMatrixCSC{Tv,Ti}) where {loops,Tv,Ti}
     return Graph{loops,Ti}(S.m, S.n, S.colptr, S.rowval)
 end
 
+Base.size(g::Graph) = (g.m, g.n)
 SparseArrays.nnz(g::Graph) = length(g.rowval)
 SparseArrays.rowvals(g::Graph) = g.rowval
 SparseArrays.nzrange(g::Graph, j::Integer) = g.colptr[j]:(g.colptr[j + 1] - 1)
@@ -84,9 +85,51 @@ minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
 Return a [`Graph`](@ref) corresponding to the transpose of (the underlying matrix of) `g`.
 """
 function Base.transpose(g::Graph{loops,T}) where {loops,T}
-    S = SparseMatrixCSC{T,T}(g.m, g.n, g.colptr, g.rowval, g.rowval)
-    Sᵀ = convert(SparseMatrixCSC, transpose(S))  # TODO: use ftranspose! without segfault?
-    return Graph{loops}(Sᵀ)
+    m, n = size(g)
+    nnzA = nnz(g)
+    A_colptr = g.colptr
+    A_rowval = g.rowval
+
+    # Allocate storage for the column pointers and row indices of B = Aᵀ
+    B_colptr = zeros(T, m + 1)
+    B_rowval = Vector{T}(undef, nnzA)
+
+    # Count the number of non-zeros for each row of A.
+    # It corresponds to the number of non-zeros for each column of B = Aᵀ.
+    for k in 1:nnzA
+        i = A_rowval[k]
+        B_colptr[i] += 1
+    end
+
+    # Compute the cumulative sum to determine the starting positions of rows in B_rowval
+    counter = 1
+    for col in 1:m
+        nnz_col = B_colptr[col]
+        B_colptr[col] = counter
+        counter += nnz_col
+    end
+    B_colptr[m + 1] = counter
+
+    # Store the row indices for each column of B = Aᵀ
+    for j in 1:n
+        for index in A_colptr[j]:(A_colptr[j + 1] - 1)
+            i = A_rowval[index]
+
+            # Update B_rowval for the non-zero B[j,i].
+            # It corresponds to the non-zero A[i,j].
+            pos = B_colptr[i]
+            B_rowval[pos] = j
+            B_colptr[i] += 1
+        end
+    end
+
+    # Fix offsets of B_colptr to restore correct starting positions
+    for col in m:-1:2
+        B_colptr[col] = B_colptr[col - 1]
+    end
+    B_colptr[1] = 1
+
+    return Graph{loops,T}(n, m, B_colptr, B_rowval)
 end
 
 ## Bipartite graph
