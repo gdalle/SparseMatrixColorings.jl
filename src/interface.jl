@@ -180,7 +180,7 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 )
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     bg = bipartite_graph(
         S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
@@ -195,7 +195,7 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 )
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     bg = bipartite_graph(
         S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
@@ -209,7 +209,7 @@ function coloring(
     algo::GreedyColoringAlgorithm{:direct};
     decompression_eltype::Type=Float64,
 )
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
     return StarSetColoringResult(S, color, star_set)
@@ -221,7 +221,7 @@ function coloring(
     algo::GreedyColoringAlgorithm{:substitution};
     decompression_eltype::Type=Float64,
 )
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     ag = adjacency_graph(S)
     color, tree_set = acyclic_coloring(ag, algo.order)
     return TreeSetColoringResult(S, color, tree_set, decompression_eltype)
@@ -230,21 +230,21 @@ end
 ## ADTypes interface
 
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     bg = bipartite_graph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return color
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     bg = bipartite_graph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return color
 end
 
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = sparse(A)
+    S = convert(SparseMatrixCSC, A)
     ag = adjacency_graph(S)
     color, star_set = star_coloring(ag, algo.order)
     return color

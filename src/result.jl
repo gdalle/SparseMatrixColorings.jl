@@ -143,7 +143,7 @@ struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct
 end
 
 function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
-    Sᵀ = sparse(transpose(S))
+    Sᵀ = convert(SparseMatrixCSC, transpose(S))
     group = group_by_color(color)
     C = length(group)  # ncolors
     rv = rowvals(S)
