@@ -35,6 +35,7 @@ using SparseArrays:
     SparseMatrixCSC,
     dropzeros,
     dropzeros!,
+    ftranspose!,
     nnz,
     nonzeros,
     nzrange,
