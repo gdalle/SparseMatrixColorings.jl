@@ -19,8 +19,8 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 function partial_distance2_coloring(
     bg::BipartiteGraph, ::Val{side}, order::AbstractOrder
 ) where {side}
-    color = Vector{Int}(undef, length(bg, Val(side)))
-    forbidden_colors = Vector{Int}(undef, length(bg, Val(side)))
+    color = Vector{Int}(undef, nb_vertices(bg, Val(side)))
+    forbidden_colors = Vector{Int}(undef, nb_vertices(bg, Val(side)))
     vertices_in_order = vertices(bg, Val(side), order)
     partial_distance2_coloring!(color, forbidden_colors, bg, Val(side), vertices_in_order)
     return color
@@ -76,11 +76,11 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
-    nvertices = length(g)
-    color = zeros(Int, nvertices)
-    forbidden_colors = zeros(Int, nvertices)
-    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
-    treated = zeros(Int, nvertices)
+    n = nb_vertices(g)
+    color = zeros(Int, n)
+    forbidden_colors = zeros(Int, n)
+    first_neighbor = fill((0, 0), n)  # at first no neighbors have been encountered
+    treated = zeros(Int, n)
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
     vertices_in_order = vertices(g, order)
@@ -269,12 +269,12 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function acyclic_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
-    nvertices = length(g)
-    nedges = nnz(g) ÷ 2  # symmetric sparse matrix with empty diagonal
-    color = zeros(Int, nvertices)
-    forbidden_colors = zeros(Int, nvertices)
-    first_neighbor = fill((0, 0), nvertices)  # at first no neighbors have been encountered
-    first_visit_to_tree = fill((0, 0), nedges)
+    n = nb_vertices(g)
+    e = nb_edges(g) ÷ 2  # symmetric sparse matrix with empty diagonal
+    color = zeros(Int, n)
+    forbidden_colors = zeros(Int, n)
+    first_neighbor = fill((0, 0), n)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((0, 0), e)
     forest = DisjointSets{Tuple{Int,Int}}()
     vertices_in_order = vertices(g, order)
 

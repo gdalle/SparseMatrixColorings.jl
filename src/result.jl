@@ -64,9 +64,16 @@ Assumes the colors are contiguously numbered from `1` to some `cmax`.
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
     @assert cmin == 1
-    group = [Int[] for c in 1:cmax]
+    group_sizes = zeros(Int, cmax)
+    for c in color
+        group_sizes[c] += 1
+    end
+    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
+    fill!(group_sizes, 1)
     for (k, c) in enumerate(color)
-        push!(group[c], k)
+        pos = group_sizes[c]
+        group[c][pos] = k
+        group_sizes[c] += 1
     end
     return group
 end
@@ -143,7 +150,7 @@ struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct
 end
 
 function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
-    Sᵀ = sparse(transpose(S))
+    Sᵀ = convert(SparseMatrixCSC, transpose(S))
     group = group_by_color(color)
     C = length(group)  # ncolors
     rv = rowvals(S)
