@@ -43,37 +43,47 @@ function row_colors end
 """
     column_groups(result::AbstractColoringResult)
 
-Return a vector `group` such that for every color `c`, `group[c]` contains the indices of all columns that are colored with `c`.
+Return an abstract vector `group` such that for every color `c`, `group[c]` contains the indices of all columns that are colored with `c`.
 """
 function column_groups end
 
 """
     row_groups(result::AbstractColoringResult)
 
-Return a vector `group` such that for every color `c`, `group[c]` contains the indices of all rows that are colored with `c`.
+Return an abstract vector `group` such that for every color `c`, `group[c]` contains the indices of all rows that are colored with `c`.
 """
 function row_groups end
 
 """
     group_by_color(color::Vector{Int})
 
-Create `group::Vector{Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
+Create `group::Vector{<:AbstractVector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
 
 Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
     @assert cmin == 1
-    group_sizes = zeros(Int, cmax)
+    # Compute group sizes and offsets for a joint storage
+    group_sizes = zeros(Int, cmax)  # allocation 1, size cmax
     for c in color
         group_sizes[c] += 1
     end
-    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
-    fill!(group_sizes, 1)
+    group_offsets = cumsum(group_sizes)  # allocation 2, size cmax
+    # Concatenate all groups inside a single vector
+    group_flat = similar(color)  # allocation 3, size n
+    fill!(group_sizes, 0)
     for (k, c) in enumerate(color)
-        pos = group_sizes[c]
-        group[c][pos] = k
+        i = group_offsets[c] - group_sizes[c]
+        group_flat[i] = k
         group_sizes[c] += 1
+    end
+    # Create views into contiguous blocks of the group vector
+    group = Vector{typeof(view(group_flat, 1:1))}(undef, cmax)  # allocation 4, size cmax
+    for c in 1:cmax
+        i = group_offsets[c] - group_sizes[c] + 1
+        j = group_offsets[c]
+        group[c] = view(group_flat, i:j)
     end
     return group
 end
@@ -99,13 +109,14 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:direct,M}
+struct ColumnColoringResult{M,G<:AbstractVector{Int}} <:
+       AbstractColoringResult{:nonsymmetric,:column,:direct,M}
     "matrix that was colored"
     S::M
     "one integer color for each column or row (depending on `partition`)"
     color::Vector{Int}
     "color groups for columns or rows (depending on `partition`)"
-    group::Vector{Vector{Int}}
+    group::Vector{G}
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
     compressed_indices::Vector{Int}
 end
@@ -141,11 +152,12 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct,M}
+struct RowColoringResult{M,G<:AbstractVector{Int}} <:
+       AbstractColoringResult{:nonsymmetric,:row,:direct,M}
     S::M
     Sᵀ::M
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::Vector{G}
     compressed_indices::Vector{Int}
 end
 
@@ -181,10 +193,11 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M} <: AbstractColoringResult{:symmetric,:column,:direct,M}
+struct StarSetColoringResult{M,G<:AbstractVector{Int}} <:
+       AbstractColoringResult{:symmetric,:column,:direct,M}
     S::M
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::Vector{G}
     star_set::StarSet
     compressed_indices::Vector{Int}
 end
@@ -220,11 +233,11 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetColoringResult{M,R} <:
+struct TreeSetColoringResult{M,G<:AbstractVector{Int},R} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
     S::M
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::Vector{G}
     vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
     buffer::Vector{R}
@@ -368,11 +381,11 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct LinearSystemColoringResult{M,R,F} <:
+struct LinearSystemColoringResult{M,G<:AbstractVector{Int},R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
     S::M
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::Vector{G}
     strict_upper_nonzero_inds::Vector{Tuple{Int,Int}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
     T_factorization::F  # TODO: adjust type
