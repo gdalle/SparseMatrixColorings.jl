@@ -41,11 +41,11 @@ end
 RandomOrder() = RandomOrder(default_rng())
 
 function vertices(g::Graph, order::RandomOrder)
-    return randperm(order.rng, length(g))
+    return randperm(order.rng, nb_vertices(g))
 end
 
 function vertices(bg::BipartiteGraph, ::Val{side}, order::RandomOrder) where {side}
-    return randperm(order.rng, length(bg, Val(side)))
+    return randperm(order.rng, nb_vertices(bg, Val(side)))
 end
 
 """
