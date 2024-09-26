@@ -12,14 +12,14 @@ using Test
 rng = StableRNG(63)
 
 asymmetric_params = vcat(
-    [(10, 20, p) for p in (0.1:0.1:0.5)],
-    [(20, 10, p) for p in (0.1:0.1:0.5)],
+    [(10, 20, p) for p in (0.0:0.1:0.5)],
+    [(20, 10, p) for p in (0.0:0.1:0.5)],
     [(100, 200, p) for p in (0.01:0.01:0.05)],
     [(200, 100, p) for p in (0.01:0.01:0.05)],
 )
 
 symmetric_params = vcat(
-    [(10, p) for p in (0.1:0.1:0.5)], #
+    [(10, p) for p in (0.0:0.1:0.5)], #
     [(100, p) for p in (0.01:0.01:0.05)],
 )
 
