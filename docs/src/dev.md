@@ -16,6 +16,7 @@ SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 SparseMatrixColorings.adjacency_graph
 SparseMatrixColorings.bipartite_graph
+transpose
 ```
 
 ## Low-level coloring
