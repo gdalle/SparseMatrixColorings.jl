@@ -106,13 +106,15 @@ end
 function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     group = group_by_color(color)
     n = size(S, 1)
-    I, J, _ = findnz(S)
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[j]
-        # A[i, j] = B[i, c]
-        compressed_indices[k] = (c - 1) * n + i
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            c = color[j]
+            # A[i, j] = B[i, c]
+            compressed_indices[k] = (c - 1) * n + i
+        end
     end
     return ColumnColoringResult(S, color, group, compressed_indices)
 end
@@ -144,13 +146,15 @@ function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     Sᵀ = sparse(transpose(S))
     group = group_by_color(color)
     C = length(group)  # ncolors
-    I, J, _ = findnz(S)
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[i]
-        # A[i, j] = B[c, j]
-        compressed_indices[k] = (j - 1) * C + c
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            c = color[i]
+            # A[i, j] = B[c, j]
+            compressed_indices[k] = (j - 1) * C + c
+        end
     end
     return RowColoringResult(S, Sᵀ, color, group, compressed_indices)
 end
@@ -181,13 +185,15 @@ end
 function StarSetColoringResult(S::SparseMatrixCSC, color::Vector{Int}, star_set::StarSet)
     group = group_by_color(color)
     n = size(S, 1)
-    I, J, _ = findnz(S)
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        l, c = symmetric_coefficient(i, j, color, star_set)
-        # A[i, j] = B[l, c]
-        compressed_indices[k] = (c - 1) * n + l
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            l, c = symmetric_coefficient(i, j, color, star_set)
+            # A[i, j] = B[l, c]
+            compressed_indices[k] = (c - 1) * n + l
+        end
     end
     return StarSetColoringResult(S, color, group, star_set, compressed_indices)
 end
@@ -370,15 +376,18 @@ function LinearSystemColoringResult(
 ) where {R}
     group = group_by_color(color)
     C = length(group)  # ncolors
+    rv = rowvals(S)
 
     # build T such that T * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
     # only consider the strict upper triangle of A because of symmetry
     n = checksquare(S)
     strict_upper_nonzero_inds = Tuple{Int,Int}[]
-    I, J, _ = findnz(S)
-    for (i, j) in zip(I, J)
-        (i < j) && push!(strict_upper_nonzero_inds, (i, j))
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            (i < j) && push!(strict_upper_nonzero_inds, (i, j))
+        end
     end
 
     T = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
