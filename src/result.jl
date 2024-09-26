@@ -111,7 +111,6 @@ function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
-            i, j = I[k], J[k]
             c = color[j]
             # A[i, j] = B[i, c]
             compressed_indices[k] = (c - 1) * n + i
