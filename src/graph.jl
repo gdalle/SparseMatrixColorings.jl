@@ -159,7 +159,7 @@ function bipartite_graph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
         checksquare(A)  # proxy for checking full symmetry
         g1 = g2
     else
-        g1 = Graph{true}(sparse(transpose(A)))  # rows to columns
+        g1 = Graph{true}(convert(SparseMatrixCSC, transpose(A)))  # rows to columns
     end
     return BipartiteGraph(g1, g2)
 end
