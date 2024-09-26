@@ -279,7 +279,7 @@ function TreeSetColoringResult(
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
 
     # nvmax is the number of vertices of the biggest tree in the forest
-    nvmax = mapreduce(length, max, vertices_by_tree, init=0)
+    nvmax = mapreduce(length, max, vertices_by_tree; init=0)
 
     # Create a queue with a fixed size nvmax
     queue = Vector{Int}(undef, nvmax)
