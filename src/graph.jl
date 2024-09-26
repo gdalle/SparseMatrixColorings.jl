@@ -30,7 +30,6 @@ function Graph{loops}(S::SparseMatrixCSC{Tv,Ti}) where {loops,Tv,Ti}
     return Graph{loops,Ti}(S.m, S.n, S.colptr, S.rowval)
 end
 
-Base.size(g::Graph) = (g.m, g.n)
 SparseArrays.nnz(g::Graph) = length(g.rowval)
 SparseArrays.rowvals(g::Graph) = g.rowval
 SparseArrays.nzrange(g::Graph, j::Integer) = g.colptr[j]:(g.colptr[j + 1] - 1)
