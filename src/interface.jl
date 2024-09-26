@@ -156,7 +156,7 @@ julia> column_colors(result)
  2
  3
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]

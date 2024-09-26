@@ -63,7 +63,7 @@ Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
-    @assert cmin == 1
+    @assert cmin >= 1
     # Compute group sizes and offsets for a joint storage
     group_sizes = zeros(Int, cmax)  # allocation 1, size cmax
     for c in color
@@ -72,16 +72,15 @@ function group_by_color(color::AbstractVector{<:Integer})
     group_offsets = cumsum(group_sizes)  # allocation 2, size cmax
     # Concatenate all groups inside a single vector
     group_flat = similar(color)  # allocation 3, size n
-    fill!(group_sizes, 0)
     for (k, c) in enumerate(color)
-        i = group_offsets[c] - group_sizes[c]
+        i = group_offsets[c] - group_sizes[c] + 1
         group_flat[i] = k
-        group_sizes[c] += 1
+        group_sizes[c] -= 1
     end
     # Create views into contiguous blocks of the group vector
     group = Vector{typeof(view(group_flat, 1:1))}(undef, cmax)  # allocation 4, size cmax
     for c in 1:cmax
-        i = group_offsets[c] - group_sizes[c] + 1
+        i = 1 + (c == 1 ? 0 : group_offsets[c - 1])
         j = group_offsets[c]
         group[c] = view(group_flat, i:j)
     end
