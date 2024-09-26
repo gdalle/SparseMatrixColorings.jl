@@ -3,8 +3,8 @@
 """
     Graph{loops,T}
 
-Store a sparse matrix (in CSC) without its values, keeping only the pattern of nonzeros.
-It can be seen as a graph mapping columns to rows, hence the name `Graph`.
+Undirected graph structure stored in Compressed Sparse Column (CSC) format.
+Note that the underyling CSC may not be square, so the term "graph" is slightly abusive.
 
 The type parameter `loops` must be set to:
 - `true` if coefficients `(i, i)` present in the CSC are counted as edges in the graph (e.g. for each half of a bipartite graph)
@@ -12,63 +12,54 @@ The type parameter `loops` must be set to:
 
 # Fields
 
-Copied from `SparseMatrixCSC`:
-
-- `m::Int`: number of rows
-- `n::Int`: number of columns
-- `colptr::Vector{T}`: column `j` is in `colptr[j]:(colptr[j+1]-1)`
-- `rowval::Vector{T}`: row indices of stored values
+- `colptr::Vector{T}`: same as for `SparseMatrixCSC`
+- `rowval::Vector{T}`: same as for `SparseMatrixCSC`
 """
 struct Graph{loops,T<:Integer}
-    m::Int
-    n::Int
     colptr::Vector{T}
     rowval::Vector{T}
 end
 
 function Graph{loops}(S::SparseMatrixCSC{Tv,Ti}) where {loops,Tv,Ti}
-    return Graph{loops,Ti}(S.m, S.n, S.colptr, S.rowval)
+    return Graph{loops,Ti}(S.colptr, S.rowval)
 end
 
-SparseArrays.nnz(g::Graph) = length(g.rowval)
-SparseArrays.rowvals(g::Graph) = g.rowval
-SparseArrays.nzrange(g::Graph, j::Integer) = g.colptr[j]:(g.colptr[j + 1] - 1)
+Base.length(g::Graph) = length(g.colptr) - 1
 
-nb_vertices(g::Graph) = g.n
-vertices(g::Graph) = 1:nb_vertices(g)
+SparseArrays.nnz(g::Graph{true}) = length(g.rowval)
 
-nb_edges(g::Graph{true}) = length(g.rowval)
-
-function nb_edges(g::Graph{false})
-    e = 0
-    for j in vertices(g)
-        for k in nzrange(g, j)
-            i = rowvals(g)[k]
+function SparseArrays.nnz(g::Graph{false})
+    n = 0
+    for j in 1:(length(g.colptr) - 1)
+        for k in g.colptr[j]:(g.colptr[j + 1] - 1)
+            i = g.rowval[k]
             if i != j
-                e += 1
+                n += 1
             end
         end
     end
-    return e
+    return n
 end
 
+vertices(g::Graph) = 1:length(g)
+
 function neighbors(g::Graph{true}, v::Integer)
-    return view(rowvals(g), nzrange(g, v))
+    return view(g.rowval, g.colptr[v]:(g.colptr[v + 1] - 1))
 end
 
 function neighbors(g::Graph{false}, v::Integer)
-    neighbors_with_loops = view(rowvals(g), nzrange(g, v))
+    neighbors_with_loops = view(g.rowval, g.colptr[v]:(g.colptr[v + 1] - 1))
     return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
 end
 
 function degree(g::Graph{true}, v::Integer)
-    return length(nzrange(g, v))
+    return length(g.colptr[v]:(g.colptr[v + 1] - 1))
 end
 
 function degree(g::Graph{false}, v::Integer)
-    d = length(nzrange(g, v))
-    for k in nzrange(g, v)
-        if rowvals(g)[k] == v
+    d = length(g.colptr[v]:(g.colptr[v + 1] - 1))
+    for k in g.colptr[v]:(g.colptr[v + 1] - 1)
+        if g.rowval[k] == v
             d -= 1
         end
     end
@@ -77,17 +68,6 @@ end
 
 maximum_degree(g::Graph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
-
-"""
-    transpose(g::Graph)
-
-Return a [`Graph`](@ref) corresponding to the transpose of (the underlying matrix of) `g`.
-"""
-function Base.transpose(g::Graph{loops,T}) where {loops,T}
-    S = SparseMatrixCSC{T,T}(g.m, g.n, g.colptr, g.rowval, g.rowval)
-    Sᵀ = convert(SparseMatrixCSC, transpose(S))  # TODO: use ftranspose! without segfault?
-    return Graph{loops}(Sᵀ)
-end
 
 ## Bipartite graph
 
@@ -108,17 +88,16 @@ struct BipartiteGraph{T<:Integer}
     g2::Graph{true,T}
 end
 
-nb_vertices(bg::BipartiteGraph, ::Val{1}) = nb_vertices(bg.g1)
-nb_vertices(bg::BipartiteGraph, ::Val{2}) = nb_vertices(bg.g2)
-
-nb_edges(bg::BipartiteGraph) = nb_edges(bg.g1)
+Base.length(bg::BipartiteGraph, ::Val{1}) = length(bg.g1)
+Base.length(bg::BipartiteGraph, ::Val{2}) = length(bg.g2)
+SparseArrays.nnz(bg::BipartiteGraph) = nnz(bg.g1)
 
 """
     vertices(bg::BipartiteGraph, Val(side))
 
 Return the list of vertices of `bg` from the specified `side` as a range `1:n`.
 """
-vertices(bg::BipartiteGraph, ::Val{side}) where {side} = 1:nb_vertices(bg, Val(side))
+vertices(bg::BipartiteGraph, ::Val{side}) where {side} = 1:length(bg, Val(side))
 
 """
     neighbors(bg::BipartiteGraph, Val(side), v::Integer)
@@ -180,7 +159,7 @@ function bipartite_graph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
         checksquare(A)  # proxy for checking full symmetry
         g1 = g2
     else
-        g1 = transpose(g2)  # rows to columns
+        g1 = Graph{true}(convert(SparseMatrixCSC, transpose(A)))  # rows to columns
     end
     return BipartiteGraph(g1, g2)
 end
