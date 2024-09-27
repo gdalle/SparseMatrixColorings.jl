@@ -1,14 +1,8 @@
 using LinearAlgebra
 using SparseArrays
+using SparseMatrixColorings
 using SparseMatrixColorings:
-    BipartiteGraph,
-    Graph,
-    adjacency_graph,
-    bipartite_graph,
-    NaturalOrder,
-    RandomOrder,
-    degree_dist2,
-    vertices
+    BipartiteGraph, Graph, adjacency_graph, bipartite_graph, degree_dist2, vertices
 using StableRNGs
 using Test
 
