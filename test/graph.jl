@@ -1,9 +1,9 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
-    Graph,
-    adjacency_graph,
-    bipartite_graph,
+    SparsePatternCSC,
+    AdjacencyGraph,
+    BipartiteGraph,
     degree,
     degree_dist2,
     nb_vertices,
@@ -11,54 +11,20 @@ using SparseMatrixColorings:
     neighbors
 using Test
 
-## Standard graph
+## SparsePatternCSC
 
-@testset "Graph" begin
-    g = Graph{true}(sparse([
-        1 0 1 1
-        1 1 0 0
-        0 0 0 1
-    ]))
-    gᵀ = transpose(g)
-
-    @test nb_vertices(g) == 4
-    @test nb_edges(g) == 6
-    @test nnz(g) == 6
-    @test neighbors(g, 1) == [1, 2]
-    @test neighbors(g, 2) == [2]
-    @test neighbors(g, 3) == [1]
-    @test neighbors(g, 4) == [1, 3]
-    @test degree(g, 1) == 2
-    @test degree(g, 2) == 1
-    @test degree(g, 3) == 1
-    @test degree(g, 4) == 2
-
-    @test nb_vertices(gᵀ) == 3
-    @test nb_edges(gᵀ) == 6
-    @test nnz(gᵀ) == 6
-    @test neighbors(gᵀ, 1) == [1, 3, 4]
-    @test neighbors(gᵀ, 2) == [1, 2]
-    @test neighbors(gᵀ, 3) == [4]
-    @test degree(gᵀ, 1) == 3
-    @test degree(gᵀ, 2) == 2
-    @test degree(gᵀ, 3) == 1
-
-    g = Graph{false}(sparse([
-        1 0 1
-        1 1 0
-        0 0 0
-    ]))
-
-    @test nb_vertices(g) == 3
-    @test nb_edges(g) == 2
-    @test nnz(g) == 4
-    @test collect(neighbors(g, 1)) == [2]
-    @test collect(neighbors(g, 2)) == Int[]
-    @test collect(neighbors(g, 3)) == [1]
-    @test degree(g, 1) == 1
-    @test degree(g, 2) == 0
-    @test degree(g, 3) == 1
-end;
+@testset "SparsePatternCSC" begin
+    @testset "Transpose" begin
+        for _ in 1:1000
+            A = sprand(rand(100:1000), rand(100:1000), 0.1)
+            S = SparsePatternCSC(A)
+            Sᵀ = transpose(S)
+            Sᵀ_true = SparsePatternCSC(sparse(transpose(A)))
+            @test Sᵀ.colptr == Sᵀ_true.colptr
+            @test Sᵀ.rowval == Sᵀ_true.rowval
+        end
+    end
+end
 
 ## Bipartite graph (fig 3.1 of "What color is your Jacobian?")
 
@@ -70,8 +36,8 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    bg = bipartite_graph(A; symmetric_pattern=false)
-    @test_throws DimensionMismatch bipartite_graph(A; symmetric_pattern=true)
+    bg = BipartiteGraph(A; symmetric_pattern=false)
+    @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 8
     # neighbors of rows
@@ -103,7 +69,7 @@ end;
         1 0 1 0
         1 1 0 1
     ])
-    bg = bipartite_graph(A; symmetric_pattern=true)
+    bg = BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 4
     # neighbors of rows and columns
@@ -124,7 +90,7 @@ end;
     ])
 
     B = transpose(A) * A
-    g = adjacency_graph(B - Diagonal(B))
+    g = AdjacencyGraph(B - Diagonal(B))
     @test nb_vertices(g) == 8
     @test collect(neighbors(g, 1)) == [6, 7, 8]
     @test collect(neighbors(g, 2)) == [5, 7, 8]
@@ -134,15 +100,4 @@ end;
     @test collect(neighbors(g, 6)) == [1, 3, 4, 5, 7, 8]
     @test collect(neighbors(g, 7)) == [1, 2, 4, 5, 6, 8]
     @test collect(neighbors(g, 8)) == [1, 2, 3, 5, 6, 7]
-end
-
-@testset "Transpose" begin
-    for _ in 1:1000
-        A = sprand(rand(100:1000), rand(100:1000), 0.1)
-        g = Graph{true}(A)
-        gᵀ = transpose(g)
-        gᵀ_true = Graph{true}(sparse(transpose(A)))
-        @test gᵀ.colptr == gᵀ_true.colptr
-        @test gᵀ.rowval == gᵀ_true.rowval
-    end
 end
