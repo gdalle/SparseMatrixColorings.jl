@@ -20,6 +20,49 @@ Indeed, for symmetric coloring problems, we need more than just the vector of co
     The second constructor (based on keyword arguments) is type-unstable.
 
 We do not necessarily verify consistency between the matrix template and the vector of colors, this is the responsibility of the user.
+
+# Example
+
+```jldoctest
+julia> using SparseMatrixColorings, LinearAlgebra
+
+julia> matrix_template = Diagonal(ones(Bool, 5))
+5×5 Diagonal{Bool, Vector{Bool}}:
+ 1  ⋅  ⋅  ⋅  ⋅
+ ⋅  1  ⋅  ⋅  ⋅
+ ⋅  ⋅  1  ⋅  ⋅
+ ⋅  ⋅  ⋅  1  ⋅
+ ⋅  ⋅  ⋅  ⋅  1
+
+julia> color = ones(Int, 5)  # coloring a Diagonal is trivial
+5-element Vector{Int64}:
+ 1
+ 1
+ 1
+ 1
+ 1
+
+julia> problem = ColoringProblem(; structure=:nonsymmetric, partition=:column);
+
+julia> algo = ConstantColoringAlgorithm(matrix_template, color; partition=:column);
+
+julia> result = coloring(similar(matrix_template), problem, algo);
+
+julia> column_colors(result)
+5-element Vector{Int64}:
+ 1
+ 1
+ 1
+ 1
+ 1
+```
+
+# ADTypes coloring interface
+
+`ConstantColoringAlgorithm` is a subtype of [`ADTypes.AbstractColoringAlgorithm`](@extref ADTypes.AbstractColoringAlgorithm), which means the following methods are also applicable (although they will error if the kind of coloring demanded not consistent):
+
+- [`ADTypes.column_coloring`](@extref ADTypes.column_coloring)
+- [`ADTypes.row_coloring`](@extref ADTypes.row_coloring)
 """
 struct ConstantColoringAlgorithm{
     partition,M<:AbstractMatrix,R<:AbstractColoringResult{:nonsymmetric,partition,:direct}
@@ -70,4 +113,18 @@ function coloring(
     else
         return result
     end
+end
+
+function ADTypes.column_coloring(
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column}
+)
+    problem = ColoringProblem{:nonsymmetric,:column}()
+    result = coloring(A, problem, algo)
+    return column_colors(result)
+end
+
+function ADTypes.row_coloring(A::AbstractMatrix, algo::ConstantColoringAlgorithm)
+    problem = ColoringProblem{:nonsymmetric,:row}()
+    result = coloring(A, problem, algo)
+    return row_colors(result)
 end
