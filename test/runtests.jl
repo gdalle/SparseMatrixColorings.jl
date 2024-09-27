@@ -39,6 +39,9 @@ include("utils.jl")
         @testset "Matrices" begin
             include("matrices.jl")
         end
+        @testset "Constructors" begin
+            include("constructors.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Small instances" begin
@@ -50,18 +53,18 @@ include("utils.jl")
         @testset "Instances with known colorings" begin
             include("theory.jl")
         end
+        @testset "SuiteSparse" begin
+            include("suitesparse.jl")
+        end
     end
     @testset verbose = true "Performance" begin
         if VERSION >= v"1.10"
-            include("performance.jl")
+            @testset "Type stability" begin
+                include("type_stability.jl")
+            end
         end
-    end
-    @testset verbose = true "Comparison" begin
-        @testset "ColPack.jl" begin
-            include("colpack.jl")
-        end
-        @testset "SuiteSparse" begin
-            include("suitesparse.jl")
+        @testset "Allocations" begin
+            include("allocations.jl")
         end
     end
 end

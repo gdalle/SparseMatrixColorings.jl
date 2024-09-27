@@ -21,9 +21,21 @@ function matrix_versions(A)
         transpose(sparse(transpose(A_sparse))),
         adjoint(sparse(adjoint(A_sparse))),
     ]
-    # if issymmetric(A)
-    #     append!(versions, Symmetric.(versions))
-    # end
+    if issymmetric(A)
+        lower_triangles = [
+            Matrix(LowerTriangular(A_dense)), sparse(LowerTriangular(A_sparse))
+        ]
+        upper_triangles = [
+            Matrix(UpperTriangular(A_dense)), sparse(UpperTriangular(A_sparse))
+        ]
+        symmetric_versions = vcat(
+            Symmetric.(versions),
+            Hermitian.(versions),
+            Symmetric.(lower_triangles, :L),
+            Symmetric.(upper_triangles, :U),
+        )
+        append!(versions, symmetric_versions)
+    end
     return versions
 end
 
@@ -38,32 +50,35 @@ respectful_similar(A::AbstractMatrix) = respectful_similar(A, eltype(A))
 respectful_similar(A::AbstractMatrix, ::Type{T}) where {T} = similar(A, T)
 
 function respectful_similar(A::Transpose, ::Type{T}) where {T}
-    return transpose(similar(parent(A), T))
+    return transpose(respectful_similar(parent(A), T))
 end
 
 function respectful_similar(A::Adjoint, ::Type{T}) where {T}
-    return adjoint(similar(parent(A), T))
+    return adjoint(respectful_similar(parent(A), T))
+end
+
+function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
+    return respectful_similar(sparse(A), T)
 end
 
 """
-    same_sparsity_pattern(A::AbstractMatrix, B::AbstractMatrix)
+    same_pattern(A::AbstractMatrix, B::AbstractMatrix)
 
 Perform a partial equality check on the sparsity patterns of `A` and `B`:
 
 - if the return is `true`, they might have the same sparsity pattern but we're not sure
 - if the return is `false`, they definitely don't have the same sparsity pattern
 """
-function same_sparsity_pattern(A::AbstractMatrix, B::AbstractMatrix)
+function same_pattern(A::AbstractMatrix, B::AbstractMatrix)
     return size(A) == size(B)
 end
 
-function same_sparsity_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
+function same_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
     return size(A) == size(B) && nnz(A) == nnz(B)
 end
 
-function same_sparsity_pattern(
-    A::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
-    B::TransposeOrAdjoint{<:Any,<:SparseMatrixCSC},
-)
-    return same_sparsity_pattern(parent(A), parent(B))
+function check_same_pattern(A::AbstractMatrix, S::AbstractMatrix)
+    if !same_pattern(A, S)
+        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+    end
 end

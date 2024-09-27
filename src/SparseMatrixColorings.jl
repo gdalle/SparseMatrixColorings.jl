@@ -9,15 +9,19 @@ $EXPORTS
 """
 module SparseMatrixColorings
 
-using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using ADTypes: ADTypes
+using Base.Iterators: Iterators
 using Compat: @compat, stack
+using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
     Diagonal,
+    Hermitian,
+    LowerTriangular,
     Symmetric,
     Transpose,
+    UpperTriangular,
     adjoint,
     checksquare,
     factorize,
@@ -31,7 +35,7 @@ using SparseArrays:
     SparseMatrixCSC,
     dropzeros,
     dropzeros!,
-    findnz,
+    ftranspose!,
     nnz,
     nonzeros,
     nzrange,
@@ -49,11 +53,12 @@ include("decompression.jl")
 include("check.jl")
 include("examples.jl")
 
+export NaturalOrder, RandomOrder, LargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
-export compress, decompress, decompress!
+export compress, decompress, decompress!, decompress_single_color!
 
 @compat public NaturalOrder, RandomOrder, LargestFirst
 @compat public DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst

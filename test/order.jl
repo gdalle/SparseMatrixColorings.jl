@@ -1,15 +1,13 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
+    BipartiteGraph,
     Graph,
     adjacency_graph,
     bipartite_graph,
     NaturalOrder,
     RandomOrder,
-    LargestFirst,
-    SmallestLast,
-    IncidenceDegree,
-    DynamicLargestFirst,
+    degree_dist2,
     vertices
 using StableRNGs
 using Test
@@ -58,23 +56,20 @@ end;
     @test vertices(ag, LargestFirst()) == [2, 1, 3]
 
     A = sparse([
-        1 1 1
-        1 0 0
-        0 1 1
-        0 0 0
-    ])
-    bg = bipartite_graph(A)
-
-    @test vertices(bg, Val(1), LargestFirst()) == [1, 3, 2, 4]
-
-    A = sparse([
         1 1 0 0
-        1 0 1 0
+        0 1 1 1
+        0 0 1 0
+        0 0 0 0
         1 0 1 0
     ])
     bg = bipartite_graph(A)
 
-    @test vertices(bg, Val(2), LargestFirst()) == [1, 3, 2, 4]
+    for side in (1, 2)
+        true_order = sort(
+            vertices(bg, Val(side)); by=v -> degree_dist2(bg, Val(side), v), rev=true
+        )
+        @test vertices(bg, Val(side), LargestFirst()) == true_order
+    end
 end;
 
 @testset "Dynamic degree-based orders" begin

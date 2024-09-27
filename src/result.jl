@@ -19,19 +19,12 @@ Combination between the type parameters of [`ColoringProblem`](@ref) and [`Greed
 
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
-- [`compress`](@ref), [`decompress`](@ref) and [`decompress!`](@ref)
+- [`compress`](@ref), [`decompress`](@ref), [`decompress!`](@ref), [`decompress_single_color!`](@ref)
 
 !!! warning
     Unlike the methods above, the concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 """
 abstract type AbstractColoringResult{structure,partition,decompression,M<:SparseMatrixCSC} end
-
-"""
-    get_matrix(result::AbstractColoringResult)
-
-Return the matrix that was colored.
-"""
-function get_matrix end
 
 """
     column_colors(result::AbstractColoringResult)
@@ -71,14 +64,19 @@ Assumes the colors are contiguously numbered from `1` to some `cmax`.
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
     @assert cmin == 1
-    group = [Int[] for c in 1:cmax]
+    group_sizes = zeros(Int, cmax)
+    for c in color
+        group_sizes[c] += 1
+    end
+    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
+    fill!(group_sizes, 1)
     for (k, c) in enumerate(color)
-        push!(group[c], k)
+        pos = group_sizes[c]
+        group[c][pos] = k
+        group_sizes[c] += 1
     end
     return group
 end
-
-get_matrix(result::AbstractColoringResult) = result.S
 
 column_colors(result::AbstractColoringResult{s,:column}) where {s} = result.color
 column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.group
@@ -91,7 +89,7 @@ row_groups(result::AbstractColoringResult{s,:row}) where {s} = result.group
 """
 $TYPEDEF
 
-Storage for the result of a nonsymmetric coloring with direct decompression.
+Storage for the result of a column coloring with direct decompression.
 
 # Fields
 
@@ -101,8 +99,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct NonSymmetricColoringResult{partition,M} <:
-       AbstractColoringResult{:nonsymmetric,partition,:direct,M}
+struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:direct,M}
     "matrix that was colored"
     S::M
     "one integer color for each column or row (depending on `partition`)"
@@ -113,34 +110,60 @@ struct NonSymmetricColoringResult{partition,M} <:
     compressed_indices::Vector{Int}
 end
 
-function NonSymmetricColoringResult{:column}(S::SparseMatrixCSC, color::Vector{Int})
+function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
     group = group_by_color(color)
     n = size(S, 1)
-    I, J, _ = findnz(S)
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[j]
-        # A[i, j] = B[i, c]
-        compressed_indices[k] = (c - 1) * n + i
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            c = color[j]
+            # A[i, j] = B[i, c]
+            compressed_indices[k] = (c - 1) * n + i
+        end
     end
-    return NonSymmetricColoringResult{:column,typeof(S)}(
-        S, color, group, compressed_indices
-    )
+    return ColumnColoringResult(S, color, group, compressed_indices)
 end
 
-function NonSymmetricColoringResult{:row}(S::SparseMatrixCSC, color::Vector{Int})
+"""
+$TYPEDEF
+
+Storage for the result of a row coloring with direct decompression.
+
+# Fields
+
+See the docstring of [`ColumnColoringResult`](@ref).
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct,M}
+    S::M
+    Sᵀ::M
+    color::Vector{Int}
+    group::Vector{Vector{Int}}
+    compressed_indices::Vector{Int}
+end
+
+function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
+    Sᵀ = convert(SparseMatrixCSC, transpose(S))
     group = group_by_color(color)
-    C = maximum(color)
-    I, J, _ = findnz(S)
+    C = length(group)  # ncolors
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        c = color[i]
-        # A[i, j] = B[c, j]
-        compressed_indices[k] = (j - 1) * C + c
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            c = color[i]
+            # A[i, j] = B[c, j]
+            compressed_indices[k] = (j - 1) * C + c
+        end
     end
-    return NonSymmetricColoringResult{:row,typeof(S)}(S, color, group, compressed_indices)
+    return RowColoringResult(S, Sᵀ, color, group, compressed_indices)
 end
 
 """
@@ -150,12 +173,13 @@ Storage for the result of a symmetric coloring with direct decompression.
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct StarSetColoringResult{M} <: AbstractColoringResult{:symmetric,:column,:direct,M}
     S::M
@@ -168,13 +192,15 @@ end
 function StarSetColoringResult(S::SparseMatrixCSC, color::Vector{Int}, star_set::StarSet)
     group = group_by_color(color)
     n = size(S, 1)
-    I, J, _ = findnz(S)
+    rv = rowvals(S)
     compressed_indices = zeros(Int, nnz(S))
-    for k in eachindex(I, J, compressed_indices)
-        i, j = I[k], J[k]
-        l, c = symmetric_coefficient(i, j, color, star_set)
-        # A[i, j] = B[l, c]
-        compressed_indices[k] = (c - 1) * n + l
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            l, c = symmetric_coefficient(i, j, color, star_set)
+            # A[i, j] = B[l, c]
+            compressed_indices[k] = (c - 1) * n + l
+        end
     end
     return StarSetColoringResult(S, color, group, star_set, compressed_indices)
 end
@@ -186,12 +212,13 @@ Storage for the result of a symmetric coloring with decompression by substitutio
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct TreeSetColoringResult{M,R} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
@@ -264,28 +291,37 @@ function TreeSetColoringResult(
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
 
+    # nvmax is the number of vertices of the biggest tree in the forest
+    nvmax = mapreduce(length, max, vertices_by_tree; init=0)
+
+    # Create a queue with a fixed size nvmax
+    queue = Vector{Int}(undef, nvmax)
+
     for k in 1:ntrees
         tree = trees[k]
 
-        # queue to store the leaves
-        queue = Int[]
+        # Initialize the queue to store the leaves
+        queue_start = 1
+        queue_end = 0
 
         # compute the degree of each vertex in the tree
-        for (vertex, neighbors) in trees[k]
+        for (vertex, neighbors) in tree
             degree = length(neighbors)
             degrees[vertex] = degree
 
             # the vertex is a leaf
             if degree == 1
-                push!(queue, vertex)
+                queue_end += 1
+                queue[queue_end] = vertex
             end
         end
 
         # continue until all leaves are treated
-        while !isempty(queue)
-            leaf = pop!(queue)
+        while queue_start <= queue_end
+            leaf = queue[queue_start]
+            queue_start += 1
 
-            # Convenient way to specify that the vertex is removed
+            # Mark the vertex as removed
             degrees[leaf] = 0
 
             for neighbor in tree[leaf]
@@ -293,12 +329,13 @@ function TreeSetColoringResult(
                     # (leaf, neighbor) represents the next edge to visit during decompression
                     push!(reverse_bfs_orders[k], (leaf, neighbor))
 
-                    # reduce the degree of all neighbors
+                    # reduce the degree of the neighbor
                     degrees[neighbor] -= 1
 
                     # check if the neighbor is now a leaf
                     if degrees[neighbor] == 1
-                        push!(queue, neighbor)
+                        queue_end += 1
+                        queue[queue_end] = neighbor
                     end
                 end
             end
@@ -323,12 +360,13 @@ Storage for the result of a symmetric coloring with any decompression.
 
 # Fields
 
+See the docstring of [`ColumnColoringResult`](@ref).
+
 $TYPEDFIELDS
 
 # See also
 
 - [`AbstractColoringResult`](@ref)
-- [`NonSymmetricColoringResult`](@ref)
 """
 struct LinearSystemColoringResult{M,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution,M}
@@ -344,19 +382,22 @@ function LinearSystemColoringResult(
     S::SparseMatrixCSC, color::Vector{Int}, decompression_eltype::Type{R}
 ) where {R}
     group = group_by_color(color)
-    C = maximum(color)
+    C = length(group)  # ncolors
+    rv = rowvals(S)
 
     # build T such that T * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
     # only consider the strict upper triangle of A because of symmetry
     n = checksquare(S)
     strict_upper_nonzero_inds = Tuple{Int,Int}[]
-    I, J, _ = findnz(S)
-    for (i, j) in zip(I, J)
-        (i < j) && push!(strict_upper_nonzero_inds, (i, j))
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            (i < j) && push!(strict_upper_nonzero_inds, (i, j))
+        end
     end
 
-    T = spzeros(Float64, n * C, length(strict_upper_nonzero_inds))
+    T = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
         cj = color[j]
@@ -367,7 +408,7 @@ function LinearSystemColoringResult(
     end
     T_factorization = factorize(T)
 
-    strict_upper_nonzeros_A = Vector{R}(undef, size(T, 2))
+    strict_upper_nonzeros_A = Vector{float(R)}(undef, size(T, 2))
 
     return LinearSystemColoringResult(
         S, color, group, strict_upper_nonzero_inds, strict_upper_nonzeros_A, T_factorization

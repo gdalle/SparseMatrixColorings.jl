@@ -1,7 +1,3 @@
-using ADTypes: column_coloring, row_coloring, symmetric_coloring
-using Base.Iterators: product
-using Compat
-using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:

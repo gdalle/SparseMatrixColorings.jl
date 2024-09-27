@@ -41,11 +41,11 @@ end
 RandomOrder() = RandomOrder(default_rng())
 
 function vertices(g::Graph, order::RandomOrder)
-    return randperm(order.rng, length(g))
+    return randperm(order.rng, nb_vertices(g))
 end
 
 function vertices(bg::BipartiteGraph, ::Val{side}, order::RandomOrder) where {side}
-    return randperm(order.rng, length(bg, Val(side)))
+    return randperm(order.rng, nb_vertices(bg, Val(side)))
 end
 
 """
@@ -61,7 +61,22 @@ function vertices(g::Graph, ::LargestFirst)
 end
 
 function vertices(bg::BipartiteGraph, ::Val{side}, ::LargestFirst) where {side}
-    criterion(v) = degree(bg, Val(side), v)
+    other_side = 3 - side
+    n = nb_vertices(bg, Val(side))
+    visited = falses(n)  # necessary for distance-2 neighborhoods
+    degrees_dist2 = zeros(Int, n)
+    for v in vertices(bg, Val(side))
+        fill!(visited, false)
+        for u in neighbors(bg, Val(side), v)
+            for w in neighbors(bg, Val(other_side), u)
+                if w != v && !visited[w]
+                    degrees_dist2[v] += 1
+                    visited[w] = true  # avoid double counting
+                end
+            end
+        end
+    end
+    criterion(v) = degrees_dist2[v]
     return sort(vertices(bg, Val(side)); by=criterion, rev=true)
 end
 

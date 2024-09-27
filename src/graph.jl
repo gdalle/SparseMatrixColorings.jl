@@ -1,31 +1,136 @@
 ## Standard graph
 
 """
-    Graph{T}
+    Graph{loops,T}
 
-Undirected graph structure stored in Compressed Sparse Column (CSC) format.
+Store a sparse matrix (in CSC) without its values, keeping only the pattern of nonzeros.
+It can be seen as a graph mapping columns to rows, hence the name `Graph`.
+
+The type parameter `loops` must be set to:
+- `true` if coefficients `(i, i)` present in the CSC are counted as edges in the graph (e.g. for each half of a bipartite graph)
+- `false` otherwise (e.g. for an adjacency graph)
 
 # Fields
 
-- `colptr::Vector{T}`: same as for `SparseMatrixCSC`
-- `rowval::Vector{T}`: same as for `SparseMatrixCSC`
+Copied from `SparseMatrixCSC`:
+
+- `m::Int`: number of rows
+- `n::Int`: number of columns
+- `colptr::Vector{T}`: column `j` is in `colptr[j]:(colptr[j+1]-1)`
+- `rowval::Vector{T}`: row indices of stored values
 """
-struct Graph{T<:Integer}
+struct Graph{loops,T<:Integer}
+    m::Int
+    n::Int
     colptr::Vector{T}
     rowval::Vector{T}
 end
 
-Graph(S::SparseMatrixCSC) = Graph(S.colptr, S.rowval)
+function Graph{loops}(S::SparseMatrixCSC{Tv,Ti}) where {loops,Tv,Ti}
+    return Graph{loops,Ti}(S.m, S.n, S.colptr, S.rowval)
+end
 
-Base.length(g::Graph) = length(g.colptr) - 1
+Base.size(g::Graph) = (g.m, g.n)
 SparseArrays.nnz(g::Graph) = length(g.rowval)
+SparseArrays.rowvals(g::Graph) = g.rowval
+SparseArrays.nzrange(g::Graph, j::Integer) = g.colptr[j]:(g.colptr[j + 1] - 1)
 
-vertices(g::Graph) = 1:length(g)
-neighbors(g::Graph, v::Integer) = view(g.rowval, g.colptr[v]:(g.colptr[v + 1] - 1))
-degree(g::Graph, v::Integer) = length(g.colptr[v]:(g.colptr[v + 1] - 1))
+nb_vertices(g::Graph) = g.n
+vertices(g::Graph) = 1:nb_vertices(g)
+
+nb_edges(g::Graph{true}) = length(g.rowval)
+
+function nb_edges(g::Graph{false})
+    ne = 0
+    for j in vertices(g)
+        for k in nzrange(g, j)
+            i = rowvals(g)[k]
+            if i != j
+                ne += 1
+            end
+        end
+    end
+    return ne
+end
+
+function neighbors(g::Graph{true}, v::Integer)
+    return view(rowvals(g), nzrange(g, v))
+end
+
+function neighbors(g::Graph{false}, v::Integer)
+    neighbors_with_loops = view(rowvals(g), nzrange(g, v))
+    return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
+end
+
+function degree(g::Graph{true}, v::Integer)
+    return length(nzrange(g, v))
+end
+
+function degree(g::Graph{false}, v::Integer)
+    d = length(nzrange(g, v))
+    for k in nzrange(g, v)
+        if rowvals(g)[k] == v
+            d -= 1
+        end
+    end
+    return d
+end
 
 maximum_degree(g::Graph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::Graph) = minimum(Base.Fix1(degree, g), vertices(g))
+
+"""
+    transpose(g::Graph)
+
+Return a [`Graph`](@ref) corresponding to the transpose of (the underlying matrix of) `g`.
+"""
+function Base.transpose(g::Graph{loops,T}) where {loops,T}
+    m, n = size(g)
+    nnzA = nnz(g)
+    A_colptr = g.colptr
+    A_rowval = g.rowval
+
+    # Allocate storage for the column pointers and row indices of B = Aᵀ
+    B_colptr = zeros(T, m + 1)
+    B_rowval = Vector{T}(undef, nnzA)
+
+    # Count the number of non-zeros for each row of A.
+    # It corresponds to the number of non-zeros for each column of B = Aᵀ.
+    for k in 1:nnzA
+        i = A_rowval[k]
+        B_colptr[i] += 1
+    end
+
+    # Compute the cumulative sum to determine the starting positions of rows in B_rowval
+    counter = 1
+    for col in 1:m
+        nnz_col = B_colptr[col]
+        B_colptr[col] = counter
+        counter += nnz_col
+    end
+    B_colptr[m + 1] = counter
+
+    # Store the row indices for each column of B = Aᵀ
+    for j in 1:n
+        for index in A_colptr[j]:(A_colptr[j + 1] - 1)
+            i = A_rowval[index]
+
+            # Update B_rowval for the non-zero B[j,i].
+            # It corresponds to the non-zero A[i,j].
+            pos = B_colptr[i]
+            B_rowval[pos] = j
+            B_colptr[i] += 1
+        end
+    end
+
+    # Fix offsets of B_colptr to restore correct starting positions
+    for col in m:-1:2
+        B_colptr[col] = B_colptr[col - 1]
+    end
+    B_colptr[1] = 1
+
+    return Graph{loops,T}(n, m, B_colptr, B_rowval)
+end
 
 ## Bipartite graph
 
@@ -42,20 +147,21 @@ A bipartite graph has two "sides", which we number `1` and `2`.
 - `g2::Graph{T}`: contains the neighbors for vertices on side `2`
 """
 struct BipartiteGraph{T<:Integer}
-    g1::Graph{T}
-    g2::Graph{T}
+    g1::Graph{true,T}
+    g2::Graph{true,T}
 end
 
-Base.length(bg::BipartiteGraph, ::Val{1}) = length(bg.g1)
-Base.length(bg::BipartiteGraph, ::Val{2}) = length(bg.g2)
-SparseArrays.nnz(bg::BipartiteGraph) = nnz(bg.g1)
+nb_vertices(bg::BipartiteGraph, ::Val{1}) = nb_vertices(bg.g1)
+nb_vertices(bg::BipartiteGraph, ::Val{2}) = nb_vertices(bg.g2)
+
+nb_edges(bg::BipartiteGraph) = nb_edges(bg.g1)
 
 """
     vertices(bg::BipartiteGraph, Val(side))
 
 Return the list of vertices of `bg` from the specified `side` as a range `1:n`.
 """
-vertices(bg::BipartiteGraph, ::Val{side}) where {side} = 1:length(bg, Val(side))
+vertices(bg::BipartiteGraph, ::Val{side}) where {side} = 1:nb_vertices(bg, Val(side))
 
 """
     neighbors(bg::BipartiteGraph, Val(side), v::Integer)
@@ -76,10 +182,22 @@ function minimum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
     return minimum(v -> degree(bg, Val(side), v), vertices(bg, Val(side)))
 end
 
+function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,side}
+    # not efficient, for testing purposes only
+    other_side = 3 - side
+    neighbors_dist2 = Set{T}()
+    for u in neighbors(bg, Val(side), v)
+        for w in neighbors(bg, Val(other_side), u)
+            w != v && push!(neighbors_dist2, w)
+        end
+    end
+    return length(neighbors_dist2)
+end
+
 ## Construct from matrices
 
 """
-    adjacency_graph(H::AbstractMatrix)
+    adjacency_graph(A::SparseMatrixCSC)
 
 Return a [`Graph`](@ref) representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
 
@@ -92,10 +210,10 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-adjacency_graph(H::SparseMatrixCSC) = Graph(H - Diagonal(H))
+adjacency_graph(A::SparseMatrixCSC) = Graph{false}(A)
 
 """
-    bipartite_graph(J::AbstractMatrix)
+    bipartite_graph(A::SparseMatrixCSC; symmetric_pattern::Bool)
 
 Return a [`BipartiteGraph`](@ref) representing the nonzeros of a non-symmetric matrix (typically a Jacobian matrix).
 
@@ -105,12 +223,19 @@ The bipartite graph of a matrix `A ∈ ℝ^{m × n}` is `Gb(A) = (V₁, V₂, E)
 - `V₂ = 1:n` is the set of columns `j`
 - `(i, j) ∈ E` whenever `A[i, j] ≠ 0`
 
+When `symmetric_pattern` is `true`, this construction is more efficient.
+
 # References
 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-function bipartite_graph(J::SparseMatrixCSC)
-    g1 = Graph(sparse(transpose(J)))  # rows to columns
-    g2 = Graph(J)  # columns to rows
+function bipartite_graph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
+    g2 = Graph{true}(A)  # columns to rows
+    if symmetric_pattern
+        checksquare(A)  # proxy for checking full symmetry
+        g1 = g2
+    else
+        g1 = transpose(g2)  # rows to columns
+    end
     return BipartiteGraph(g1, g2)
 end
