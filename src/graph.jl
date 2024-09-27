@@ -41,16 +41,16 @@ vertices(g::Graph) = 1:nb_vertices(g)
 nb_edges(g::Graph{true}) = length(g.rowval)
 
 function nb_edges(g::Graph{false})
-    e = 0
+    ne = 0
     for j in vertices(g)
         for k in nzrange(g, j)
             i = rowvals(g)[k]
             if i != j
-                e += 1
+                ne += 1
             end
         end
     end
-    return e
+    return ne
 end
 
 function neighbors(g::Graph{true}, v::Integer)

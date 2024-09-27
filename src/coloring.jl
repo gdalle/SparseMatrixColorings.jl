@@ -76,11 +76,11 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function star_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
-    n = nb_vertices(g)
-    color = zeros(Int, n)
-    forbidden_colors = zeros(Int, n)
-    first_neighbor = fill((0, 0), n)  # at first no neighbors have been encountered
-    treated = zeros(Int, n)
+    nv = nb_vertices(g)
+    color = zeros(Int, nv)
+    forbidden_colors = zeros(Int, nv)
+    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    treated = zeros(Int, nv)
     star = Dict{Tuple{Int,Int},Int}()
     hub = Int[]
     vertices_in_order = vertices(g, order)
@@ -269,12 +269,12 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 """
 function acyclic_coloring(g::Graph{false}, order::AbstractOrder)
     # Initialize data structures
-    n = nb_vertices(g)
-    e = nb_edges(g) ÷ 2  # symmetric sparse matrix with empty diagonal
-    color = zeros(Int, n)
-    forbidden_colors = zeros(Int, n)
-    first_neighbor = fill((0, 0), n)  # at first no neighbors have been encountered
-    first_visit_to_tree = fill((0, 0), e)
+    nv = nb_vertices(g)
+    ne = nb_edges(g) ÷ 2  # symmetric sparse matrix with empty diagonal
+    color = zeros(Int, nv)
+    forbidden_colors = zeros(Int, nv)
+    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((0, 0), ne)
     forest = DisjointSets{Tuple{Int,Int}}()
     vertices_in_order = vertices(g, order)
 
