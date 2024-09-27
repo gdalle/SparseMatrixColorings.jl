@@ -96,8 +96,78 @@ Common framework for various orders based on dynamic degrees.
 """
 struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder end
 
+struct DegreeBuckets
+    degrees::Vector{Int}
+    buckets::Vector{Vector{Int}}
+    positions::Vector{Int}
+end
+
+function DegreeBuckets(degrees::Vector{Int}, dmax)
+    buckets = [Int[] for d in 1:(dmax + 1)]
+    positions = similar(degrees, Int)
+    for v in eachindex(degrees, positions)
+        d = degrees[v]
+        push!(buckets[d], v)  # TODO: optimize
+        positions[v] = length(buckets[d])
+    end
+    return DegreeBuckets(degrees, buckets, positions)
+end
+
+function mark_ordered!(db::DegreeBuckets, v::Integer)
+    db.degrees[v] = -1
+    db.positions[v] = -1
+    return nothing
+end
+
+already_ordered(db::DegreeBuckets, v::Integer) = db.degrees[v] == -1
+
+function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
+    @compat (; buckets) = db
+    if direction == :up
+        candidate_degree = findlast(!isempty, buckets)  # start with largest degree
+    else
+        candidate_degree = findfirst(!isempty, buckets)  # start with smallest degree
+    end
+    candidate_bucket = buckets[candidate_degree]
+    candidate = pop!(candidate_bucket)
+    return candidate
+end
+
+function pop_from_bucket!(db::DegreeBuckets, v::Integer)
+    @compat (; degrees, buckets, positions) = db
+    d, p = degrees[v], positions[v]
+    bucket = buckets[d]
+    w = bucket[end]
+    bucket[p] = w
+    bucket[end] = v
+    positions[w] = p
+    pop!(bucket)
+    return nothing
+end
+
+function new_degree(d::Integer; degtype::Symbol, direction::Symbol)
+    if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
+        return d + 1  # back degree increases
+    else
+        return d - 1  # forward degree decreases
+    end
+end
+
+function change_degree_and_push_into_bucket!(
+    db::DegreeBuckets, v::Integer; degtype::Symbol, direction::Symbol
+)
+    @compat (; degrees, buckets, positions) = db
+    d = degrees[v]
+    d_new = new_degree(d; degtype, direction)
+    new_bucket = buckets[d_new]
+    push!(new_bucket, v)
+    degrees[v] = d_new
+    positions[v] = length(new_bucket)
+    return nothing
+end
+
 function vertices(
-    g::Graph, ::DynamicDegreeBasedOrder{degtype,direction}
+    g::AdjacencyGraph, ::DynamicDegreeBasedOrder{degtype,direction}
 ) where {degtype,direction}
     # Initialize degrees
     if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
@@ -105,64 +175,60 @@ function vertices(
     else
         degrees = [degree(g, v) + 1 for v in vertices(g)]  # forward degree decreases
     end
-
     # Initialize buckets and positions
-    buckets = [Int[] for d in 1:(maximum_degree(g) + 1)]
-    positions = zeros(Int, length(g))
-    for v in vertices(g)
-        d = degrees[v]
-        push!(buckets[d], v)
-        positions[v] = length(buckets[d])
-    end
-
+    degree_buckets = DegreeBuckets(degrees, maximum_degree(g))
     order = Int[]
-
-    for _ in 1:length(g)
+    for _ in 1:nb_vertices(g)
         # Pick the candidate as the remaining vertex with largest or smallest degree
+        u = pop_next_candidate!(degree_buckets; direction)
         if direction == :up
-            candidate_d = findlast(!isempty, buckets)  # start with largest degree
+            push!(order, u)  # order grows from 1 to n
         else
-            candidate_d = findfirst(!isempty, buckets)  # start with smallest degree
+            pushfirst!(order, u)  # order grows from n to 1
         end
-        candidate_bucket = buckets[candidate_d]
-        candidate = pop!(candidate_bucket)
-        if direction == :up
-            push!(order, candidate)  # order grows from 1 to n
-        else
-            pushfirst!(order, candidate)  # order grows from n to 1
-        end
-
-        for v in neighbors(g, candidate)
-            @assert v != candidate
-            d, p = degrees[v], positions[v]
+        for v in neighbors(g, u)
             # Discard neighbor if it has already been ordered
-            d == -1 && continue
-
+            already_ordered(degree_buckets, v) && continue
             # Modify the neighbor's old bucket by swapping and popping
-            neighbor_bucket = buckets[d]
-            w = neighbor_bucket[end]
-            neighbor_bucket[p] = w
-            neighbor_bucket[end] = v
-            positions[w] = p
-            pop!(neighbor_bucket)
-
+            pop_from_bucket!(degree_buckets, v)
             # Modify the neighbor's new bucket by pushing and reindexing
-            if (degtype == :back && direction == :up) ||
-                (degtype == :forward && direction == :down)
-                d_new = d + 1  # back degree increases
-            else
-                d_new = d - 1  # forward degree decreases
-            end
-            neighbor_new_bucket = buckets[d_new]
-            push!(neighbor_new_bucket, v)
-            degrees[v] = d_new
-            positions[v] = length(neighbor_new_bucket)
+            change_degree_and_push_into_bucket!(degree_buckets, v; degtype, direction)
         end
-
-        degrees[candidate] = -1
-        positions[candidate] = -1
+        mark_ordered!(degree_buckets, u)
     end
+    return order
+end
 
+function vertices(
+    g::BipartiteGraph, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
+) where {side,degtype,direction}
+    other_side = 3 - side
+    if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
+        degrees = [0 + 1 for v in vertices(g, Val(side))]
+    else
+        degrees = [degree_dist2(g, Val(side), v) + 1 for v in vertices(g, Val(side))]  # TODO: optimize
+    end
+    degree_buckets = DegreeBuckets(degrees, maximum_degree_dist2(g, Val(side)))  # TODO: optimize
+    order = Int[]
+    visited = falses(nb_vertices(g, Val(side)))
+    for _ in 1:nb_vertices(g, Val(side))
+        u = pop_next_candidate!(degree_buckets; direction)
+        direction == :up ? push!(order, u) : pushfirst!(order, u)
+        for w in neighbors(g, Val(side), u)
+            for v in neighbors(g, Val(other_side), w)
+                if v == u || visited[v]
+                    continue
+                else
+                    visited[v] = true
+                end
+                already_ordered(degree_buckets, v) && continue
+                pop_from_bucket!(degree_buckets, v)
+                change_degree_and_push_into_bucket!(degree_buckets, v; degtype, direction)
+            end
+        end
+        mark_ordered!(degree_buckets, u)
+        fill!(visited, false)
+    end
     return order
 end
 
