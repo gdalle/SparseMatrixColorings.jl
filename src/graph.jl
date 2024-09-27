@@ -182,6 +182,18 @@ function minimum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
     return minimum(v -> degree(bg, Val(side), v), vertices(bg, Val(side)))
 end
 
+function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,side}
+    # not efficient, for testing purposes only
+    other_side = 3 - side
+    neighbors_dist2 = Set{T}()
+    for u in neighbors(bg, Val(side), v)
+        for w in neighbors(bg, Val(other_side), u)
+            w != v && push!(neighbors_dist2, w)
+        end
+    end
+    return length(neighbors_dist2)
+end
+
 ## Construct from matrices
 
 """

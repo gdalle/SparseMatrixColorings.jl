@@ -1,7 +1,14 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
-    Graph, adjacency_graph, bipartite_graph, degree, nb_vertices, nb_edges, neighbors
+    Graph,
+    adjacency_graph,
+    bipartite_graph,
+    degree,
+    degree_dist2,
+    nb_vertices,
+    nb_edges,
+    neighbors
 using Test
 
 ## Standard graph
@@ -81,6 +88,14 @@ end;
     @test neighbors(bg, Val(2), 6) == [1, 3, 4]
     @test neighbors(bg, Val(2), 7) == [1, 2, 4]
     @test neighbors(bg, Val(2), 8) == [1, 2, 3]
+    @test degree_dist2(bg, Val(2), 1) == 3
+    @test degree_dist2(bg, Val(2), 2) == 3
+    @test degree_dist2(bg, Val(2), 3) == 3
+    @test degree_dist2(bg, Val(2), 4) == 3
+    @test degree_dist2(bg, Val(2), 5) == 6
+    @test degree_dist2(bg, Val(2), 6) == 6
+    @test degree_dist2(bg, Val(2), 7) == 6
+    @test degree_dist2(bg, Val(2), 8) == 6
 
     A = sparse([
         1 0 1 1
