@@ -4,7 +4,6 @@ using LinearAlgebra
 using MatrixDepot
 using SparseArrays
 using SparseMatrixColorings:
-    Graph,
     AdjacencyGraph,
     BipartiteGraph,
     LargestFirst,

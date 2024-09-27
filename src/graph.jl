@@ -218,7 +218,9 @@ function neighbors(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side}
     return view(rowvals(S), nzrange(S, v))
 end
 
-degree(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side} = length(neighbors(bg, v))
+function degree(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side}
+    return length(neighbors(bg, Val(side), v))
+end
 
 function maximum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
     return maximum(v -> degree(bg, Val(side), v), vertices(bg, Val(side)))
