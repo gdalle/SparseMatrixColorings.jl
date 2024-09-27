@@ -37,7 +37,7 @@ colpack_table_6_7 = CSV.read(
         bg = BipartiteGraph(mat)
         @test nb_vertices(bg, Val(1)) == row[:V1]
         @test nb_vertices(bg, Val(2)) == row[:V2]
-        @test nb_edges(bg) * 2 == row[:E]
+        @test nb_edges(bg) == row[:E]
         @test maximum_degree(bg, Val(1)) == row[:Δ1]
         @test maximum_degree(bg, Val(2)) == row[:Δ2]
         color_N1 = partial_distance2_coloring(bg, Val(1), NaturalOrder())
@@ -65,7 +65,7 @@ what_table_31_32 = CSV.read(
         bg = BipartiteGraph(mat)
         @test nb_vertices(bg, Val(1)) == row[:m]
         @test nb_vertices(bg, Val(2)) == row[:n]
-        @test nb_edges(bg) * 2 == row[:nnz]
+        @test nb_edges(bg) == row[:nnz]
         @test minimum_degree(bg, Val(1)) == row[:ρmin]
         @test maximum_degree(bg, Val(1)) == row[:ρmax]
         @test minimum_degree(bg, Val(2)) == row[:κmin]
