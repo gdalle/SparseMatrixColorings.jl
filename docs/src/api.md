@@ -17,6 +17,7 @@ SparseMatrixColorings
 coloring
 ColoringProblem
 GreedyColoringAlgorithm
+ConstantColoringAlgorithm
 ```
 
 ## Result analysis
