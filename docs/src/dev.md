@@ -10,12 +10,12 @@ The docstrings on this page describe internals, they are not part of the public 
 ## Graph storage
 
 ```@docs
-SparseMatrixColorings.SparsePatternCSC
-transpose
+SparseMatrixColorings.SparsityPatternCSC
 SparseMatrixColorings.AdjacencyGraph
 SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
+transpose
 ```
 
 ## Low-level coloring

@@ -1,7 +1,7 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
-    SparsePatternCSC,
+    SparsityPatternCSC,
     AdjacencyGraph,
     BipartiteGraph,
     degree,
@@ -11,15 +11,15 @@ using SparseMatrixColorings:
     neighbors
 using Test
 
-## SparsePatternCSC
+## SparsityPatternCSC
 
-@testset "SparsePatternCSC" begin
+@testset "SparsityPatternCSC" begin
     @testset "Transpose" begin
         for _ in 1:1000
             A = sprand(rand(100:1000), rand(100:1000), 0.1)
-            S = SparsePatternCSC(A)
+            S = SparsityPatternCSC(A)
             Sᵀ = transpose(S)
-            Sᵀ_true = SparsePatternCSC(sparse(transpose(A)))
+            Sᵀ_true = SparsityPatternCSC(sparse(transpose(A)))
             @test Sᵀ.colptr == Sᵀ_true.colptr
             @test Sᵀ.rowval == Sᵀ_true.rowval
         end
