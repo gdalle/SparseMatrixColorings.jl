@@ -1,7 +1,6 @@
 using SparseArrays
 using SparseMatrixColorings:
     BipartiteGraph,
-    Graph,
     AdjacencyGraph,
     BipartiteGraph,
     LargestFirst,
