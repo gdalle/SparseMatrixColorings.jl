@@ -21,7 +21,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using their index in th
 """
 struct NaturalOrder <: AbstractOrder end
 
-function vertices(g::Graph, ::NaturalOrder)
+function vertices(g::AdjacencyGraph, ::NaturalOrder)
     return vertices(g)
 end
 
@@ -40,7 +40,7 @@ end
 
 RandomOrder() = RandomOrder(default_rng())
 
-function vertices(g::Graph, order::RandomOrder)
+function vertices(g::AdjacencyGraph, order::RandomOrder)
     return randperm(order.rng, nb_vertices(g))
 end
 
@@ -55,7 +55,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using their degree in t
 """
 struct LargestFirst <: AbstractOrder end
 
-function vertices(g::Graph, ::LargestFirst)
+function vertices(g::AdjacencyGraph, ::LargestFirst)
     criterion(v) = degree(g, v)
     return sort(vertices(g); by=criterion, rev=true)
 end

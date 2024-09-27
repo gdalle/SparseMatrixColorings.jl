@@ -1,8 +1,7 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings:
-    BipartiteGraph, Graph, adjacency_graph, bipartite_graph, degree_dist2, vertices
+using SparseMatrixColorings: BipartiteGraph, AdjacencyGraph, degree_dist2, vertices
 using StableRNGs
 using Test
 
@@ -10,31 +9,31 @@ rng = StableRNG(63)
 
 @testset "NaturalOrder" begin
     A = sprand(rng, Bool, 5, 5, 0.5)
-    ag = adjacency_graph(A)
+    ag = AdjacencyGraph(A)
     @test vertices(ag, NaturalOrder()) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
-    bg = bipartite_graph(A)
+    bg = BipartiteGraph(A)
     @test vertices(bg, Val(1), NaturalOrder()) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
-    bg = bipartite_graph(A)
+    bg = BipartiteGraph(A)
     @test vertices(bg, Val(2), NaturalOrder()) == 1:4
 end;
 
 @testset "RandomOrder" begin
     A = sprand(rng, Bool, 5, 5, 0.5)
-    ag = adjacency_graph(A)
+    ag = AdjacencyGraph(A)
     @test sort(vertices(ag, RandomOrder(rng))) == 1:5
     @test sort(vertices(ag, RandomOrder())) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
-    bg = bipartite_graph(A)
+    bg = BipartiteGraph(A)
     @test sort(vertices(bg, Val(1), RandomOrder(rng))) == 1:5
     @test sort(vertices(bg, Val(1), RandomOrder())) == 1:5
 
     A = sprand(rng, Bool, 5, 4, 0.5)
-    bg = bipartite_graph(A)
+    bg = BipartiteGraph(A)
     @test sort(vertices(bg, Val(2), RandomOrder(rng))) == 1:4
     @test sort(vertices(bg, Val(2), RandomOrder())) == 1:4
 end;
@@ -45,7 +44,7 @@ end;
         1 0 0
         0 1 0
     ])
-    ag = adjacency_graph(A)
+    ag = AdjacencyGraph(A)
 
     @test vertices(ag, LargestFirst()) == [2, 1, 3]
 
@@ -56,7 +55,7 @@ end;
         0 0 0 0
         1 0 1 0
     ])
-    bg = bipartite_graph(A)
+    bg = BipartiteGraph(A)
 
     for side in (1, 2)
         true_order = sort(

@@ -54,7 +54,7 @@ function partial_distance2_coloring!(
 end
 
 """
-    star_coloring(g::Graph, order::AbstractOrder)
+    star_coloring(g::AdjacencyGraph, order::AbstractOrder)
 
 Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
 
@@ -67,14 +67,14 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 # See also
 
-- [`Graph`](@ref)
+- [`AdjacencyGraph`](@ref)
 - [`AbstractOrder`](@ref)
 
 # References
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
-function star_coloring(g::Graph{false}, order::AbstractOrder)
+function star_coloring(g::AdjacencyGraph, order::AbstractOrder)
     # Initialize data structures
     nv = nb_vertices(g)
     color = zeros(Int, nv)
@@ -157,7 +157,7 @@ function _treat!(
     treated::AbstractVector{<:Integer},
     forbidden_colors::AbstractVector{<:Integer},
     # not modified
-    g::Graph,
+    g::AdjacencyGraph,
     v::Integer,
     w::Integer,
     color::AbstractVector{<:Integer},
@@ -175,7 +175,7 @@ function _update_stars!(
     star::Dict{<:Tuple,<:Integer},
     hub::AbstractVector{<:Integer},
     # not modified
-    g::Graph,
+    g::AdjacencyGraph,
     v::Integer,
     color::AbstractVector{<:Integer},
     first_neighbor::AbstractVector{<:Tuple},
@@ -247,7 +247,7 @@ function symmetric_coefficient(
 end
 
 """
-    acyclic_coloring(g::Graph, order::AbstractOrder)
+    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -260,17 +260,17 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 # See also
 
-- [`Graph`](@ref)
+- [`AdjacencyGraph`](@ref)
 - [`AbstractOrder`](@ref)
 
 # References
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::Graph{false}, order::AbstractOrder)
+function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder)
     # Initialize data structures
     nv = nb_vertices(g)
-    ne = nb_edges(g) ÷ 2  # symmetric sparse matrix with empty diagonal
+    ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered

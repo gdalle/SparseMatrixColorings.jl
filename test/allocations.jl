@@ -10,7 +10,7 @@ rng = StableRNG(63)
 
 function test_noallocs_distance2_coloring(n)
     bench = @be (;
-        bg=bipartite_graph(sprand(rng, n, n, 5 / n)),
+        bg=BipartiteGraph(sprand(rng, n, n, 5 / n)),
         color=Vector{Int}(undef, n),
         forbidden_colors=Vector{Int}(undef, n),
     ) partial_distance2_coloring!(_.color, _.forbidden_colors, _.bg, Val(1), 1:n) evals = 1
