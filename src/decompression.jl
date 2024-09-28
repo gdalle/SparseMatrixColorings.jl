@@ -460,8 +460,6 @@ end
 
 ## TreeSetColoringResult
 
-# TODO: add method for A::SparseMatrixCSC
-
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
@@ -498,6 +496,92 @@ function decompress!(
             end
             if in_triangle(j, i, uplo)
                 A[j, i] = val
+            end
+        end
+    end
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
+    @compat (;
+        S,
+        color,
+        vertices_by_tree,
+        reverse_bfs_orders,
+        diagonal_indices,
+        diagonal_nzind,
+        lower_triangle_offsets,
+        upper_triangle_offsets,
+        buffer,
+    ) = result
+    nzA = nonzeros(A)
+    uplo == :F && check_same_pattern(A, S)
+
+    if eltype(buffer) == R
+        buffer_right_type = buffer
+    else
+        buffer_right_type = similar(buffer, R)
+    end
+
+    # Recover the diagonal coefficients of A
+    if uplo == :L
+        for i in diagonal_indices
+            # A[i, i] is the first element in column i
+            nzind = A.colptr[i]
+            nzA[nzind] = B[i, color[i]]
+        end
+    elseif uplo == :U
+        for i in diagonal_indices
+            # A[i, i] is the last element in column i
+            nzind = A.colptr[i + 1] - 1
+            nzA[nzind] = B[i, color[i]]
+        end
+    else  # uplo == :F
+        for (k, i) in enumerate(diagonal_indices)
+            nzind = diagonal_nzind[k]
+            nzA[nzind] = B[i, color[i]]
+        end
+    end
+
+    # Index of offsets in lower_triangle_offsets and upper_triangle_offsets
+    counter = 0
+
+    # Recover the off-diagonal coefficients of A
+    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
+        for vertex in vertices_by_tree[k]
+            buffer_right_type[vertex] = zero(R)
+        end
+
+        for (i, j) in reverse_bfs_orders[k]
+            counter += 1
+            val = B[i, color[j]] - buffer_right_type[i]
+            buffer_right_type[j] = buffer_right_type[j] + val
+
+            # A[i,j] = val
+            if in_triangle(i, j, uplo)
+                if uplo == :L
+                    nzind = A.colptr[j + 1] - lower_triangle_offsets[counter]
+                else
+                    nzind = A.colptr[j] + upper_triangle_offsets[counter]
+                end
+                # Both values of `nzind` can be used if uplo = :F
+                nzA[nzind] = val
+            end
+
+            # A[j,i] = val
+            if in_triangle(j, i, uplo)
+                if uplo == :L
+                    nzind = A.colptr[i + 1] - lower_triangle_offsets[counter]
+                else
+                    nzind = A.colptr[i] + upper_triangle_offsets[counter]
+                end
+                # Both values of `nzind` can be used if uplo = :F
+                nzA[nzind] = val
             end
         end
     end

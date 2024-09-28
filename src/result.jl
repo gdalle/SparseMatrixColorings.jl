@@ -249,6 +249,10 @@ struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,R} <:
     group::Vector{Vector{Int}}
     vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    diagonal_indices::Vector{Int}
+    diagonal_nzind::Vector{Int}
+    lower_triangle_offsets::Vector{Int}
+    upper_triangle_offsets::Vector{Int}
     buffer::Vector{R}
 end
 
@@ -262,6 +266,29 @@ function TreeSetColoringResult(
     S = ag.S
     nvertices = length(color)
     group = group_by_color(color)
+
+    # Vector for the decompression of the diagonal coefficients
+    diagonal_indices = Int[]
+    diagonal_nzind = Int[]
+    ndiag = 0
+
+    n = size(S, 1)
+    rv = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            if i == j
+                push!(diagonal_indices, i)
+                push!(diagonal_nzind, k)
+                ndiag += 1
+            end
+        end
+    end
+
+    # Vectors for the decompression of the off-diagonal coefficients
+    nedges = (nnz(S) - ndiag) ÷ 2
+    lower_triangle_offsets = Vector{Int}(undef, nedges)
+    upper_triangle_offsets = Vector{Int}(undef, nedges)
 
     # forest is a structure DisjointSets from DataStructures.jl
     # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
@@ -324,6 +351,9 @@ function TreeSetColoringResult(
     # Create a queue with a fixed size nvmax
     queue = Vector{Int}(undef, nvmax)
 
+    # Index in lower_triangle_offsets and upper_triangle_offsets
+    index_offsets = 0
+
     for k in 1:ntrees
         tree = trees[k]
 
@@ -344,7 +374,7 @@ function TreeSetColoringResult(
         end
 
         # continue until all leaves are treated
-        while queue_start <= queue_end
+        while queue_start ≤ queue_end
             leaf = queue[queue_start]
             queue_start += 1
 
@@ -364,6 +394,35 @@ function TreeSetColoringResult(
                         queue_end += 1
                         queue[queue_end] = neighbor
                     end
+
+                    # Update lower_triangle_offsets and upper_triangle_offsets
+                    i = leaf
+                    j = neighbor
+                    col_i = view(rv, nzrange(S, i))
+                    col_j = view(rv, nzrange(S, j))
+                    index_ij = S.colptr[j] - 1 + searchsortedfirst(col_j, i)  # S.nzval[index_ij] = S[i,j]
+                    @assert S.nzval[index_ij] == S[i,j]
+                    index_ji = S.colptr[i] - 1 + searchsortedfirst(col_i, j)  # S.nzval[index_ji] = S[j,i]
+                    @assert S.nzval[index_ji] == S[j,i]
+                    index_offsets += 1
+
+                    if in_triangle(i, j, :L)
+                        # uplo = :L or uplo = :F
+                        # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
+                        lower_triangle_offsets[index_offsets] = S.colptr[j + 1] - index_ij
+
+                        # uplo = :U or uplo = :F
+                        # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
+                        upper_triangle_offsets[index_offsets] = index_ji - S.colptr[i]
+                    else
+                        # uplo = :L or uplo = :F
+                        # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
+                        lower_triangle_offsets[index_offsets] = S.colptr[i + 1] - index_ji
+
+                        # uplo = :U or uplo = :F
+                        # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
+                        upper_triangle_offsets[index_offsets] = index_ij - S.colptr[j]
+                    end
                 end
             end
         end
@@ -374,7 +433,17 @@ function TreeSetColoringResult(
     buffer = Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
-        A, ag, color, group, vertices_by_tree, reverse_bfs_orders, buffer
+        A,
+        ag,
+        color,
+        group,
+        vertices_by_tree,
+        reverse_bfs_orders,
+        diagonal_indices,
+        diagonal_nzind,
+        lower_triangle_offsets,
+        upper_triangle_offsets,
+        buffer,
     )
 end
 
