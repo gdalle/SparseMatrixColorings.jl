@@ -49,12 +49,14 @@ include("coloring.jl")
 include("result.jl")
 include("matrices.jl")
 include("interface.jl")
+include("constant.jl")
 include("decompression.jl")
 include("check.jl")
 include("examples.jl")
 
 export NaturalOrder, RandomOrder, LargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
+export ConstantColoringAlgorithm
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups

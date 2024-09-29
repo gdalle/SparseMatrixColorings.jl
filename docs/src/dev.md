@@ -10,12 +10,11 @@ The docstrings on this page describe internals, they are not part of the public 
 ## Graph storage
 
 ```@docs
-SparseMatrixColorings.Graph
+SparseMatrixColorings.SparsityPatternCSC
+SparseMatrixColorings.AdjacencyGraph
 SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
-SparseMatrixColorings.adjacency_graph
-SparseMatrixColorings.bipartite_graph
 transpose
 ```
 

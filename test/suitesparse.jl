@@ -4,9 +4,8 @@ using LinearAlgebra
 using MatrixDepot
 using SparseArrays
 using SparseMatrixColorings:
-    Graph,
-    adjacency_graph,
-    bipartite_graph,
+    AdjacencyGraph,
+    BipartiteGraph,
     LargestFirst,
     NaturalOrder,
     degree,
@@ -35,7 +34,7 @@ colpack_table_6_7 = CSV.read(
         @info "Testing distance-2 coloring for $(row[:name]) against ColPack paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(original_mat)
-        bg = bipartite_graph(mat)
+        bg = BipartiteGraph(mat)
         @test nb_vertices(bg, Val(1)) == row[:V1]
         @test nb_vertices(bg, Val(2)) == row[:V2]
         @test nb_edges(bg) == row[:E]
@@ -63,7 +62,7 @@ what_table_31_32 = CSV.read(
         @info "Testing distance-2 coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = original_mat  # no dropzeros
-        bg = bipartite_graph(mat)
+        bg = BipartiteGraph(mat)
         @test nb_vertices(bg, Val(1)) == row[:m]
         @test nb_vertices(bg, Val(2)) == row[:n]
         @test nb_edges(bg) == row[:nnz]
@@ -93,10 +92,10 @@ what_table_41_42 = CSV.read(
         @info "Testing star coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(sparse(original_mat))
-        ag = adjacency_graph(mat)
-        bg = bipartite_graph(mat)
+        ag = AdjacencyGraph(mat)
+        bg = BipartiteGraph(mat)
         @test nb_vertices(ag) == row[:V]
-        @test nb_edges(ag) ÷ 2 == row[:E]
+        @test nb_edges(ag) == row[:E]
         @test maximum_degree(ag) == row[:Δ]
         @test minimum_degree(ag) == row[:δ]
         color_N, _ = star_coloring(ag, NaturalOrder())
