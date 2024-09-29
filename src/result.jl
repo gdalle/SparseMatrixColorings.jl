@@ -374,7 +374,7 @@ function TreeSetColoringResult(
         end
 
         # continue until all leaves are treated
-        while queue_start ≤ queue_end
+        while queue_start <= queue_end
             leaf = queue[queue_start]
             queue_start += 1
 
@@ -400,29 +400,30 @@ function TreeSetColoringResult(
                     j = neighbor
                     col_i = view(rv, nzrange(S, i))
                     col_j = view(rv, nzrange(S, j))
-                    index_ij = S.colptr[j] - 1 + searchsortedfirst(col_j, i)  # S.nzval[index_ij] = S[i,j]
-                    @assert S.nzval[index_ij] == S[i,j]
-                    index_ji = S.colptr[i] - 1 + searchsortedfirst(col_i, j)  # S.nzval[index_ji] = S[j,i]
-                    @assert S.nzval[index_ji] == S[j,i]
                     index_offsets += 1
 
+                    #! format: off
+                    # S[i,j] is in the lower triangular part of S
                     if in_triangle(i, j, :L)
                         # uplo = :L or uplo = :F
-                        # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
-                        lower_triangle_offsets[index_offsets] = S.colptr[j + 1] - index_ij
+                        # S[i,j] is stored at index_ij = (S.colptr[j+1] - offset_L) in S.nzval
+                        lower_triangle_offsets[index_offsets] = length(col_j) - searchsortedfirst(col_j, i) + 1
 
                         # uplo = :U or uplo = :F
-                        # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
-                        upper_triangle_offsets[index_offsets] = index_ji - S.colptr[i]
+                        # S[j,i] is stored at index_ji = (S.colptr[i] + offset_U) in S.nzval
+                        upper_triangle_offsets[index_offsets] = searchsortedfirst(col_i, j)::Int - 1
+
+                    # S[i,j] is in the upper triangular part of S
                     else
-                        # uplo = :L or uplo = :F
-                        # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
-                        lower_triangle_offsets[index_offsets] = S.colptr[i + 1] - index_ji
-
                         # uplo = :U or uplo = :F
-                        # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
-                        upper_triangle_offsets[index_offsets] = index_ij - S.colptr[j]
+                        # S[i,j] is stored at index_ij = (S.colptr[j] + offset_U) in S.nzval
+                        upper_triangle_offsets[index_offsets] = searchsortedfirst(col_j, i)::Int - 1
+
+                        # uplo = :L or uplo = :F
+                        # S[j,i] is stored at index_ji = (S.colptr[i+1] - offset_L) in S.nzval
+                        lower_triangle_offsets[index_offsets] = length(col_i) - searchsortedfirst(col_i, j) + 1
                     end
+                    #! format: on
                 end
             end
         end

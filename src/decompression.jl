@@ -562,27 +562,40 @@ function decompress!(
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
 
-            # A[i,j] = val
-            if in_triangle(i, j, uplo)
-                if uplo == :L
+            #! format: off
+            # A[i,j] is in the lower triangular part of A
+            if in_triangle(i, j, :L)
+                # uplo = :L or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
+                if uplo != :U
                     nzind = A.colptr[j + 1] - lower_triangle_offsets[counter]
-                else
-                    nzind = A.colptr[j] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
                 end
-                # Both values of `nzind` can be used if uplo = :F
-                nzA[nzind] = val
-            end
 
-            # A[j,i] = val
-            if in_triangle(j, i, uplo)
-                if uplo == :L
-                    nzind = A.colptr[i + 1] - lower_triangle_offsets[counter]
-                else
+                # uplo = :U or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
+                if uplo != :L
                     nzind = A.colptr[i] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
                 end
-                # Both values of `nzind` can be used if uplo = :F
-                nzA[nzind] = val
+
+            # A[i,j] is in the upper triangular part of A
+            else
+                # uplo = :U or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
+                if uplo != :L
+                    nzind = A.colptr[j] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+
+                # uplo = :L or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
+                if uplo != :U
+                    nzind = A.colptr[i + 1] - lower_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
             end
+            #! format: on
         end
     end
     return A
