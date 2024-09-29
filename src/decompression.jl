@@ -257,7 +257,7 @@ function in_triangle(i::Integer, j::Integer, uplo::Symbol)
         return true
     elseif uplo == :U
         return i <= j
-    else
+    else  # uplo == :L
         return i >= j
     end
 end
@@ -434,35 +434,32 @@ function decompress_single_color!(
 end
 
 function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::StarSetColoringResult,
+    uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (; S, compressed_indices) = result
-    check_same_pattern(A, S)
     nzA = nonzeros(A)
-    for k in eachindex(nzA, compressed_indices)
-        nzA[k] = B[compressed_indices[k]]
-    end
-    return A
-end
-
-function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult, uplo::Symbol
-) where {R<:Real}
-    @compat (; S, compressed_indices) = result
-    uplo == :F && check_same_pattern(A, S)
-    rvS = rowvals(S)
-    nzA = nonzeros(A)
-    l = 0  # assume A has the same pattern as the triangle
-    for j in axes(S, 2)
-        for k in nzrange(S, j)
-            i = rvS[k]
-            if in_triangle(i, j, uplo)
-                l += 1
-                nzA[l] = B[compressed_indices[k]]
+    if uplo == :F
+        check_same_pattern(A, S)
+        for k in eachindex(nzA, compressed_indices)
+            nzA[k] = B[compressed_indices[k]]
+        end
+    else
+        rvS = rowvals(S)
+        l = 0  # assume A has the same pattern as the triangle
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                if in_triangle(i, j, uplo)
+                    l += 1
+                    nzA[l] = B[compressed_indices[k]]
+                end
             end
         end
+        @assert l == length(nonzeros(A))
     end
-    @assert l == length(nonzeros(A))
     return A
 end
 
