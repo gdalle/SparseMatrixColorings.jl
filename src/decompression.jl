@@ -519,6 +519,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
+    A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
 
@@ -532,13 +533,13 @@ function decompress!(
     if uplo == :L
         for i in diagonal_indices
             # A[i, i] is the first element in column i
-            nzind = A.colptr[i]
+            nzind = A_colptr[i]
             nzA[nzind] = B[i, color[i]]
         end
     elseif uplo == :U
         for i in diagonal_indices
             # A[i, i] is the last element in column i
-            nzind = A.colptr[i + 1] - 1
+            nzind = A_colptr[i + 1] - 1
             nzA[nzind] = B[i, color[i]]
         end
     else  # uplo == :F
@@ -568,14 +569,14 @@ function decompress!(
                 # uplo = :L or uplo = :F
                 # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
                 if uplo != :U
-                    nzind = A.colptr[j + 1] - lower_triangle_offsets[counter]
+                    nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
                     nzA[nzind] = val
                 end
 
                 # uplo = :U or uplo = :F
                 # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
                 if uplo != :L
-                    nzind = A.colptr[i] + upper_triangle_offsets[counter]
+                    nzind = A_colptr[i] + upper_triangle_offsets[counter]
                     nzA[nzind] = val
                 end
 
@@ -584,14 +585,14 @@ function decompress!(
                 # uplo = :U or uplo = :F
                 # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
                 if uplo != :L
-                    nzind = A.colptr[j] + upper_triangle_offsets[counter]
+                    nzind = A_colptr[j] + upper_triangle_offsets[counter]
                     nzA[nzind] = val
                 end
 
                 # uplo = :L or uplo = :F
                 # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
                 if uplo != :U
-                    nzind = A.colptr[i + 1] - lower_triangle_offsets[counter]
+                    nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
                     nzA[nzind] = val
                 end
             end
