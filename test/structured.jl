@@ -1,6 +1,6 @@
 using ArrayInterface: ArrayInterface
 using BandedMatrices: BandedMatrix, brand
-using BlockBandedMatrices: BlockBandedMatrix
+using BlockBandedMatrices: BandedBlockBandedMatrix, BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings: cycle_range
