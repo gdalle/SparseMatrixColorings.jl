@@ -2,6 +2,7 @@
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
