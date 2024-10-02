@@ -27,6 +27,7 @@ using Test
         A = spzeros(10, 20)
         S = SparsityPatternCSC(A)
         @test size(A) == size(S)
+        @test_throws BoundsError size(A, 0)
         @test size(A, 1) == size(S, 1)
         @test size(A, 2) == size(S, 2)
         @test size(A, 3) == size(S, 3)
