@@ -73,7 +73,7 @@ function blockbanded_coloring(
         length(subblockbandrange(A))
     else
         # vertices within a block are colored naively with distinct micro colors (~ infinite band width)
-        minimum(size(A))
+        typemax(Int)
     end
 
     # for each macroscopic color, count how many microscopic colors will be needed
