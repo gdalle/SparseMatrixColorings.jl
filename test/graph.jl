@@ -23,6 +23,16 @@ using Test
             Sᵀ.colptr == Sᵀ_true.colptr && Sᵀ.rowval == Sᵀ_true.rowval
         end
     end
+    @testset "size" begin
+        A = spzeros(10, 20)
+        S = SparsityPatternCSC(A)
+        @test size(A) == size(S)
+        @test size(A, 1) == size(S, 1)
+        @test size(A, 2) == size(S, 2)
+        @test size(A, 3) == size(S, 3)
+        @test axes(A, 1) == axes(S, 1)
+        @test axes(A, 2) == axes(S, 2)
+    end
     @testset "getindex" begin
         A = sprand(Bool, 100, 100, 0.1)
         S = SparsityPatternCSC(A)
