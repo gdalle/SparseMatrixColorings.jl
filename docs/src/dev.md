@@ -69,5 +69,5 @@ SparseMatrixColorings.efficient_fig_4
 ## Misc
 
 ```@docs
-SparseMatrixColorings.cycle_until
+SparseMatrixColorings.cycle_range
 ```

@@ -1,11 +1,23 @@
 using LinearAlgebra
 using SparseMatrixColorings
+using SparseMatrixColorings: cycle_range
 using Test
 
 column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
 row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
 
 algo = GreedyColoringAlgorithm()
+
+@testset "Utils" begin
+    @test cycle_range(2, 3) == [1, 2, 1]
+    @test cycle_range(2, 4) == [1, 2, 1, 2]
+    @test cycle_range(2, 5) == [1, 2, 1, 2, 1]
+    @test cycle_range(3, 5) == [1, 2, 3, 1, 2]
+    @test cycle_range(3, 6) == [1, 2, 3, 1, 2, 3]
+    @test cycle_range(2, 1) == [1]
+    @test cycle_range(3, 1) == [1]
+    @test cycle_range(3, 2) == [1, 2]
+end
 
 @testset "Diagonal" begin
     for n in (1, 2, 10, 100, 1000)

@@ -6,13 +6,16 @@ Question: when decompressing, should we always assume that the coloring was opti
 =#
 
 """
-    cycle_until(iterator, max_length::Integer)
+    cycle_range(k::Integer, n::Integer)
 
-Concatenate copies of `iterator` to fill a vector of length `max_length` (with one partial copy allowed at the end).
+Concatenate copies of `1:k` to fill a vector of length `n` (with one partial copy allowed at the end).
 """
-function cycle_until(iterator, max_length::Integer)
-    a = repeat(iterator, div(max_length, length(iterator)) + 1)
-    return resize!(a, max_length)
+function cycle_range(k::Integer, n::Integer)
+    color = Vector{Int}(undef, n)
+    for i in eachindex(color)
+        color[i] = 1 + (i - 1) % k
+    end
+    return color
 end
 
 ## Diagonal
@@ -67,7 +70,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_until(1:2, size(A, 2))
+    color = cycle_range(1:2, size(A, 2))
     bg = BipartiteGraph(A)
     return ColumnColoringResult(A, bg, color)
 end
@@ -78,7 +81,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_until(1:2, size(A, 1))
+    color = cycle_range(1:2, size(A, 1))
     bg = BipartiteGraph(A)
     return RowColoringResult(A, bg, color)
 end
@@ -123,7 +126,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_until(1:3, size(A, 2))
+    color = cycle_range(1:3, size(A, 2))
     bg = BipartiteGraph(A)
     return ColumnColoringResult(A, bg, color)
 end
@@ -134,7 +137,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_until(1:3, size(A, 1))
+    color = cycle_range(1:3, size(A, 1))
     bg = BipartiteGraph(A)
     return RowColoringResult(A, bg, color)
 end
