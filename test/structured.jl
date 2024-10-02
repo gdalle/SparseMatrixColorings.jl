@@ -1,3 +1,4 @@
+using BandedMatrices: BandedMatrix, brand
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings: cycle_range
@@ -25,15 +26,15 @@ end
         # column
         result = coloring(A, column_problem, algo)
         B = compress(A, result)
-        @test size(B, 2) == 1
         D = decompress(B, result)
+        @test size(B, 2) == 1
         @test D == A
         @test D isa Diagonal
         # row
         result = coloring(A, row_problem, algo)
         B = compress(A, result)
-        @test size(B, 1) == 1
         D = decompress(B, result)
+        @test size(B, 1) == 1
         @test D == A
         @test D isa Diagonal
     end
@@ -47,15 +48,15 @@ end
             # column
             result = coloring(A, column_problem, algo)
             B = compress(A, result)
-            @test size(B, 2) == 2
             D = decompress(B, result)
+            @test size(B, 2) == 2
             @test D == A
             @test D isa Bidiagonal
             # row
             result = coloring(A, row_problem, algo)
             B = compress(A, result)
-            @test size(B, 1) == 2
             D = decompress(B, result)
+            @test size(B, 1) == 2
             @test D == A
             @test D isa Bidiagonal
         end
@@ -70,16 +71,34 @@ end
             # column
             result = coloring(A, column_problem, algo)
             B = compress(A, result)
-            @test size(B, 2) == min(n, 3)
             D = decompress(B, result)
+            @test size(B, 2) == min(n, 3)
             @test D == A
             @test D isa Tridiagonal            # row
             result = coloring(A, row_problem, algo)
             B = compress(A, result)
-            @test size(B, 1) == min(n, 3)
             D = decompress(B, result)
+            @test size(B, 1) == min(n, 3)
             @test D == A
             @test D isa Tridiagonal
         end
+    end
+end
+
+@testset "BandedMatrices" begin
+    for (m, n) in [(10, 20), (20, 10)], l in 0:5, u in 0:5
+        A = brand(m, n, l, u)
+        # column
+        result = coloring(A, column_problem, algo)
+        B = compress(A, result)
+        D = decompress(B, result)
+        @test D == A
+        @test D isa BandedMatrix
+        # row
+        result = coloring(A, row_problem, algo)
+        B = compress(A, result)
+        D = decompress(B, result)
+        @test D == A
+        @test D isa BandedMatrix
     end
 end

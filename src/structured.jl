@@ -1,8 +1,6 @@
 #=
 This code is partially taken from ArrayInterface.jl
 https://github.com/JuliaArrays/ArrayInterface.jl
-
-Question: when decompressing, should we always assume that the coloring was optimal?
 =#
 
 """
@@ -42,9 +40,7 @@ function coloring(
     return RowColoringResult(A, bg, color)
 end
 
-function decompress!(
-    A::Diagonal{R}, B::AbstractMatrix{R}, result::ColumnColoringResult
-) where {R<:Real}
+function decompress!(A::Diagonal, B::AbstractMatrix, result::ColumnColoringResult)
     color = column_colors(result)
     for j in axes(A, 2)
         A[j, j] = B[j, color[j]]
@@ -52,9 +48,7 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::Diagonal{R}, B::AbstractMatrix{R}, result::RowColoringResult
-) where {R<:Real}
+function decompress!(A::Diagonal, B::AbstractMatrix, result::RowColoringResult)
     color = row_colors(result)
     for i in axes(A, 1)
         A[i, i] = B[color[i], i]
@@ -86,9 +80,7 @@ function coloring(
     return RowColoringResult(A, bg, color)
 end
 
-function decompress!(
-    A::Bidiagonal{R}, B::AbstractMatrix{R}, result::ColumnColoringResult
-) where {R<:Real}
+function decompress!(A::Bidiagonal, B::AbstractMatrix, result::ColumnColoringResult)
     color = column_colors(result)
     for j in axes(A, 2)
         c = color[j]
@@ -102,9 +94,7 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::Bidiagonal{R}, B::AbstractMatrix{R}, result::RowColoringResult
-) where {R<:Real}
+function decompress!(A::Bidiagonal, B::AbstractMatrix, result::RowColoringResult)
     color = row_colors(result)
     for i in axes(A, 1)
         c = color[i]
@@ -142,9 +132,7 @@ function coloring(
     return RowColoringResult(A, bg, color)
 end
 
-function decompress!(
-    A::Tridiagonal{R}, B::AbstractMatrix{R}, result::ColumnColoringResult
-) where {R<:Real}
+function decompress!(A::Tridiagonal, B::AbstractMatrix, result::ColumnColoringResult)
     color = column_colors(result)
     for j in axes(A, 2)
         c = color[j]
@@ -159,9 +147,7 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::Tridiagonal{R}, B::AbstractMatrix{R}, result::RowColoringResult
-) where {R<:Real}
+function decompress!(A::Tridiagonal, B::AbstractMatrix, result::RowColoringResult)
     color = row_colors(result)
     for i in axes(A, 1)
         c = color[i]

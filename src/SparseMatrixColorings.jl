@@ -65,4 +65,15 @@ export column_colors, row_colors
 export column_groups, row_groups
 export compress, decompress, decompress!, decompress_single_color!
 
+if !isdefined(Base, :get_extension)
+    using Requires
+end
+
+@static if !isdefined(Base, :get_extension)
+    function __init__()
+        @require BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+        return include("../ext/SparseMatrixColoringsBandedMatricesExt.jl")
+    end
+end
+
 end
