@@ -24,7 +24,8 @@ function coloring(
     kwargs...,
 )
     color = fill(1, size(A, 2))
-    return ColumnColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return ColumnColoringResult(A, bg, color)
 end
 
 function coloring(
@@ -34,7 +35,8 @@ function coloring(
     kwargs...,
 )
     color = fill(1, size(A, 1))
-    return RowColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return RowColoringResult(A, bg, color)
 end
 
 function decompress!(
@@ -66,7 +68,8 @@ function coloring(
     kwargs...,
 )
     color = cycle_until(1:2, size(A, 2))
-    return ColumnColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return ColumnColoringResult(A, bg, color)
 end
 
 function coloring(
@@ -76,7 +79,8 @@ function coloring(
     kwargs...,
 )
     color = cycle_until(1:2, size(A, 1))
-    return RowColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return RowColoringResult(A, bg, color)
 end
 
 function decompress!(
@@ -120,7 +124,8 @@ function coloring(
     kwargs...,
 )
     color = cycle_until(1:3, size(A, 2))
-    return ColumnColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return ColumnColoringResult(A, bg, color)
 end
 
 function coloring(
@@ -130,7 +135,8 @@ function coloring(
     kwargs...,
 )
     color = cycle_until(1:3, size(A, 1))
-    return RowColoringResult(A, color)
+    bg = BipartiteGraph(A)
+    return RowColoringResult(A, bg, color)
 end
 
 function decompress!(

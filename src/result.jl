@@ -110,12 +110,7 @@ struct ColumnColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
     "color groups for columns or rows (depending on `partition`)"
     group::Vector{Vector{Int}}
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
-    compressed_indices::C
-end
-
-function ColumnColoringResult(A::AbstractMatrix, color::Vector{Int})
-    group = group_by_color(color)
-    return ColumnColoringResult(A, color, group, nothing)
+    compressed_indices::Vector{Int}
 end
 
 function ColumnColoringResult(A::AbstractMatrix, bg::BipartiteGraph, color::Vector{Int})
@@ -156,12 +151,7 @@ struct RowColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
     bg::G
     color::Vector{Int}
     group::Vector{Vector{Int}}
-    compressed_indices::C
-end
-
-function RowColoringResult(A::AbstractMatrix, color::Vector{Int})
-    group = group_by_color(color)
-    return RowColoringResult(A, nothing, color, group, nothing)
+    compressed_indices::Vector{Int}
 end
 
 function RowColoringResult(A::AbstractMatrix, bg::BipartiteGraph, color::Vector{Int})
