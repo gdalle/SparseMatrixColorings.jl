@@ -53,6 +53,9 @@ include("utils.jl")
         @testset "Random instances" begin
             include("random.jl")
         end
+        @testset "Structured matrices" begin
+            include("structured.jl")
+        end
         @testset "Instances with known colorings" begin
             include("theory.jl")
         end

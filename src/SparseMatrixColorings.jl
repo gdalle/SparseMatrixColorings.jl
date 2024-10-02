@@ -16,11 +16,13 @@ using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
+    Bidiagonal,
     Diagonal,
     Hermitian,
     LowerTriangular,
     Symmetric,
     Transpose,
+    Tridiagonal,
     UpperTriangular,
     adjoint,
     checksquare,
@@ -51,6 +53,7 @@ include("matrices.jl")
 include("interface.jl")
 include("constant.jl")
 include("decompression.jl")
+include("structured.jl")
 include("check.jl")
 include("examples.jl")
 

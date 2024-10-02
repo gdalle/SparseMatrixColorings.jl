@@ -24,7 +24,7 @@ Combination between the type parameters of [`ColoringProblem`](@ref) and [`Greed
 !!! warning
     Unlike the methods above, the concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 """
-abstract type AbstractColoringResult{structure,partition,decompression,M<:SparseMatrixCSC} end
+abstract type AbstractColoringResult{structure,partition,decompression,M} end
 
 """
     column_colors(result::AbstractColoringResult)
@@ -99,7 +99,8 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:direct,M}
+struct ColumnColoringResult{M,C<:Union{Nothing,Vector{Int}}} <:
+       AbstractColoringResult{:nonsymmetric,:column,:direct,M}
     "matrix that was colored"
     S::M
     "one integer color for each column or row (depending on `partition`)"
@@ -107,7 +108,12 @@ struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:
     "color groups for columns or rows (depending on `partition`)"
     group::Vector{Vector{Int}}
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
-    compressed_indices::Vector{Int}
+    compressed_indices::C
+end
+
+function ColumnColoringResult(A::AbstractMatrix, color::Vector{Int})
+    group = group_by_color(color)
+    return ColumnColoringResult(A, color, group, nothing)
 end
 
 function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
@@ -141,12 +147,18 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct,M}
+struct RowColoringResult{M,Mᵀ,C<:Union{Nothing,Vector{Int}}} <:
+       AbstractColoringResult{:nonsymmetric,:row,:direct,M}
     S::M
-    Sᵀ::M
+    Sᵀ::Mᵀ
     color::Vector{Int}
     group::Vector{Vector{Int}}
-    compressed_indices::Vector{Int}
+    compressed_indices::C
+end
+
+function RowColoringResult(A::AbstractMatrix, color::Vector{Int})
+    group = group_by_color(color)
+    return RowColoringResult(A, nothing, color, group, nothing)
 end
 
 function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
