@@ -1,6 +1,7 @@
 using LinearAlgebra
 using SparseMatrixColorings
-using SparseMatrixColorings: LinearSystemColoringResult, matrix_versions, respectful_similar
+using SparseMatrixColorings:
+    AdjacencyGraph, LinearSystemColoringResult, matrix_versions, respectful_similar
 using Test
 
 function test_coloring_decompression(
@@ -99,7 +100,8 @@ function test_coloring_decompression(
 
         @testset "Linear system decompression" begin
             if structure == :symmetric && count(!iszero, A) > 0  # sparse factorization cannot handle empty matrices
-                linresult = LinearSystemColoringResult(sparse(A), color, Float64)
+                ag = AdjacencyGraph(A)
+                linresult = LinearSystemColoringResult(A, ag, color, Float64)
                 @test decompress(float.(B), linresult) ≈ A0
                 @test decompress!(respectful_similar(float.(A)), float.(B), linresult) ≈ A0
             end

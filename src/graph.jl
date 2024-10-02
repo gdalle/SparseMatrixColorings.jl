@@ -24,6 +24,19 @@ end
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
+
+function Base.size(S::SparsityPatternCSC, d::Integer)
+    if d == 1
+        return S.m
+    elseif d == 2
+        return S.n
+    else
+        return 1
+    end
+end
+
+Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
+
 SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
 SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
 SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
@@ -81,6 +94,15 @@ function Base.transpose(S::SparsityPatternCSC{T}) where {T}
     return SparsityPatternCSC{T}(n, m, B_colptr, B_rowval)
 end
 
+# copied from SparseArrays.jl
+function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
+    r1 = Int(S.colptr[i1])
+    r2 = Int(S.colptr[i1 + 1] - 1)
+    (r1 > r2) && return false
+    r1 = searchsortedfirst(rowvals(S), i0, r1, r2, Base.Order.Forward)
+    return ((r1 > r2) || (rowvals(S)[r1] != i0)) ? false : true
+end
+
 ## Adjacency graph
 
 """
@@ -109,6 +131,7 @@ struct AdjacencyGraph{T}
     S::SparsityPatternCSC{T}
 end
 
+AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A))
 AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
 
 pattern(g::AdjacencyGraph) = g.S
@@ -181,6 +204,10 @@ When `symmetric_pattern` is `true`, this construction is more efficient.
 struct BipartiteGraph{T<:Integer}
     S1::SparsityPatternCSC{T}
     S2::SparsityPatternCSC{T}
+end
+
+function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
+    return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)
 end
 
 function BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
