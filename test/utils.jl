@@ -4,11 +4,7 @@ using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    AdjacencyGraph,
-    LinearSystemColoringResult,
-    matrix_versions,
-    respectful_similar,
-    structurally_orthogonal_columns
+    AdjacencyGraph, LinearSystemColoringResult, matrix_versions, respectful_similar
 using Test
 
 function test_coloring_decompression(

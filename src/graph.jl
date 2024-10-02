@@ -24,17 +24,7 @@ end
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
-
-function Base.size(S::SparsityPatternCSC, d::Integer)
-    if d == 1
-        return S.m
-    elseif d == 2
-        return S.n
-    else
-        return 1
-    end
-end
-
+Base.size(S::SparsityPatternCSC, d) = d::Integer <= 2 ? size(S)[d] : 1
 Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
 
 SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
