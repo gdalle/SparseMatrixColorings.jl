@@ -19,6 +19,9 @@ BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 [extensions]
 SparseMatrixColoringsBandedMatricesExt = "BandedMatrices"
 
+[extras]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+
 [compat]
 ADTypes = "1.2.1"
 BandedMatrices = "1.7.5"
