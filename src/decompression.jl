@@ -377,7 +377,7 @@ function decompress!(
     @compat (; star, hub, spokes) = star_set
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
-    A .= zero(eltype(A))
+    fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
             A[i, i] = B[i, color[i]]
@@ -469,7 +469,7 @@ function decompress!(
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
-    A .= zero(R)
+    fill!(A, zero(R))
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -519,7 +519,7 @@ function decompress!(
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
     strict_upper_nonzeros_A = T_factorization \ vec(B)
-    A .= zero(eltype(A))
+    fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
             A[i, i] = B[i, color[i]]
