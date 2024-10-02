@@ -70,7 +70,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_range(1:2, size(A, 2))
+    color = cycle_range(2, size(A, 2))
     bg = BipartiteGraph(A)
     return ColumnColoringResult(A, bg, color)
 end
@@ -81,7 +81,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_range(1:2, size(A, 1))
+    color = cycle_range(2, size(A, 1))
     bg = BipartiteGraph(A)
     return RowColoringResult(A, bg, color)
 end
@@ -126,7 +126,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_range(1:3, size(A, 2))
+    color = cycle_range(3, size(A, 2))
     bg = BipartiteGraph(A)
     return ColumnColoringResult(A, bg, color)
 end
@@ -137,7 +137,7 @@ function coloring(
     algo::GreedyColoringAlgorithm;
     kwargs...,
 )
-    color = cycle_range(1:3, size(A, 1))
+    color = cycle_range(3, size(A, 1))
     bg = BipartiteGraph(A)
     return RowColoringResult(A, bg, color)
 end

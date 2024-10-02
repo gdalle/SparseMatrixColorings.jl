@@ -26,12 +26,16 @@ end
         result = coloring(A, column_problem, algo)
         B = compress(A, result)
         @test size(B, 2) == 1
-        @test decompress(B, result) == A
+        D = decompress(B, result)
+        @test D == A
+        @test D isa Diagonal
         # row
         result = coloring(A, row_problem, algo)
         B = compress(A, result)
         @test size(B, 1) == 1
-        @test decompress(B, result) == A
+        D = decompress(B, result)
+        @test D == A
+        @test D isa Diagonal
     end
 end
 
@@ -44,12 +48,16 @@ end
             result = coloring(A, column_problem, algo)
             B = compress(A, result)
             @test size(B, 2) == 2
-            @test decompress(B, result) == A
+            D = decompress(B, result)
+            @test D == A
+            @test D isa Bidiagonal
             # row
             result = coloring(A, row_problem, algo)
             B = compress(A, result)
             @test size(B, 1) == 2
-            @test decompress(B, result) == A
+            D = decompress(B, result)
+            @test D == A
+            @test D isa Bidiagonal
         end
     end
 end
@@ -63,12 +71,15 @@ end
             result = coloring(A, column_problem, algo)
             B = compress(A, result)
             @test size(B, 2) == min(n, 3)
-            @test decompress(B, result) == A
-            # row
+            D = decompress(B, result)
+            @test D == A
+            @test D isa Tridiagonal            # row
             result = coloring(A, row_problem, algo)
             B = compress(A, result)
             @test size(B, 1) == min(n, 3)
-            @test decompress(B, result) == A
+            D = decompress(B, result)
+            @test D == A
+            @test D isa Tridiagonal
         end
     end
 end
