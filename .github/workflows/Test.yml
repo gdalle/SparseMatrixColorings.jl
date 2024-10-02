@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        julia-version: ['1', 'pre']  # TODO: do we drop 'lts'?
+        julia-version: ['lts', '1', 'pre']
 
     steps:
       - uses: actions/checkout@v4
