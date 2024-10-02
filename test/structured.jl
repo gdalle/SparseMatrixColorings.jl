@@ -18,14 +18,14 @@ using Test
 end;
 
 @testset "Diagonal" begin
-    @testset for n in (1, 2, 10, 100)
+    for n in (1, 2, 10, 100)
         A = Diagonal(rand(n))
         test_structured_coloring_decompression(A)
     end
 end;
 
 @testset "Bidiagonal" begin
-    @testset for n in (2, 10, 100)
+    for n in (2, 10, 100)
         A1 = Bidiagonal(rand(n), rand(n - 1), :U)
         A2 = Bidiagonal(rand(n), rand(n - 1), :L)
         test_structured_coloring_decompression(A1)
@@ -48,10 +48,23 @@ end;
 end;
 
 @testset "BlockBandedMatrices" begin
-    @testset for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, bs in 1:3
-        rows = rand(1:bs, mb)
-        cols = rand(1:bs, nb)
+    for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, _ in 1:10
+        rows = rand(1:5, mb)
+        cols = rand(1:5, nb)
         A = BlockBandedMatrix{Float64}(rand(sum(rows), sum(cols)), rows, cols, (l, u))
+        test_structured_coloring_decompression(A)
+    end
+end;
+
+@testset "BandedBlockBandedMatrices" begin
+    for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, _ in 1:10
+        rows = rand(5:10, mb)
+        cols = rand(5:10, nb)
+        λ = rand(0:5)
+        μ = rand(0:5)
+        A = BandedBlockBandedMatrix{Float64}(
+            rand(sum(rows), sum(cols)), rows, cols, (lb, ub), (λ, μ)
+        )
         test_structured_coloring_decompression(A)
     end
 end;

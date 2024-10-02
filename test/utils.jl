@@ -127,24 +127,20 @@ function test_structured_coloring_decompression(A::AbstractMatrix)
     row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     algo = GreedyColoringAlgorithm()
 
-    @testset "Column" begin
-        result = coloring(A, column_problem, algo)
-        color = column_colors(result)
-        B = compress(A, result)
-        D = decompress(B, result)
-        @test D == A
-        @test D isa typeof(A)
-        @test structurally_orthogonal_columns(A, color)
-        if A isa OptimalColoringKnown
-            @test color == ArrayInterface.matrix_colors(A)
-        end
-    end
+    # Column
+    result = coloring(A, column_problem, algo)
+    color = column_colors(result)
+    B = compress(A, result)
+    D = decompress(B, result)
+    @test D == A
+    @test nameof(typeof(D)) == nameof(typeof(A))
+    @test structurally_orthogonal_columns(A, color)
+    @test color == ArrayInterface.matrix_colors(A)
 
-    @testset "Row" begin
-        result = coloring(A, row_problem, algo)
-        B = compress(A, result)
-        D = decompress(B, result)
-        @test D == A
-        @test D isa typeof(A)
-    end
+    # Row
+    result = coloring(A, row_problem, algo)
+    B = compress(A, result)
+    D = decompress(B, result)
+    @test D == A
+    @test nameof(typeof(D)) == nameof(typeof(A))
 end
