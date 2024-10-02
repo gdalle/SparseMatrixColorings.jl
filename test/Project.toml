@@ -1,7 +1,9 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"

@@ -1,5 +1,5 @@
 #=
-This code is partially taken from ArrayInterface.jl
+This code is partly taken from ArrayInterface.jl
 https://github.com/JuliaArrays/ArrayInterface.jl
 =#
 

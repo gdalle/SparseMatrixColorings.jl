@@ -36,7 +36,7 @@ function structurally_orthogonal_columns(
     group = group_by_color(color)
     for (c, g) in enumerate(group)
         Ag = view(A, :, g)
-        nonzeros_per_row = dropdims(count(!iszero, Ag; dims=2); dims=2)
+        nonzeros_per_row = only(eachcol(count(!iszero, Ag; dims=2)))
         max_nonzeros_per_row, i = findmax(nonzeros_per_row)
         if max_nonzeros_per_row > 1
             if verbose

@@ -1,7 +1,14 @@
+using ArrayInterface: ArrayInterface
+using BandedMatrices: BandedMatrix
+using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    AdjacencyGraph, LinearSystemColoringResult, matrix_versions, respectful_similar
+    AdjacencyGraph,
+    LinearSystemColoringResult,
+    matrix_versions,
+    respectful_similar,
+    structurally_orthogonal_columns
 using Test
 
 function test_coloring_decompression(
@@ -110,5 +117,34 @@ function test_coloring_decompression(
 
     @testset "Coherence between all colorings" begin
         @test all(color_vec .== Ref(color_vec[1]))
+    end
+end
+
+OptimalColoringKnown = Union{Diagonal,Bidiagonal,Tridiagonal,BandedMatrix,BlockBandedMatrix}
+
+function test_structured_coloring_decompression(A::AbstractMatrix)
+    column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    algo = GreedyColoringAlgorithm()
+
+    @testset "Column" begin
+        result = coloring(A, column_problem, algo)
+        color = column_colors(result)
+        B = compress(A, result)
+        D = decompress(B, result)
+        @test D == A
+        @test D isa typeof(A)
+        @test structurally_orthogonal_columns(A, color)
+        if A isa OptimalColoringKnown
+            @test color == ArrayInterface.matrix_colors(A)
+        end
+    end
+
+    @testset "Row" begin
+        result = coloring(A, row_problem, algo)
+        B = compress(A, result)
+        D = decompress(B, result)
+        @test D == A
+        @test D isa typeof(A)
     end
 end
