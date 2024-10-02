@@ -75,8 +75,8 @@ end
 function ConstantColoringAlgorithm{:column}(
     matrix_template::AbstractMatrix, color::Vector{Int}
 )
-    S = convert(SparseMatrixCSC, matrix_template)
-    result = ColumnColoringResult(S, color)
+    bg = BipartiteGraph(matrix_template)
+    result = ColumnColoringResult(matrix_template, bg, color)
     M, R = typeof(matrix_template), typeof(result)
     return ConstantColoringAlgorithm{:column,M,R}(matrix_template, color, result)
 end
@@ -84,8 +84,8 @@ end
 function ConstantColoringAlgorithm{:row}(
     matrix_template::AbstractMatrix, color::Vector{Int}
 )
-    S = convert(SparseMatrixCSC, matrix_template)
-    result = RowColoringResult(S, color)
+    bg = BipartiteGraph(matrix_template)
+    result = RowColoringResult(matrix_template, bg, color)
     M, R = typeof(matrix_template), typeof(result)
     return ConstantColoringAlgorithm{:row,M,R}(matrix_template, color, result)
 end
