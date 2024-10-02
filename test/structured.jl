@@ -51,7 +51,7 @@ end;
     for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, _ in 1:10
         rows = rand(1:5, mb)
         cols = rand(1:5, nb)
-        A = BlockBandedMatrix{Float64}(rand(sum(rows), sum(cols)), rows, cols, (l, u))
+        A = BlockBandedMatrix{Float64}(rand(sum(rows), sum(cols)), rows, cols, (lb, ub))
         test_structured_coloring_decompression(A)
     end
 end;
