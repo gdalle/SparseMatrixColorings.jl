@@ -74,6 +74,9 @@ end
         @require BandedMatrices = "aae01518-5342-5314-be14-df237901396f" include(
             "../ext/SparseMatrixColoringsBandedMatricesExt.jl"
         )
+        @require BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0" include(
+            "../ext/SparseMatrixColoringsBlockBandedMatricesExt.jl"
+        )
     end
 end
 

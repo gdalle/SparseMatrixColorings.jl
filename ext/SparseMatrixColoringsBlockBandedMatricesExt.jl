@@ -46,6 +46,8 @@ https://github.com/JuliaArrays/ArrayInterface.jl
 https://github.com/JuliaDiff/FiniteDiff.jl
 =#
 
+## BlockBandedMatrix
+
 function blockbanded_coloring(A::BlockBandedMatrix, dim::Integer)
     # consider blocks of columns or rows (let's call them vertices) depending on `dim`
     nb_blocks = blocksize(A, dim)
@@ -99,5 +101,7 @@ function SMC.coloring(
     bg = BipartiteGraph(A)
     return RowColoringResult(A, bg, color)
 end
+
+
 
 end
