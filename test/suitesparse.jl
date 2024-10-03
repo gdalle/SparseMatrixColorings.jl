@@ -31,7 +31,6 @@ colpack_table_6_7 = CSV.read(
 
 @testset "Distance-2 coloring (ColPack paper)" begin
     @testset "$(row[:name])" for row in eachrow(colpack_table_6_7)
-        @info "Testing distance-2 coloring for $(row[:name]) against ColPack paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(original_mat)
         bg = BipartiteGraph(mat)
@@ -59,7 +58,6 @@ what_table_31_32 = CSV.read(
 @testset "Distance-2 coloring (survey paper)" begin
     @testset "$(row[:name])" for row in eachrow(what_table_31_32)
         ismissing(row[:group]) && continue
-        @info "Testing distance-2 coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = original_mat  # no dropzeros
         bg = BipartiteGraph(mat)
@@ -89,7 +87,6 @@ what_table_41_42 = CSV.read(
 @testset "Star coloring (survey paper)" begin
     @testset "$(row[:name])" for row in eachrow(what_table_41_42)
         ismissing(row[:group]) && continue
-        @info "Testing star coloring for $(row[:name]) against survey paper"
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(sparse(original_mat))
         ag = AdjacencyGraph(mat)

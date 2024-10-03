@@ -4,7 +4,13 @@ using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings:
-    AdjacencyGraph, LinearSystemColoringResult, matrix_versions, respectful_similar
+    AdjacencyGraph,
+    LinearSystemColoringResult,
+    directly_recoverable_columns,
+    matrix_versions,
+    respectful_similar,
+    structurally_orthogonal_columns,
+    symmetrically_orthogonal_columns
 using Test
 
 function test_coloring_decompression(
@@ -35,8 +41,27 @@ function test_coloring_decompression(
         B = compress(A, result)
 
         @testset "Reference" begin
+            @test sparsity_pattern(result) === A  # identity of objects
             !isnothing(color0) && @test color == color0
             !isnothing(B0) && @test B == B0
+        end
+
+        @testset "Recoverability" begin
+            # TODO: find tests for recoverability for substitution decompression
+            if decompression == :direct
+                if structure == :nonsymmetric
+                    if partition == :column
+                        @test structurally_orthogonal_columns(A0, color)
+                        @test directly_recoverable_columns(A0, color)
+                    else
+                        @test structurally_orthogonal_columns(transpose(A0), color)
+                        @test directly_recoverable_columns(transpose(A0), color)
+                    end
+                else
+                    @test symmetrically_orthogonal_columns(A0, color)
+                    @test directly_recoverable_columns(A0, color)
+                end
+            end
         end
 
         @testset "Full decompression" begin
@@ -105,6 +130,7 @@ function test_coloring_decompression(
             if structure == :symmetric && count(!iszero, A) > 0  # sparse factorization cannot handle empty matrices
                 ag = AdjacencyGraph(A)
                 linresult = LinearSystemColoringResult(A, ag, color, Float64)
+                @test sparsity_pattern(result) === A  # identity of objects
                 @test decompress(float.(B), linresult) ≈ A0
                 @test decompress!(respectful_similar(float.(A)), float.(B), linresult) ≈ A0
             end
