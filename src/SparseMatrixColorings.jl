@@ -16,13 +16,11 @@ using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
-    Bidiagonal,
     Diagonal,
     Hermitian,
     LowerTriangular,
     Symmetric,
     Transpose,
-    Tridiagonal,
     UpperTriangular,
     adjoint,
     checksquare,
