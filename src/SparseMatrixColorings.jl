@@ -53,7 +53,6 @@ include("matrices.jl")
 include("interface.jl")
 include("constant.jl")
 include("decompression.jl")
-include("structured.jl")
 include("check.jl")
 include("examples.jl")
 
