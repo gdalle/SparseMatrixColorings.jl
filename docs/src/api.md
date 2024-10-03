@@ -28,6 +28,7 @@ column_colors
 row_colors
 column_groups
 row_groups
+sparsity_pattern
 ```
 
 ## Decompression
