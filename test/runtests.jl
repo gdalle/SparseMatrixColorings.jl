@@ -11,7 +11,7 @@ include("utils.jl")
     @testset verbose = true "Code quality" begin
         if VERSION >= v"1.10"
             @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
+                Aqua.test_all(SparseMatrixColorings)
             end
             @testset "JET" begin
                 JET.test_package(SparseMatrixColorings; target_defined_modules=true)
