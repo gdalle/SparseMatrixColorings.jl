@@ -19,6 +19,7 @@ Combination between the type parameters of [`ColoringProblem`](@ref) and [`Greed
 
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
+- [`sparsity_pattern`](@ref)
 - [`compress`](@ref), [`decompress`](@ref), [`decompress!`](@ref), [`decompress_single_color!`](@ref)
 
 !!! warning
@@ -83,6 +84,16 @@ column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.grou
 
 row_colors(result::AbstractColoringResult{s,:row}) where {s} = result.color
 row_groups(result::AbstractColoringResult{s,:row}) where {s} = result.group
+
+"""
+    sparsity_pattern(result::AbstractColoringResult)
+
+Return the matrix that was initially passed to [`coloring`](@ref), without any modifications.
+
+!!! note
+    This matrix is not necessarily a `SparseMatrixCSC`, nor does it necessarily have `Bool` entries.
+"""
+sparsity_pattern(result::AbstractColoringResult) = result.A
 
 ## Concrete subtypes
 

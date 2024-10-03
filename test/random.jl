@@ -2,10 +2,6 @@ using ADTypes: column_coloring, row_coloring, symmetric_coloring
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings:
-    structurally_orthogonal_columns,
-    symmetrically_orthogonal_columns,
-    directly_recoverable_columns
 using StableRNGs
 using Test
 
@@ -29,15 +25,11 @@ symmetric_params = vcat(
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
-        @test structurally_orthogonal_columns(A0, color0)
-        @test directly_recoverable_columns(A0, color0)
         test_coloring_decompression(A0, problem, algo; color0)
     end
     @testset "$((; n, p))" for (n, p) in symmetric_params
         A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         color0 = column_coloring(A0, algo)
-        @test structurally_orthogonal_columns(A0, color0)
-        @test directly_recoverable_columns(A0, color0)
         test_coloring_decompression(A0, problem, algo; color0)
     end
 end;
@@ -48,15 +40,11 @@ end;
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
-        @test structurally_orthogonal_columns(transpose(A0), color0)
-        @test directly_recoverable_columns(transpose(A0), color0)
         test_coloring_decompression(A0, problem, algo; color0)
     end
     @testset "$((; n, p))" for (n, p) in symmetric_params
         A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         color0 = row_coloring(A0, algo)
-        @test structurally_orthogonal_columns(transpose(A0), color0)
-        @test directly_recoverable_columns(transpose(A0), color0)
         test_coloring_decompression(A0, problem, algo; color0)
     end
 end;
@@ -67,8 +55,6 @@ end;
     @testset "$((; n, p))" for (n, p) in symmetric_params
         A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         color0 = symmetric_coloring(A0, algo)
-        @test symmetrically_orthogonal_columns(A0, color0)
-        @test directly_recoverable_columns(A0, color0)
         test_coloring_decompression(A0, problem, algo; color0)
     end
 end;
