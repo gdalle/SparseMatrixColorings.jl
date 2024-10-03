@@ -240,7 +240,7 @@ function symmetric_coefficient(
     if h == j
         # i is the spoke
         return i, color[h]
-    elseif h == i
+    else
         # j is the spoke
         return j, color[h]
     end
