@@ -3,7 +3,6 @@ using BandedMatrices: BandedMatrix, brand
 using BlockBandedMatrices: BandedBlockBandedMatrix, BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
-using SparseMatrixColorings: cycle_range
 using Test
 
 @testset "Diagonal" begin
