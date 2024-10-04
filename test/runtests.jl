@@ -45,6 +45,9 @@ include("utils.jl")
         @testset "Constant coloring" begin
             include("constant.jl")
         end
+        @testset "ADTypes coloring algorithms" begin
+            include("adtypes.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Small instances" begin
