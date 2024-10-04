@@ -2,7 +2,7 @@ using Chairmarks
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: partial_distance2_coloring!
+using SparseMatrixColorings: BipartiteGraph, partial_distance2_coloring!
 using StableRNGs
 using Test
 
@@ -21,7 +21,7 @@ end
     test_noallocs_distance2_coloring(1000)
 end;
 
-function test_noallocs_decompression(
+function test_noallocs_sparse_decompression(
     n::Integer; structure::Symbol, partition::Symbol, decompression::Symbol
 )
     A = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
@@ -75,7 +75,27 @@ function test_noallocs_decompression(
     end
 end
 
-@testset "Decompression" begin
+function test_noallocs_structured_decompression(
+    n::Integer; structure::Symbol, partition::Symbol, decompression::Symbol
+)
+    @testset "$(nameof(typeof(A)))" for A in [
+        Diagonal(rand(n)),
+        Bidiagonal(rand(n), rand(n - 1), 'U'),
+        Bidiagonal(rand(n), rand(n - 1), 'L'),
+        Tridiagonal(rand(n - 1), rand(n), rand(n - 1)),
+    ]
+        result = coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression),
+        )
+        B = compress(A, result)
+        bench = @be similar(A) decompress!(_, B, result) evals = 1
+        @test minimum(bench).allocs == 0
+    end
+end
+
+@testset "Sparse decompression" begin
     @testset "$structure - $partition - $decompression" for (
         structure, partition, decompression
     ) in [
@@ -84,6 +104,16 @@ end
         (:symmetric, :column, :direct),
         (:symmetric, :column, :substitution),
     ]
-        test_noallocs_decompression(1000; structure, partition, decompression)
+        test_noallocs_sparse_decompression(1000; structure, partition, decompression)
+    end
+end;
+
+@testset "Structured decompression" begin
+    @testset "$structure - $partition - $decompression" for (
+        structure, partition, decompression
+    ) in [
+        (:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)
+    ]
+        test_noallocs_structured_decompression(1000; structure, partition, decompression)
     end
 end;

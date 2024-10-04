@@ -1,3 +1,6 @@
+using ArrayInterface: ArrayInterface
+using BandedMatrices: BandedMatrix
+using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseMatrixColorings:
@@ -137,4 +140,30 @@ function test_coloring_decompression(
     @testset "Coherence between all colorings" begin
         @test all(color_vec .== Ref(color_vec[1]))
     end
+end
+
+function test_structured_coloring_decompression(A::AbstractMatrix)
+    column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    algo = GreedyColoringAlgorithm()
+
+    # Column
+    result = coloring(A, column_problem, algo)
+    color = column_colors(result)
+    B = compress(A, result)
+    D = decompress(B, result)
+    @test D == A
+    @test nameof(typeof(D)) == nameof(typeof(A))
+    @test structurally_orthogonal_columns(A, color)
+    if VERSION >= v"1.10" || A isa Union{Diagonal,Bidiagonal,Tridiagonal}
+        # banded matrices not supported by ArrayInterface on Julia 1.6
+        # @test color == ArrayInterface.matrix_colors(A)  # TODO: uncomment
+    end
+
+    # Row
+    result = coloring(A, row_problem, algo)
+    B = compress(A, result)
+    D = decompress(B, result)
+    @test D == A
+    @test nameof(typeof(D)) == nameof(typeof(A))
 end
