@@ -40,7 +40,7 @@ end
 
 RandomOrder() = RandomOrder(default_rng())
 
-function vertices(g::AdjacencyGraph, order::RandomOrder)
+function vertices(g::AbstractAdjacencyGraph, order::RandomOrder)
     return randperm(order.rng, nb_vertices(g))
 end
 
@@ -55,7 +55,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using their degree in t
 """
 struct LargestFirst <: AbstractOrder end
 
-function vertices(g::AdjacencyGraph, ::LargestFirst)
+function vertices(g::AbstractAdjacencyGraph, ::LargestFirst)
     criterion(v) = degree(g, v)
     return sort(vertices(g); by=criterion, rev=true)
 end
