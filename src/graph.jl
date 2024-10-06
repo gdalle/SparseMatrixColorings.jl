@@ -96,6 +96,16 @@ end
 ## Adjacency graph
 
 """
+    AbstractAdjacencyGraph{T}
+
+Supertype for various adjacency graph implementations:
+
+- [`AdjacencyGraph`](@ref)
+- [`AdjacencyFromBipartiteGraph`](@ref)
+"""
+abstract type AbstractAdjacencyGraph{T} end
+
+"""
     AdjacencyGraph{T}
 
 Undirected graph without self-loops representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
@@ -117,7 +127,7 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct AdjacencyGraph{T}
+struct AdjacencyGraph{T} <: AbstractAdjacencyGraph{T}
     S::SparsityPatternCSC{T}
 end
 
@@ -126,7 +136,7 @@ AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
-vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
+vertices(g::AbstractAdjacencyGraph) = 1:nb_vertices(g)
 
 function neighbors(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
@@ -134,7 +144,7 @@ function neighbors(g::AdjacencyGraph, v::Integer)
     return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
 end
 
-function degree(g::AdjacencyGraph, v::Integer)
+function degree(g::AbstractAdjacencyGraph, v::Integer)
     d = 0
     for u in neighbors(g, v)
         if u != v
@@ -144,22 +154,18 @@ function degree(g::AdjacencyGraph, v::Integer)
     return d
 end
 
-function nb_edges(g::AdjacencyGraph)
-    S = pattern(g)
+function nb_edges(g::AbstractAdjacencyGraph)
     ne = 0
-    for j in vertices(g)
-        for k in nzrange(S, j)
-            i = rowvals(S)[k]
-            if i > j
-                ne += 1
-            end
+    for v in vertices(g)
+        for u in neighbors(g, v)
+            ne += 1
         end
     end
-    return ne
+    return ne ÷ 2
 end
 
-maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
-minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
+maximum_degree(g::AbstractAdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
+minimum_degree(g::AbstractAdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 ## Bipartite graph
 
@@ -257,4 +263,47 @@ function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,s
         end
     end
     return length(neighbors_dist2)
+end
+
+## Adjacency graph from bipartite
+
+"""
+    AdjacencyFromBipartiteGraph{T}
+
+Custom version of [`AdjacencyGraph`](@ref) constructed from a [`BipartiteGraph`](@ref).
+If the bipartite graph represents a matrix `A`, then this graph represents the block matrix `[0 A; A' 0]` (of size `(n+m) x (n+m)`).
+
+# Constructors
+
+    AdjacencyFromBipartiteGraph(A::AbstractMatrix)
+
+# Fields
+
+- `bg::BipartiteGraph{T}`: bipartite graph representation of the matrix `A`
+"""
+struct AdjacencyFromBipartiteGraph{T} <: AbstractAdjacencyGraph{T}
+    bg::BipartiteGraph{T}
+end
+
+function AdjacencyFromBipartiteGraph(A::AbstractMatrix; kwargs...)
+    return AdjacencyFromBipartiteGraph(BipartiteGraph(A; kwargs...))
+end
+
+function nb_vertices(abg::AdjacencyFromBipartiteGraph)
+    @compat (; bg) = abg
+    m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
+    return m + n
+end
+
+function neighbors(abg::AdjacencyFromBipartiteGraph, v::Integer)
+    @compat (; bg) = abg
+    m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
+    if 1 <= v <= n
+        # v is a column
+        return neighbors(bg, Val(2), v)
+    else
+        # v is a row
+        @assert n + 1 <= v <= n + m
+        return neighbors(bg, Val(1), v - n)
+    end
 end
