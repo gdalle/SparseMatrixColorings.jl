@@ -21,7 +21,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using their index in th
 """
 struct NaturalOrder <: AbstractOrder end
 
-function vertices(g::AdjacencyGraph, ::NaturalOrder)
+function vertices(g::AbstractAdjacencyGraph, ::NaturalOrder)
     return vertices(g)
 end
 
