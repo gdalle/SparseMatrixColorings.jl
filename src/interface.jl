@@ -1,6 +1,6 @@
 function check_valid_problem(structure::Symbol, partition::Symbol)
     valid = (
-        (structure == :nonsymmetric && partition in (:column, :row)) ||
+        (structure == :nonsymmetric && partition in (:column, :row, :bidirectional)) ||
         (structure == :symmetric && partition == :column)
     )
     if !valid
@@ -49,7 +49,7 @@ Matrix coloring is often used in automatic differentiation, and here is the tran
 | -------- | ------- | --------------- | ---------------- | ----------- |
 | Jacobian | forward | `:nonsymmetric` | `:column`        | yes         |
 | Jacobian | reverse | `:nonsymmetric` | `:row`           | yes         |
-| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | no          |
+| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | yes         |
 | Hessian  | -       | `:symmetric`    | `:column`        | yes         |
 | Hessian  | -       | `:symmetric`    | `:row`           | no          |
 """
@@ -199,6 +199,29 @@ function coloring(
     )
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return RowColoringResult(A, bg, color)
+end
+
+function coloring(
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{:direct};
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
+)
+    m, n = size(A)
+    S = convert(SparseMatrixCSC, A)
+    H = [
+        spzeros(n, n) transpose(S)
+        S spzeros(m, m)
+    ]
+    ag = AdjacencyGraph(H)
+    abg = AdjacencyFromBipartiteGraph(
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
+    color, star_set = star_coloring(ag, algo.order)
+    column_color = color[1:n]
+    row_color = color[(n + 1):(n + m)]
+    return BicoloringResult(A, abg, column_color, row_color)
 end
 
 function coloring(

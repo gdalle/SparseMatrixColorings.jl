@@ -58,23 +58,12 @@ function row_groups end
 """
     group_by_color(color::Vector{Int})
 
-Create `group::Vector{Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
-
-Assumes the colors are contiguously numbered from `1` to some `cmax`.
+Create `group::Dict{Int,Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
-    cmin, cmax = extrema(color)
-    @assert cmin == 1
-    group_sizes = zeros(Int, cmax)
-    for c in color
-        group_sizes[c] += 1
-    end
-    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
-    fill!(group_sizes, 1)
+    group = Dict(c => Int[] for c in unique(color))
     for (k, c) in enumerate(color)
-        pos = group_sizes[c]
-        group[c][pos] = k
-        group_sizes[c] += 1
+        push!(group[c], k)
     end
     return group
 end
@@ -448,4 +437,52 @@ function LinearSystemColoringResult(
         strict_upper_nonzeros_A,
         T_factorization,
     )
+end
+
+## Bicoloring result
+
+"""
+$TYPEDEF
+
+Storage for the result of a bidirectional coloring with direct decompression.
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct BicoloringResult{M<:AbstractMatrix,G<:AdjacencyFromBipartiteGraph} <:
+       AbstractColoringResult{:nonsymmetric,:bidirectional,:direct}
+    "matrix that was colored"
+    A::M
+    "adjacency graph that was used for coloring (constructed from the bipartite graph)"
+    bg::G
+    "one integer color for each column"
+    column_color::Vector{Int}
+    "one integer color for each row"
+    row_color::Vector{Int}
+    "color groups for columns"
+    column_group::Vector{Vector{Int}}
+    "color groups for rows"
+    row_group::Vector{Vector{Int}}
+end
+
+column_colors(result::BicoloringResult) = result.column_color
+column_groups(result::BicoloringResult) = result.column_group
+
+row_colors(result::BicoloringResult) = result.row_color
+row_groups(result::BicoloringResult) = result.row_group
+
+function BicoloringResult(
+    A::AbstractMatrix,
+    abg::AdjacencyFromBipartiteGraph,
+    column_color::Vector{Int},
+    row_color::Vector{Int},
+)
+    column_group = group_by_color(column_color)
+    row_group = group_by_color(row_color)
+    return BicoloringResult(A, abg, column_color, row_color, column_group, row_group)
 end
