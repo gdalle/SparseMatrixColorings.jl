@@ -161,7 +161,7 @@ function nb_edges(g::AbstractAdjacencyGraph)
             ne += 1
         end
     end
-    return ne
+    return ne ÷ 2
 end
 
 maximum_degree(g::AbstractAdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
