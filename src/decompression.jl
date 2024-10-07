@@ -509,7 +509,6 @@ function decompress!(
     uplo::Symbol=:F,
 ) where {R<:Real}
     @compat (;
-        S,
         color,
         vertices_by_tree,
         reverse_bfs_orders,
@@ -519,6 +518,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
+    S = result.ag.S
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
