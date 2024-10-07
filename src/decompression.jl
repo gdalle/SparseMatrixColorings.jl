@@ -134,7 +134,6 @@ end
 
 function decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult)
     A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
-    fill!(A, zero(eltype(A)))
     return decompress!(A, Br, Bc, result)
 end
 

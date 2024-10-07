@@ -58,7 +58,9 @@ function row_groups end
 """
     group_by_color(color::Vector{Int})
 
-Create a color-indexed `group` containing iterables such that `i ∈ group[c]` iff `color[i] == c`.
+Create `group::Vector{Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
+
+Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
