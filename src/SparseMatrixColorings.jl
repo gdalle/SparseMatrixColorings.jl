@@ -50,6 +50,7 @@ include("result.jl")
 include("matrices.jl")
 include("interface.jl")
 include("constant.jl")
+include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
 include("examples.jl")
@@ -60,6 +61,7 @@ export ConstantColoringAlgorithm
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
+export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!
 
 end

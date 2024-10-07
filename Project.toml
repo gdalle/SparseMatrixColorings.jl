@@ -1,7 +1,7 @@
 name = "SparseMatrixColorings"
 uuid = "0a514795-09f3-496d-8182-132a7b665d35"
 authors = ["Guillaume Dalle", "Alexis Montoison"]
-version = "0.4.2"
+version = "0.4.6"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -15,9 +15,9 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 [compat]
 ADTypes = "1.2.1"
 Compat = "3.46,4.2"
-DocStringExtensions = "0.8,0.9"
 DataStructures = "0.18"
 LinearAlgebra = "<0.0.1, 1"
+DocStringExtensions = "0.8,0.9"
 Random = "<0.0.1, 1"
 SparseArrays = "<0.0.1, 1"
 julia = "1.6"

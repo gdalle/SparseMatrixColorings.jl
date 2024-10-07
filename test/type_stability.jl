@@ -3,13 +3,13 @@ using JET
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: respectful_similar
+using SparseMatrixColorings: matrix_versions, respectful_similar
 using StableRNGs
 using Test
 
 rng = StableRNG(63)
 
-@testset "Coloring" begin
+@testset "Sparse coloring" begin
     n = 10
     A = sprand(rng, n, n, 5 / n)
 
@@ -40,9 +40,28 @@ rng = StableRNG(63)
             GreedyColoringAlgorithm(; decompression),
         )
     end
-end
+end;
 
-@testset "Decompression" begin
+@testset "Structured coloring" begin
+    n = 10
+    @testset "$(nameof(typeof(A))) - $structure - $partition - $decompression" for A in [
+            Diagonal(rand(n)),
+            Bidiagonal(rand(n), rand(n - 1), 'U'),
+            Bidiagonal(rand(n), rand(n - 1), 'L'),
+            Tridiagonal(rand(n - 1), rand(n), rand(n - 1)),
+        ],
+        (structure, partition, decompression) in
+        [(:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)]
+
+        @test_opt target_modules = (SparseMatrixColorings,) coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression),
+        )
+    end
+end;
+
+@testset "Sparse decompression" begin
     n = 10
     A0 = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
 
@@ -90,5 +109,26 @@ end
                 end
             end
         end
+    end
+end;
+
+@testset "Structured decompression" begin
+    n = 10
+    @testset "$(nameof(typeof(A))) - $structure - $partition - $decompression" for A in [
+            Diagonal(rand(n)),
+            Bidiagonal(rand(n), rand(n - 1), 'U'),
+            Bidiagonal(rand(n), rand(n - 1), 'L'),
+            Tridiagonal(rand(n - 1), rand(n), rand(n - 1)),
+        ],
+        (structure, partition, decompression) in
+        [(:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)]
+
+        result = coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression);
+        )
+        B = compress(A, result)
+        @test_opt decompress(B, result)
     end
 end;

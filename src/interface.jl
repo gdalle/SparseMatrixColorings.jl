@@ -180,12 +180,11 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 )
-    S = convert(SparseMatrixCSC, A)
     bg = BipartiteGraph(
-        S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return ColumnColoringResult(S, color)
+    return ColumnColoringResult(A, bg, color)
 end
 
 function coloring(
@@ -195,12 +194,11 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 )
-    S = convert(SparseMatrixCSC, A)
     bg = BipartiteGraph(
-        S; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return RowColoringResult(S, color)
+    return RowColoringResult(A, bg, color)
 end
 
 function coloring(
@@ -209,10 +207,9 @@ function coloring(
     algo::GreedyColoringAlgorithm{:direct};
     decompression_eltype::Type=Float64,
 )
-    S = convert(SparseMatrixCSC, A)
-    ag = AdjacencyGraph(S)
+    ag = AdjacencyGraph(A)
     color, star_set = star_coloring(ag, algo.order)
-    return StarSetColoringResult(S, color, star_set)
+    return StarSetColoringResult(A, ag, color, star_set)
 end
 
 function coloring(
@@ -221,31 +218,27 @@ function coloring(
     algo::GreedyColoringAlgorithm{:substitution};
     decompression_eltype::Type=Float64,
 )
-    S = convert(SparseMatrixCSC, A)
-    ag = AdjacencyGraph(S)
+    ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order)
-    return TreeSetColoringResult(S, color, tree_set, decompression_eltype)
+    return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
 end
 
 ## ADTypes interface
 
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = convert(SparseMatrixCSC, A)
-    bg = BipartiteGraph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
+    bg = BipartiteGraph(A; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     return color
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = convert(SparseMatrixCSC, A)
-    bg = BipartiteGraph(S; symmetric_pattern=A isa Union{Symmetric,Hermitian})
+    bg = BipartiteGraph(A; symmetric_pattern=A isa Union{Symmetric,Hermitian})
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     return color
 end
 
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    S = convert(SparseMatrixCSC, A)
-    ag = AdjacencyGraph(S)
+    ag = AdjacencyGraph(A)
     color, star_set = star_coloring(ag, algo.order)
     return color
 end
