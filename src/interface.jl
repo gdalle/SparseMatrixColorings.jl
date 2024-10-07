@@ -226,41 +226,27 @@ end
 function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{:direct};
+    algo::GreedyColoringAlgorithm{decompression};
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
-)
+) where {decompression}
     m, n = size(A)
     abg = AdjacencyFromBipartiteGraph(
         A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
-    bigA = SparseMatrixCSC(pattern(abg))
-    color, star_set = star_coloring(abg, algo.order)
-    star_set_result = StarSetColoringResult(bigA, abg, color, star_set)
+    bigA = SparseMatrixCSC(pattern(abg))  # TODO: slow
+    if decompression == :direct
+        color, star_set = star_coloring(abg, algo.order)
+        symmetric_result = StarSetColoringResult(bigA, abg, color, star_set)
+    else
+        color, tree_set = acyclic_coloring(abg, algo.order)
+        symmetric_result = TreeSetColoringResult(
+            bigA, abg, color, tree_set, decompression_eltype
+        )
+    end
     column_color, _ = remap_colors(color[1:n])
     row_color, _ = remap_colors(color[(n + 1):(n + m)])
-    return BicoloringResult(A, abg, column_color, row_color, star_set_result)
-end
-
-function coloring(
-    A::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{:substitution};
-    decompression_eltype::Type=Float64,
-    symmetric_pattern::Bool=false,
-)
-    m, n = size(A)
-    abg = AdjacencyFromBipartiteGraph(
-        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
-    )
-    bigA = SparseMatrixCSC(pattern(abg))
-    color, tree_set = acyclic_coloring(abg, algo.order)
-    tree_set_result = TreeSetColoringResult(
-        bigA, abg, color, tree_set, decompression_eltype
-    )
-    column_color, _ = remap_colors(color[1:n])
-    row_color, _ = remap_colors(color[(n + 1):(n + m)])
-    return BicoloringResult(A, abg, column_color, row_color, tree_set_result)
+    return BicoloringResult(A, abg, column_color, row_color, symmetric_result)
 end
 
 function remap_colors(color::Vector{Int})
