@@ -65,3 +65,9 @@ SparseMatrixColorings.what_fig_61
 SparseMatrixColorings.efficient_fig_1
 SparseMatrixColorings.efficient_fig_4
 ```
+
+## Misc
+
+```@docs
+SparseMatrixColorings.cycle_range
+```
