@@ -262,7 +262,3 @@ end
 function maximum_degree_dist2(bg::BipartiteGraph, ::Val{side}) where {side}
     return maximum(v -> degree_dist2(bg, Val(side), v), vertices(bg, Val(side)))
 end
-
-function minimum_degree_dist2(bg::BipartiteGraph, ::Val{side}) where {side}
-    return minimum(v -> degree_dist2(bg, Val(side), v), vertices(bg, Val(side)))
-end
