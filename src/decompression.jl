@@ -571,10 +571,10 @@ function decompress!(
     B = zeros(T, n + m, length(unique(symmetric_color)))
     for c in axes(B, 2)
         if haskey(col_color_ind, c)  # some columns were colored with c
-            B[:, c] .+= vcat(zeros(T, n), Bc[:, col_color_ind[c]])
+            B[(n + 1):(n + m), c] .+= @view Bc[:, col_color_ind[c]]
         end
         if haskey(row_color_ind, c)  # some rows were colored with c
-            B[:, c] .+= vcat(Br[row_color_ind[c], :], zeros(T, m))
+            B[1:n, c] .+= @view Br[row_color_ind[c], :]
         end
     end
     new_A = decompress(B, result.symmetric_result)
