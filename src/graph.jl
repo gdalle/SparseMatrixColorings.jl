@@ -1,7 +1,7 @@
 ## Standard graph
 
 """
-    SparsePatternCSC{Ti<:Integer}
+    SparsityPatternCSC{Ti<:Integer}
 
 Store a sparse matrix (in CSC) without its values, keeping only the pattern of nonzeros.
 
@@ -14,26 +14,29 @@ Copied from `SparseMatrixCSC`:
 - `colptr::Vector{Ti}`: column `j` is in `colptr[j]:(colptr[j+1]-1)`
 - `rowval::Vector{Ti}`: row indices of stored values
 """
-struct SparsePatternCSC{Ti<:Integer}
+struct SparsityPatternCSC{Ti<:Integer}
     m::Int
     n::Int
     colptr::Vector{Ti}
     rowval::Vector{Ti}
 end
 
-SparsePatternCSC(A::SparseMatrixCSC) = SparsePatternCSC(A.m, A.n, A.colptr, A.rowval)
+SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
-Base.size(S::SparsePatternCSC) = (S.m, S.n)
-SparseArrays.nnz(S::SparsePatternCSC) = length(S.rowval)
-SparseArrays.rowvals(S::SparsePatternCSC) = S.rowval
-SparseArrays.nzrange(S::SparsePatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
+Base.size(S::SparsityPatternCSC) = (S.m, S.n)
+Base.size(S::SparsityPatternCSC, d) = d::Integer <= 2 ? size(S)[d] : 1
+Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
+
+SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
+SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
+SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
 
 """
-    transpose(S::SparsePatternCSC)
+    transpose(S::SparsityPatternCSC)
 
-Return a [`SparsePatternCSC`](@ref) corresponding to the transpose of `S`.
+Return a [`SparsityPatternCSC`](@ref) corresponding to the transpose of `S`.
 """
-function Base.transpose(S::SparsePatternCSC{T}) where {T}
+function Base.transpose(S::SparsityPatternCSC{T}) where {T}
     m, n = size(S)
     nnzA = nnz(S)
     A_colptr = S.colptr
@@ -78,7 +81,16 @@ function Base.transpose(S::SparsePatternCSC{T}) where {T}
     end
     B_colptr[1] = 1
 
-    return SparsePatternCSC{T}(n, m, B_colptr, B_rowval)
+    return SparsityPatternCSC{T}(n, m, B_colptr, B_rowval)
+end
+
+# copied from SparseArrays.jl
+function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
+    r1 = Int(S.colptr[i1])
+    r2 = Int(S.colptr[i1 + 1] - 1)
+    (r1 > r2) && return false
+    r1 = searchsortedfirst(rowvals(S), i0, r1, r2, Base.Order.Forward)
+    return ((r1 > r2) || (rowvals(S)[r1] != i0)) ? false : true
 end
 
 ## Adjacency graph
@@ -99,17 +111,18 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 # Fields
 
-- `S::SparsePatternCSC{T}`
+- `S::SparsityPatternCSC{T}`
 
 # References
 
-> [_What Color Is Your Jacobian? SparsePatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
+> [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 struct AdjacencyGraph{T}
-    S::SparsePatternCSC{T}
+    S::SparsityPatternCSC{T}
 end
 
-AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsePatternCSC(A))
+AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A))
+AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
@@ -137,12 +150,12 @@ function nb_edges(g::AdjacencyGraph)
     for j in vertices(g)
         for k in nzrange(S, j)
             i = rowvals(S)[k]
-            if i != j
+            if i > j
                 ne += 1
             end
         end
     end
-    return ne ÷ 2
+    return ne
 end
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
@@ -171,20 +184,24 @@ When `symmetric_pattern` is `true`, this construction is more efficient.
 
 # Fields
 
-- `S1::SparsePatternCSC{T}`: maps vertices on side `1` to their neighbors
-- `S2::SparsePatternCSC{T}`: maps vertices on side `2` to their neighbors
+- `S1::SparsityPatternCSC{T}`: maps vertices on side `1` to their neighbors
+- `S2::SparsityPatternCSC{T}`: maps vertices on side `2` to their neighbors
 
 # References
 
-> [_What Color Is Your Jacobian? SparsePatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
+> [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 struct BipartiteGraph{T<:Integer}
-    S1::SparsePatternCSC{T}
-    S2::SparsePatternCSC{T}
+    S1::SparsityPatternCSC{T}
+    S2::SparsityPatternCSC{T}
+end
+
+function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
+    return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)
 end
 
 function BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
-    S2 = SparsePatternCSC(A)  # columns to rows
+    S2 = SparsityPatternCSC(A)  # columns to rows
     if symmetric_pattern
         checksquare(A)  # proxy for checking full symmetry
         S1 = S2
@@ -240,9 +257,4 @@ function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,s
         end
     end
     return length(neighbors_dist2)
-end
-
-function maximum_degree_dist2(bg::BipartiteGraph, ::Val{side}) where {side}
-    # not efficient, for testing purposes only
-    return maximum(v -> degree_dist2(bg, Val(side), v), vertices(bg, Val(side)))
 end

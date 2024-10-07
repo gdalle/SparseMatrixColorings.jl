@@ -115,9 +115,8 @@ true
 - [`ColoringProblem`](@ref)
 - [`AbstractColoringResult`](@ref)
 """
-function decompress(B::AbstractMatrix{R}, result::AbstractColoringResult) where {R<:Real}
-    @compat (; S) = result
-    A = respectful_similar(S, R)
+function decompress(B::AbstractMatrix, result::AbstractColoringResult)
+    A = respectful_similar(result.A, eltype(B))
     return decompress!(A, B, result)
 end
 
@@ -257,19 +256,18 @@ function in_triangle(i::Integer, j::Integer, uplo::Symbol)
         return true
     elseif uplo == :U
         return i <= j
-    else
+    else  # uplo == :L
         return i >= j
     end
 end
 
 ## ColumnColoringResult
 
-function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::ColumnColoringResult
-) where {R<:Real}
-    @compat (; S, color) = result
+function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColoringResult)
+    @compat (; color) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
-    A .= zero(R)
+    fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
         cj = color[j]
@@ -282,9 +280,10 @@ function decompress!(
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix{R}, b::AbstractVector{R}, c::Integer, result::ColumnColoringResult
-) where {R<:Real}
-    @compat (; S, group) = result
+    A::AbstractMatrix, b::AbstractVector, c::Integer, result::ColumnColoringResult
+)
+    @compat (; group) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
     for j in group[c]
@@ -296,10 +295,9 @@ function decompress_single_color!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::ColumnColoringResult
-) where {R<:Real}
-    @compat (; S, compressed_indices) = result
+function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
+    @compat (; compressed_indices) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
     for k in eachindex(nzA, compressed_indices)
@@ -309,9 +307,10 @@ function decompress!(
 end
 
 function decompress_single_color!(
-    A::SparseMatrixCSC{R}, b::AbstractVector{R}, c::Integer, result::ColumnColoringResult
-) where {R<:Real}
-    @compat (; S, group) = result
+    A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::ColumnColoringResult
+)
+    @compat (; group) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
     nzA = nonzeros(A)
@@ -326,12 +325,11 @@ end
 
 ## RowColoringResult
 
-function decompress!(
-    A::AbstractMatrix{R}, B::AbstractMatrix{R}, result::RowColoringResult
-) where {R<:Real}
-    @compat (; S, color) = result
+function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringResult)
+    @compat (; color) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
-    A .= zero(R)
+    fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
         for k in nzrange(S, j)
@@ -344,9 +342,10 @@ function decompress!(
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix{R}, b::AbstractVector{R}, c::Integer, result::RowColoringResult
-) where {R<:Real}
-    @compat (; S, Sᵀ, group) = result
+    A::AbstractMatrix, b::AbstractVector, c::Integer, result::RowColoringResult
+)
+    @compat (; group) = result
+    S, Sᵀ = result.bg.S2, result.bg.S1
     check_same_pattern(A, S)
     rvSᵀ = rowvals(Sᵀ)
     for i in group[c]
@@ -358,10 +357,9 @@ function decompress_single_color!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::RowColoringResult
-) where {R<:Real}
-    @compat (; S, compressed_indices) = result
+function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
+    @compat (; compressed_indices) = result
+    S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
     for k in eachindex(nzA, compressed_indices)
@@ -373,15 +371,13 @@ end
 ## StarSetColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R},
-    B::AbstractMatrix{R},
-    result::StarSetColoringResult,
-    uplo::Symbol=:F,
-) where {R<:Real}
-    @compat (; S, color, star_set) = result
+    A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+)
+    @compat (; color, star_set) = result
     @compat (; star, hub, spokes) = star_set
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
-    A .= zero(R)
+    fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
             A[i, i] = B[i, color[i]]
@@ -403,14 +399,15 @@ function decompress!(
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix{R},
-    b::AbstractVector{R},
+    A::AbstractMatrix,
+    b::AbstractVector,
     c::Integer,
     result::StarSetColoringResult,
     uplo::Symbol=:F,
-) where {R<:Real}
-    @compat (; S, color, group, star_set) = result
+)
+    @compat (; color, group, star_set) = result
     @compat (; hub, spokes) = star_set
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     for i in axes(A, 1)
         if !iszero(S[i, i]) && color[i] == c
@@ -434,35 +431,30 @@ function decompress_single_color!(
 end
 
 function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult
-) where {R<:Real}
-    @compat (; S, compressed_indices) = result
-    check_same_pattern(A, S)
+    A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+)
+    @compat (; compressed_indices) = result
+    S = result.ag.S
     nzA = nonzeros(A)
-    for k in eachindex(nzA, compressed_indices)
-        nzA[k] = B[compressed_indices[k]]
-    end
-    return A
-end
-
-function decompress!(
-    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::StarSetColoringResult, uplo::Symbol
-) where {R<:Real}
-    @compat (; S, compressed_indices) = result
-    uplo == :F && check_same_pattern(A, S)
-    rvS = rowvals(S)
-    nzA = nonzeros(A)
-    l = 0  # assume A has the same pattern as the triangle
-    for j in axes(S, 2)
-        for k in nzrange(S, j)
-            i = rvS[k]
-            if in_triangle(i, j, uplo)
-                l += 1
-                nzA[l] = B[compressed_indices[k]]
+    if uplo == :F
+        check_same_pattern(A, S)
+        for k in eachindex(nzA, compressed_indices)
+            nzA[k] = B[compressed_indices[k]]
+        end
+    else
+        rvS = rowvals(S)
+        l = 0  # assume A has the same pattern as the triangle
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                if in_triangle(i, j, uplo)
+                    l += 1
+                    nzA[l] = B[compressed_indices[k]]
+                end
             end
         end
+        @assert l == length(nonzeros(A))
     end
-    @assert l == length(nonzeros(A))
     return A
 end
 
@@ -471,14 +463,13 @@ end
 # TODO: add method for A::SparseMatrixCSC
 
 function decompress!(
-    A::AbstractMatrix{R},
-    B::AbstractMatrix{R},
-    result::TreeSetColoringResult,
-    uplo::Symbol=:F,
-) where {R<:Real}
-    @compat (; S, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
+    A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
+)
+    @compat (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
-    A .= zero(R)
+    R = eltype(A)
+    fill!(A, zero(R))
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -516,19 +507,19 @@ end
 ## MatrixInverseColoringResult
 
 function decompress!(
-    A::AbstractMatrix{R},
-    B::AbstractMatrix{R},
+    A::AbstractMatrix,
+    B::AbstractMatrix,
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
-) where {R<:Real}
-    @compat (;
-        S, color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A
-    ) = result
+)
+    @compat (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) =
+        result
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
     strict_upper_nonzeros_A = T_factorization \ vec(B)
-    A .= zero(R)
+    fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
             A[i, i] = B[i, color[i]]

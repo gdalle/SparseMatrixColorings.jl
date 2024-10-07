@@ -19,12 +19,13 @@ Combination between the type parameters of [`ColoringProblem`](@ref) and [`Greed
 
 - [`column_colors`](@ref) and [`column_groups`](@ref) (for a `:column` or `:bidirectional` partition) 
 - [`row_colors`](@ref) and [`row_groups`](@ref) (for a `:row` or `:bidirectional` partition)
+- [`sparsity_pattern`](@ref)
 - [`compress`](@ref), [`decompress`](@ref), [`decompress!`](@ref), [`decompress_single_color!`](@ref)
 
 !!! warning
     Unlike the methods above, the concrete subtypes of `AbstractColoringResult` are not part of the public API and may change without notice.
 """
-abstract type AbstractColoringResult{structure,partition,decompression,M<:SparseMatrixCSC} end
+abstract type AbstractColoringResult{structure,partition,decompression} end
 
 """
     column_colors(result::AbstractColoringResult)
@@ -84,6 +85,16 @@ column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.grou
 row_colors(result::AbstractColoringResult{s,:row}) where {s} = result.color
 row_groups(result::AbstractColoringResult{s,:row}) where {s} = result.group
 
+"""
+    sparsity_pattern(result::AbstractColoringResult)
+
+Return the matrix that was initially passed to [`coloring`](@ref), without any modifications.
+
+!!! note
+    This matrix is not necessarily a `SparseMatrixCSC`, nor does it necessarily have `Bool` entries.
+"""
+sparsity_pattern(result::AbstractColoringResult) = result.A
+
 ## Concrete subtypes
 
 """
@@ -99,9 +110,12 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:direct,M}
+struct ColumnColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
+       AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
-    S::M
+    A::M
+    "bipartite graph that was used for coloring"
+    bg::G
     "one integer color for each column or row (depending on `partition`)"
     color::Vector{Int}
     "color groups for columns or rows (depending on `partition`)"
@@ -110,7 +124,8 @@ struct ColumnColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:column,:
     compressed_indices::Vector{Int}
 end
 
-function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
+function ColumnColoringResult(A::AbstractMatrix, bg::BipartiteGraph, color::Vector{Int})
+    S = bg.S2
     group = group_by_color(color)
     n = size(S, 1)
     rv = rowvals(S)
@@ -123,7 +138,7 @@ function ColumnColoringResult(S::SparseMatrixCSC, color::Vector{Int})
             compressed_indices[k] = (c - 1) * n + i
         end
     end
-    return ColumnColoringResult(S, color, group, compressed_indices)
+    return ColumnColoringResult(A, bg, color, group, compressed_indices)
 end
 
 """
@@ -141,16 +156,17 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct RowColoringResult{M} <: AbstractColoringResult{:nonsymmetric,:row,:direct,M}
-    S::M
-    Sᵀ::M
+struct RowColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
+       AbstractColoringResult{:nonsymmetric,:row,:direct}
+    A::M
+    bg::G
     color::Vector{Int}
     group::Vector{Vector{Int}}
     compressed_indices::Vector{Int}
 end
 
-function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
-    Sᵀ = convert(SparseMatrixCSC, transpose(S))
+function RowColoringResult(A::AbstractMatrix, bg::BipartiteGraph, color::Vector{Int})
+    S = bg.S2
     group = group_by_color(color)
     C = length(group)  # ncolors
     rv = rowvals(S)
@@ -163,7 +179,7 @@ function RowColoringResult(S::SparseMatrixCSC, color::Vector{Int})
             compressed_indices[k] = (j - 1) * C + c
         end
     end
-    return RowColoringResult(S, Sᵀ, color, group, compressed_indices)
+    return RowColoringResult(A, bg, color, group, compressed_indices)
 end
 
 """
@@ -181,15 +197,20 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M} <: AbstractColoringResult{:symmetric,:column,:direct,M}
-    S::M
+struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph} <:
+       AbstractColoringResult{:symmetric,:column,:direct}
+    A::M
+    ag::G
     color::Vector{Int}
     group::Vector{Vector{Int}}
     star_set::StarSet
     compressed_indices::Vector{Int}
 end
 
-function StarSetColoringResult(S::SparseMatrixCSC, color::Vector{Int}, star_set::StarSet)
+function StarSetColoringResult(
+    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
+)
+    S = ag.S
     group = group_by_color(color)
     n = size(S, 1)
     rv = rowvals(S)
@@ -202,7 +223,7 @@ function StarSetColoringResult(S::SparseMatrixCSC, color::Vector{Int}, star_set:
             compressed_indices[k] = (c - 1) * n + l
         end
     end
-    return StarSetColoringResult(S, color, group, star_set, compressed_indices)
+    return StarSetColoringResult(A, ag, color, group, star_set, compressed_indices)
 end
 
 """
@@ -220,9 +241,10 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetColoringResult{M,R} <:
-       AbstractColoringResult{:symmetric,:column,:substitution,M}
-    S::M
+struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,R} <:
+       AbstractColoringResult{:symmetric,:column,:substitution}
+    A::M
+    ag::G
     color::Vector{Int}
     group::Vector{Vector{Int}}
     vertices_by_tree::Vector{Vector{Int}}
@@ -231,8 +253,13 @@ struct TreeSetColoringResult{M,R} <:
 end
 
 function TreeSetColoringResult(
-    S::SparseMatrixCSC, color::Vector{Int}, tree_set::TreeSet, decompression_eltype::Type{R}
+    A::AbstractMatrix,
+    ag::AdjacencyGraph,
+    color::Vector{Int},
+    tree_set::TreeSet,
+    decompression_eltype::Type{R},
 ) where {R}
+    S = ag.S
     nvertices = length(color)
     group = group_by_color(color)
 
@@ -347,7 +374,7 @@ function TreeSetColoringResult(
     buffer = Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
-        S, color, group, vertices_by_tree, reverse_bfs_orders, buffer
+        A, ag, color, group, vertices_by_tree, reverse_bfs_orders, buffer
     )
 end
 
@@ -368,9 +395,10 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct LinearSystemColoringResult{M,R,F} <:
-       AbstractColoringResult{:symmetric,:column,:substitution,M}
-    S::M
+struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,R,F} <:
+       AbstractColoringResult{:symmetric,:column,:substitution}
+    A::M
+    ag::G
     color::Vector{Int}
     group::Vector{Vector{Int}}
     strict_upper_nonzero_inds::Vector{Tuple{Int,Int}}
@@ -379,10 +407,11 @@ struct LinearSystemColoringResult{M,R,F} <:
 end
 
 function LinearSystemColoringResult(
-    S::SparseMatrixCSC, color::Vector{Int}, decompression_eltype::Type{R}
+    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, decompression_eltype::Type{R}
 ) where {R}
     group = group_by_color(color)
     C = length(group)  # ncolors
+    S = ag.S
     rv = rowvals(S)
 
     # build T such that T * strict_upper_nonzeros(A) = B
@@ -411,6 +440,12 @@ function LinearSystemColoringResult(
     strict_upper_nonzeros_A = Vector{float(R)}(undef, size(T, 2))
 
     return LinearSystemColoringResult(
-        S, color, group, strict_upper_nonzero_inds, strict_upper_nonzeros_A, T_factorization
+        A,
+        ag,
+        color,
+        group,
+        strict_upper_nonzero_inds,
+        strict_upper_nonzeros_A,
+        T_factorization,
     )
 end

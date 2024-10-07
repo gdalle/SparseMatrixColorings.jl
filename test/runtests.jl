@@ -11,7 +11,7 @@ include("utils.jl")
     @testset verbose = true "Code quality" begin
         if VERSION >= v"1.10"
             @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings)
+                Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
             end
             @testset "JET" begin
                 JET.test_package(SparseMatrixColorings; target_defined_modules=true)
@@ -42,6 +42,12 @@ include("utils.jl")
         @testset "Constructors" begin
             include("constructors.jl")
         end
+        @testset "Constant coloring" begin
+            include("constant.jl")
+        end
+        @testset "ADTypes coloring algorithms" begin
+            include("adtypes.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Small instances" begin
@@ -49,6 +55,9 @@ include("utils.jl")
         end
         @testset "Random instances" begin
             include("random.jl")
+        end
+        @testset "Structured matrices" begin
+            include("structured.jl")
         end
         @testset "Instances with known colorings" begin
             include("theory.jl")

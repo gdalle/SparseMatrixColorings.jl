@@ -49,6 +49,8 @@ include("coloring.jl")
 include("result.jl")
 include("matrices.jl")
 include("interface.jl")
+include("constant.jl")
+include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
 include("examples.jl")
@@ -56,9 +58,11 @@ include("examples.jl")
 export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
+export ConstantColoringAlgorithm
 export coloring
 export column_colors, row_colors
 export column_groups, row_groups
+export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!
 
 end

@@ -167,7 +167,7 @@ function change_degree_and_push_into_bucket!(
 end
 
 function vertices(
-    g::AdjacencyGraph, ::DynamicDegreeBasedOrder{degtype,direction}
+    g::AbstractAdjacencyGraph, ::DynamicDegreeBasedOrder{degtype,direction}
 ) where {degtype,direction}
     # Initialize degrees
     if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)

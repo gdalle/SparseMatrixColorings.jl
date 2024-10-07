@@ -62,22 +62,23 @@ function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
 end
 
 """
-    same_pattern(A::AbstractMatrix, B::AbstractMatrix)
+    same_pattern(A, B)
 
 Perform a partial equality check on the sparsity patterns of `A` and `B`:
 
 - if the return is `true`, they might have the same sparsity pattern but we're not sure
 - if the return is `false`, they definitely don't have the same sparsity pattern
 """
-function same_pattern(A::AbstractMatrix, B::AbstractMatrix)
-    return size(A) == size(B)
-end
+same_pattern(A, B) = size(A) == size(B)
 
-function same_pattern(A::SparseMatrixCSC, B::SparseMatrixCSC)
+function same_pattern(
+    A::Union{SparseMatrixCSC,SparsityPatternCSC},
+    B::Union{SparseMatrixCSC,SparsityPatternCSC},
+)
     return size(A) == size(B) && nnz(A) == nnz(B)
 end
 
-function check_same_pattern(A::AbstractMatrix, S::AbstractMatrix)
+function check_same_pattern(A, S)
     if !same_pattern(A, S)
         throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
     end
