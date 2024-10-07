@@ -68,3 +68,21 @@ end;
         test_coloring_decompression(A0, problem, algo)
     end
 end;
+
+@testset "Bicoloring & direct decompression" begin
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    algo = GreedyColoringAlgorithm(RandomOrder(rng); decompression=:direct)
+    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+        A0 = sprand(rng, m, n, p)
+        test_bicoloring_decompression(A0, problem, algo)
+    end
+end;
+
+@testset "Bicoloring & substitution decompression" begin
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    algo = GreedyColoringAlgorithm(RandomOrder(rng); decompression=:substitution)
+    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+        A0 = sprand(rng, m, n, p)
+        test_bicoloring_decompression(A0, problem, algo)
+    end
+end;

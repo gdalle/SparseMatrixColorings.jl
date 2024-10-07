@@ -31,6 +31,10 @@ SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
 SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
 SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
 
+function SparseArrays.SparseMatrixCSC(S::SparsityPatternCSC)
+    return SparseMatrixCSC(S.m, S.n, S.colptr, S.rowval, fill(true, nnz(S)))
+end
+
 """
     transpose(S::SparsityPatternCSC)
 
@@ -271,7 +275,12 @@ end
     AdjacencyFromBipartiteGraph{T}
 
 Custom version of [`AdjacencyGraph`](@ref) constructed from a [`BipartiteGraph`](@ref).
-If the bipartite graph represents a matrix `A`, then this graph represents the block matrix `[0 A; A' 0]` (of size `(n+m) x (n+m)`).
+If the bipartite graph represents a matrix `A` of size `(m, n)`, then this graph represents the block matrix `[0 A; A' 0]` of size `(n+m) x (n+m)`.
+
+Vertices are ordered as follows:
+
+- from `1` to `n`: column vertices
+- from `n+1` to `n+m`: row vertices
 
 # Constructors
 
@@ -295,15 +304,35 @@ function nb_vertices(abg::AdjacencyFromBipartiteGraph)
     return m + n
 end
 
+struct Adder{T}
+    y::T
+end
+
+(a::Adder)(x) = x + a.y
+
 function neighbors(abg::AdjacencyFromBipartiteGraph, v::Integer)
     @compat (; bg) = abg
     m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
     if 1 <= v <= n
-        # v is a column
-        return neighbors(bg, Val(2), v)
+        j = v  # v is a column, it doesn't need shifting
+        neigh = neighbors(bg, Val(2), j)
+        correction = Adder(n)  # its neighbors are rows, they need shifting
     else
-        # v is a row
-        @assert n + 1 <= v <= n + m
-        return neighbors(bg, Val(1), v - n)
+        i = v - n  # v is a row, it needs shifting
+        @assert 1 <= i <= m
+        neigh = neighbors(bg, Val(1), i)
+        correction = Adder(0)  # its neighbors are columns, they don't need shifting
     end
+    return Iterators.map(correction, neigh)
+end
+
+function pattern(abg::AdjacencyFromBipartiteGraph)
+    # TODO: slow
+    S = SparseMatrixCSC(pattern(abg.bg, Val(2)))
+    m, n = size(S)
+    T = eltype(S)
+    return SparsityPatternCSC([
+        spzeros(T, n, n) transpose(S)
+        S spzeros(T, m, m)
+    ])
 end

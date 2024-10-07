@@ -203,29 +203,6 @@ end
 
 function coloring(
     A::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{:direct};
-    decompression_eltype::Type=Float64,
-    symmetric_pattern::Bool=false,
-)
-    m, n = size(A)
-    S = convert(SparseMatrixCSC, A)
-    H = [
-        spzeros(n, n) transpose(S)
-        S spzeros(m, m)
-    ]
-    ag = AdjacencyGraph(H)
-    abg = AdjacencyFromBipartiteGraph(
-        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
-    )
-    color, star_set = star_coloring(ag, algo.order)
-    column_color = color[1:n]
-    row_color = color[(n + 1):(n + m)]
-    return BicoloringResult(A, abg, column_color, row_color)
-end
-
-function coloring(
-    A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct};
     decompression_eltype::Type=Float64,
@@ -244,6 +221,52 @@ function coloring(
     ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order)
     return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
+end
+
+function coloring(
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{:direct};
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
+)
+    m, n = size(A)
+    abg = AdjacencyFromBipartiteGraph(
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
+    bigA = SparseMatrixCSC(pattern(abg))
+    color, star_set = star_coloring(abg, algo.order)
+    star_set_result = StarSetColoringResult(bigA, abg, color, star_set)
+    column_color, _ = remap_colors(color[1:n])
+    row_color, _ = remap_colors(color[(n + 1):(n + m)])
+    return BicoloringResult(A, abg, column_color, row_color, star_set_result)
+end
+
+function coloring(
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{:substitution};
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
+)
+    m, n = size(A)
+    abg = AdjacencyFromBipartiteGraph(
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
+    bigA = SparseMatrixCSC(pattern(abg))
+    color, tree_set = acyclic_coloring(abg, algo.order)
+    tree_set_result = TreeSetColoringResult(
+        bigA, abg, color, tree_set, decompression_eltype
+    )
+    column_color, _ = remap_colors(color[1:n])
+    row_color, _ = remap_colors(color[(n + 1):(n + m)])
+    return BicoloringResult(A, abg, column_color, row_color, tree_set_result)
+end
+
+function remap_colors(color::Vector{Int})
+    col_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
+    remapped_cols = [col_to_ind[c] for c in color]
+    return remapped_cols, col_to_ind
 end
 
 ## ADTypes interface

@@ -142,6 +142,24 @@ function test_coloring_decompression(
     end
 end
 
+function test_bicoloring_decompression(
+    A0::AbstractMatrix,
+    problem::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{decompression};
+) where {decompression}
+    @testset "$(typeof(A))" for A in matrix_versions(A0)
+        yield()
+        result = coloring(A, problem, algo; decompression_eltype=Float64)
+        Br, Bc = compress(A, result)
+        @testset "Full decompression" begin
+            @test decompress(Br, Bc, result) ≈ A0
+            @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
+            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
+            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
+        end
+    end
+end
+
 function test_structured_coloring_decompression(A::AbstractMatrix)
     column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)

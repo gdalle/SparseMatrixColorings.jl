@@ -58,12 +58,21 @@ function row_groups end
 """
     group_by_color(color::Vector{Int})
 
-Create `group::Dict{Int,Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
+Create a color-indexed `group` containing iterables such that `i ∈ group[c]` iff `color[i] == c`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
-    group = Dict(c => Int[] for c in unique(color))
+    cmin, cmax = extrema(color)
+    @assert cmin == 1
+    group_sizes = zeros(Int, cmax)
+    for c in color
+        group_sizes[c] += 1
+    end
+    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
+    fill!(group_sizes, 1)
     for (k, c) in enumerate(color)
-        push!(group[c], k)
+        pos = group_sizes[c]
+        group[c][pos] = k
+        group_sizes[c] += 1
     end
     return group
 end
@@ -186,7 +195,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph} <:
+struct StarSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph} <:
        AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
@@ -197,9 +206,9 @@ struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph} <:
 end
 
 function StarSetColoringResult(
-    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
+    A::AbstractMatrix, ag::AbstractAdjacencyGraph, color::Vector{Int}, star_set::StarSet
 )
-    S = ag.S
+    S = pattern(ag)
     group = group_by_color(color)
     n = size(S, 1)
     rv = rowvals(S)
@@ -230,7 +239,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,R} <:
+struct TreeSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,R} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -243,12 +252,12 @@ end
 
 function TreeSetColoringResult(
     A::AbstractMatrix,
-    ag::AdjacencyGraph,
+    ag::AbstractAdjacencyGraph,
     color::Vector{Int},
     tree_set::TreeSet,
     decompression_eltype::Type{R},
 ) where {R}
-    S = ag.S
+    S = pattern(ag)
     nvertices = length(color)
     group = group_by_color(color)
 
@@ -384,7 +393,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,R,F} <:
+struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -444,7 +453,7 @@ end
 """
 $TYPEDEF
 
-Storage for the result of a bidirectional coloring with direct decompression.
+Storage for the result of a bidirectional coloring with direct or substitution decompression, based on the symmetric coloring of a 2x2 block matrix.
 
 # Fields
 
@@ -454,12 +463,16 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct BicoloringResult{M<:AbstractMatrix,G<:AdjacencyFromBipartiteGraph} <:
-       AbstractColoringResult{:nonsymmetric,:bidirectional,:direct}
+struct BicoloringResult{
+    M<:AbstractMatrix,
+    G<:AdjacencyFromBipartiteGraph,
+    decompression,
+    SR<:AbstractColoringResult{:symmetric,:column,decompression},
+} <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
     A::M
     "adjacency graph that was used for coloring (constructed from the bipartite graph)"
-    bg::G
+    abg::G
     "one integer color for each column"
     column_color::Vector{Int}
     "one integer color for each row"
@@ -468,6 +481,8 @@ struct BicoloringResult{M<:AbstractMatrix,G<:AdjacencyFromBipartiteGraph} <:
     column_group::Vector{Vector{Int}}
     "color groups for rows"
     row_group::Vector{Vector{Int}}
+    "result for the coloring of the symmetric 2x2 block matrix"
+    symmetric_result::SR
 end
 
 column_colors(result::BicoloringResult) = result.column_color
@@ -481,8 +496,11 @@ function BicoloringResult(
     abg::AdjacencyFromBipartiteGraph,
     column_color::Vector{Int},
     row_color::Vector{Int},
+    symmetric_result::AbstractColoringResult{:symmetric,:column},
 )
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    return BicoloringResult(A, abg, column_color, row_color, column_group, row_group)
+    return BicoloringResult(
+        A, abg, column_color, row_color, column_group, row_group, symmetric_result
+    )
 end
