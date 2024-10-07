@@ -151,6 +151,8 @@ function test_bicoloring_decompression(
         yield()
         result = coloring(A, problem, algo; decompression_eltype=Float64)
         Br, Bc = compress(A, result)
+        @test size(Br, 1) == length(unique(row_colors(result)))
+        @test size(Bc, 2) == length(unique(column_colors(result)))
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified

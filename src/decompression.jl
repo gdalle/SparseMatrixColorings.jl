@@ -76,7 +76,7 @@ end
 
 """
     decompress(B::AbstractMatrix, result::AbstractColoringResult)
-    decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult)
+    decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
 
 Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 The in-place alternative is [`decompress!`](@ref).
@@ -132,7 +132,11 @@ function decompress(B::AbstractMatrix, result::AbstractColoringResult)
     return decompress!(A, B, result)
 end
 
-function decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult)
+function decompress(
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::AbstractColoringResult{structure,:bidirectional},
+) where {structure}
     A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
     return decompress!(A, Br, Bc, result)
 end
@@ -145,7 +149,7 @@ end
 
     decompress!(
         A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix
-        result::AbstractColoringResult, [uplo=:F]
+        result::AbstractColoringResult{_,:bidirectional}, [uplo=:F]
     )
 
 Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -568,15 +572,17 @@ function decompress!(
     symmetric_color = column_colors(result.symmetric_result)
     _, col_color_ind = remap_colors(symmetric_color[1:n])
     _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
-    B = zeros(T, n + m, maximum(symmetric_color))
+    B = Matrix{T}(undef, n + m, maximum(symmetric_color))
+    fill!(B, zero(T))
     for c in axes(B, 2)
         if haskey(col_color_ind, c)  # some columns were colored with c
-            B[(n + 1):(n + m), c] .+= @view Bc[:, col_color_ind[c]]
+            @views copyto!(B[(n + 1):(n + m), c], Bc[:, col_color_ind[c]])
         end
         if haskey(row_color_ind, c)  # some rows were colored with c
-            B[1:n, c] .+= @view Br[row_color_ind[c], :]
+            @views copyto!(B[1:n, c], Br[row_color_ind[c], :])
         end
     end
-    new_A = decompress(B, result.symmetric_result)
-    return copyto!(A, new_A[(n + 1):(n + m), 1:n])
+    bigA = decompress(B, result.symmetric_result)
+    copyto!(A, bigA[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    return A
 end
