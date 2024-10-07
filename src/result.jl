@@ -44,21 +44,21 @@ function row_colors end
 """
     column_groups(result::AbstractColoringResult)
 
-Return an abstract vector `group` such that for every color `c`, `group[c]` contains the indices of all columns that are colored with `c`.
+Return a vector `group` such that for every color `c`, `group[c]` contains the indices of all columns that are colored with `c`.
 """
 function column_groups end
 
 """
     row_groups(result::AbstractColoringResult)
 
-Return an abstract vector `group` such that for every color `c`, `group[c]` contains the indices of all rows that are colored with `c`.
+Return a vector `group` such that for every color `c`, `group[c]` contains the indices of all rows that are colored with `c`.
 """
 function row_groups end
 
 """
     group_by_color(color::Vector{Int})
 
-Create a color-indexed `group` such that `i ∈ group[c]` iff `color[i] == c`.
+Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] == c`.
 
 Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
