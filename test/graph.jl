@@ -134,19 +134,19 @@ end
 
     @test nb_vertices(abg) == 4 + 8
     # neighbors of columns
-    @test neighbors(abg, 1) == [1]
-    @test neighbors(abg, 2) == [2]
-    @test neighbors(abg, 3) == [3]
-    @test neighbors(abg, 4) == [4]
-    @test neighbors(abg, 5) == [2, 3, 4]
-    @test neighbors(abg, 6) == [1, 3, 4]
-    @test neighbors(abg, 7) == [1, 2, 4]
-    @test neighbors(abg, 8) == [1, 2, 3]
+    @test collect(neighbors(abg, 1)) == 8 .+ [1]
+    @test collect(neighbors(abg, 2)) == 8 .+ [2]
+    @test collect(neighbors(abg, 3)) == 8 .+ [3]
+    @test collect(neighbors(abg, 4)) == 8 .+ [4]
+    @test collect(neighbors(abg, 5)) == 8 .+ [2, 3, 4]
+    @test collect(neighbors(abg, 6)) == 8 .+ [1, 3, 4]
+    @test collect(neighbors(abg, 7)) == 8 .+ [1, 2, 4]
+    @test collect(neighbors(abg, 8)) == 8 .+ [1, 2, 3]
     # neighbors of rows
-    @test neighbors(abg, 8 + 1) == [1, 6, 7, 8]
-    @test neighbors(abg, 8 + 2) == [2, 5, 7, 8]
-    @test neighbors(abg, 8 + 3) == [3, 5, 6, 8]
-    @test neighbors(abg, 8 + 4) == [4, 5, 6, 7]
+    @test collect(neighbors(abg, 8 + 1)) == [1, 6, 7, 8]
+    @test collect(neighbors(abg, 8 + 2)) == [2, 5, 7, 8]
+    @test collect(neighbors(abg, 8 + 3)) == [3, 5, 6, 8]
+    @test collect(neighbors(abg, 8 + 4)) == [4, 5, 6, 7]
 
     # TODO: remove once we have better tests, this is just to check whether it runs
     @test length(star_coloring(abg, NaturalOrder())[1]) == 12

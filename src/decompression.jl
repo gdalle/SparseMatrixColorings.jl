@@ -9,9 +9,6 @@ Compress `A` given a coloring `result` of the sparsity pattern of `A`.
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is undone by calling [`decompress`](@ref) or [`decompress!`](@ref).
 
-!!! warning
-    At the moment, `:bidirectional` partitions are not implemented.
-
 # Example
 
 ```jldoctest
@@ -63,8 +60,23 @@ function compress(A, result::AbstractColoringResult{structure,:row}) where {stru
     return B
 end
 
+function compress(
+    A, result::AbstractColoringResult{structure,:bidirectional}
+) where {structure}
+    row_group = row_groups(result)
+    column_group = column_groups(result)
+    Br = stack(row_group; dims=1) do g
+        dropdims(sum(A[g, :]; dims=1); dims=1)
+    end
+    Bc = stack(column_group; dims=2) do g
+        dropdims(sum(A[:, g]; dims=2); dims=2)
+    end
+    return Br, Bc
+end
+
 """
     decompress(B::AbstractMatrix, result::AbstractColoringResult)
+    decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
 
 Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 The in-place alternative is [`decompress!`](@ref).
@@ -120,10 +132,24 @@ function decompress(B::AbstractMatrix, result::AbstractColoringResult)
     return decompress!(A, B, result)
 end
 
+function decompress(
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::AbstractColoringResult{structure,:bidirectional},
+) where {structure}
+    A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
+    return decompress!(A, Br, Bc, result)
+end
+
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
         result::AbstractColoringResult, [uplo=:F]
+    )
+
+    decompress!(
+        A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix
+        result::AbstractColoringResult{_,:bidirectional}, [uplo=:F]
     )
 
 Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
@@ -407,7 +433,7 @@ function decompress_single_color!(
 )
     @compat (; color, group, star_set) = result
     @compat (; hub, spokes) = star_set
-    S = result.ag.S
+    S = pattern(result.ag)
     uplo == :F && check_same_pattern(A, S)
     for i in axes(A, 1)
         if !iszero(S[i, i]) && color[i] == c
@@ -434,7 +460,7 @@ function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
     @compat (; compressed_indices) = result
-    S = result.ag.S
+    S = pattern(result.ag)
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -466,7 +492,7 @@ function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
     @compat (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    S = result.ag.S
+    S = pattern(result.ag)
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -514,7 +540,7 @@ function decompress!(
 )
     @compat (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) =
         result
-    S = result.ag.S
+    S = pattern(result.ag)
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
@@ -533,5 +559,30 @@ function decompress!(
             A[j, i] = strict_upper_nonzeros_A[l]
         end
     end
+    return A
+end
+
+## BicoloringResult
+
+function decompress!(
+    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    m, n = size(A)
+    T = Base.promote_eltype(Br, Bc)
+    symmetric_color = column_colors(result.symmetric_result)
+    _, col_color_ind = remap_colors(symmetric_color[1:n])
+    _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
+    B = Matrix{T}(undef, n + m, maximum(symmetric_color))
+    fill!(B, zero(T))
+    for c in axes(B, 2)
+        if haskey(col_color_ind, c)  # some columns were colored with c
+            @views copyto!(B[(n + 1):(n + m), c], Bc[:, col_color_ind[c]])
+        end
+        if haskey(row_color_ind, c)  # some rows were colored with c
+            @views copyto!(B[1:n, c], Br[row_color_ind[c], :])
+        end
+    end
+    bigA = decompress(B, result.symmetric_result)
+    copyto!(A, bigA[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
     return A
 end

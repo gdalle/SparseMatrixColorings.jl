@@ -1,6 +1,6 @@
 function check_valid_problem(structure::Symbol, partition::Symbol)
     valid = (
-        (structure == :nonsymmetric && partition in (:column, :row)) ||
+        (structure == :nonsymmetric && partition in (:column, :row, :bidirectional)) ||
         (structure == :symmetric && partition == :column)
     )
     if !valid
@@ -49,7 +49,7 @@ Matrix coloring is often used in automatic differentiation, and here is the tran
 | -------- | ------- | --------------- | ---------------- | ----------- |
 | Jacobian | forward | `:nonsymmetric` | `:column`        | yes         |
 | Jacobian | reverse | `:nonsymmetric` | `:row`           | yes         |
-| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | no          |
+| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | yes         |
 | Hessian  | -       | `:symmetric`    | `:column`        | yes         |
 | Hessian  | -       | `:symmetric`    | `:row`           | no          |
 """
@@ -221,6 +221,38 @@ function coloring(
     ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order)
     return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
+end
+
+function coloring(
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{decompression};
+    decompression_eltype::Type=Float64,
+    symmetric_pattern::Bool=false,
+) where {decompression}
+    m, n = size(A)
+    abg = AdjacencyFromBipartiteGraph(
+        A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
+    )
+    bigA = SparseMatrixCSC(pattern(abg))  # TODO: slow
+    if decompression == :direct
+        color, star_set = star_coloring(abg, algo.order)
+        symmetric_result = StarSetColoringResult(bigA, abg, color, star_set)
+    else
+        color, tree_set = acyclic_coloring(abg, algo.order)
+        symmetric_result = TreeSetColoringResult(
+            bigA, abg, color, tree_set, decompression_eltype
+        )
+    end
+    column_color, _ = remap_colors(color[1:n])
+    row_color, _ = remap_colors(color[(n + 1):(n + m)])
+    return BicoloringResult(A, abg, column_color, row_color, symmetric_result)
+end
+
+function remap_colors(color::Vector{Int})
+    col_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
+    remapped_cols = [col_to_ind[c] for c in color]
+    return remapped_cols, col_to_ind
 end
 
 ## ADTypes interface
