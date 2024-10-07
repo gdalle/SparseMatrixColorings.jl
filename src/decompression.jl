@@ -568,7 +568,7 @@ function decompress!(
     symmetric_color = column_colors(result.symmetric_result)
     _, col_color_ind = remap_colors(symmetric_color[1:n])
     _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
-    B = zeros(T, n + m, length(unique(symmetric_color)))
+    B = zeros(T, n + m, maximum(symmetric_color))
     for c in axes(B, 2)
         if haskey(col_color_ind, c)  # some columns were colored with c
             B[(n + 1):(n + m), c] .+= @view Bc[:, col_color_ind[c]]
