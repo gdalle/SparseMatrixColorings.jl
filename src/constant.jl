@@ -103,7 +103,7 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 ) where {partition}
-    @compat (; matrix_template, result) = algo
+    (; matrix_template, result) = algo
     if size(A) != size(matrix_template)
         throw(
             DimensionMismatch(
