@@ -16,8 +16,12 @@ How it works
 =#
 module SparseMatrixColoringsColorTypesExt
 
-using SparseMatrixColorings: SparseMatrixColorings
-using SparseMatrixColorings: AbstractColoringResult, sparsity_pattern, column_colors, row_colors
+using SparseMatrixColorings:
+    SparseMatrixColorings,
+    AbstractColoringResult,
+    sparsity_pattern,
+    column_colors,
+    row_colors
 using ColorTypes: Colorant, RGB, RGBA
 
 # Default to Makie.jl's default color scheme "Wong":
