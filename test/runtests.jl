@@ -5,6 +5,9 @@ using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
+# Load package extensions to test them with JET
+using Images: Images
+
 include("utils.jl")
 
 @testset verbose = true "SparseMatrixColorings" begin

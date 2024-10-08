@@ -12,12 +12,22 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
+[weakdeps]
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+
+[extensions]
+SparseMatrixColoringsImagesExt = "Images"
+
 [compat]
 ADTypes = "1.2.1"
 Compat = "3.46,4.2"
 DataStructures = "0.18"
-LinearAlgebra = "<0.0.1, 1"
 DocStringExtensions = "0.8,0.9"
+Images = "0.26.1"
+LinearAlgebra = "<0.0.1, 1"
 Random = "<0.0.1, 1"
 SparseArrays = "<0.0.1, 1"
 julia = "1.6"
+
+[extras]
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
