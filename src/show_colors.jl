@@ -6,7 +6,9 @@
 Return an image visualizing an [`AbstractColoringResult`](@ref).
 
 !!! warning
-    Using this function requires loading [Images.jl](https://github.com/JuliaImages/Images.jl).
+    This function makes use of the [Julia Images ecosystem](https://juliaimages.org/latest/).
+    Using it requires loading [ColorTypes.jl](https://github.com/JuliaGraphics/ColorTypes.jl).
+
 
 ## Keyword arguments
 * `colorscheme`: colors used for non-zero matrix entries. Defaults to the Wong colorscheme.
