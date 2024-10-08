@@ -30,6 +30,9 @@ result = coloring(S, problem, algo)
 show_colors(result)
 ```
 
+!!! tip "Terminal support"
+    Loading [ImageInTerminal.jl](https://github.com/JuliaImages/ImageInTerminal.jl) will allow you to show the output of `show_colors` within your terminal.
+
 ## Customization
 
 The visualization can be customized via keyword arguments.
@@ -46,9 +49,6 @@ white = RGB(1, 1, 1)
 
 show_colors(result; colorscheme=julia_colors, background=white, scale=5, pad=1)
 ```
-
-!!! tip "Terminal support"
-    Loading [ImageInTerminal.jl](https://github.com/JuliaImages/ImageInTerminal.jl) will allow you to show the output of `show_colors` within your terminal.
 
 ## Working with large matrices
 
