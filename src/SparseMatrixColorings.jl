@@ -11,7 +11,6 @@ module SparseMatrixColorings
 
 using ADTypes: ADTypes
 using Base.Iterators: Iterators
-using Compat: @compat, stack
 using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:

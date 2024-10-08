@@ -26,7 +26,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -86,7 +86,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -152,7 +152,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -217,7 +217,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -264,7 +264,7 @@ end
 ## ColumnColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColoringResult)
-    @compat (; color) = result
+    (; color) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
@@ -282,7 +282,7 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
@@ -296,7 +296,7 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
-    @compat (; compressed_indices) = result
+    (; compressed_indices) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
@@ -309,7 +309,7 @@ end
 function decompress_single_color!(
     A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
@@ -326,7 +326,7 @@ end
 ## RowColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringResult)
-    @compat (; color) = result
+    (; color) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
@@ -344,7 +344,7 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::RowColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S, Sᵀ = result.bg.S2, result.bg.S1
     check_same_pattern(A, S)
     rvSᵀ = rowvals(Sᵀ)
@@ -358,7 +358,7 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
-    @compat (; compressed_indices) = result
+    (; compressed_indices) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
@@ -373,8 +373,8 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; color, star_set) = result
-    @compat (; star, hub, spokes) = star_set
+    (; color, star_set) = result
+    (; star, hub, spokes) = star_set
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
@@ -405,8 +405,8 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
-    @compat (; color, group, star_set) = result
-    @compat (; hub, spokes) = star_set
+    (; color, group, star_set) = result
+    (; hub, spokes) = star_set
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     for i in axes(A, 1)
@@ -433,7 +433,7 @@ end
 function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; compressed_indices) = result
+    (; compressed_indices) = result
     S = result.ag.S
     nzA = nonzeros(A)
     if uplo == :F
@@ -463,7 +463,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
+    (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -610,8 +610,7 @@ function decompress!(
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
 )
-    @compat (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) =
-        result
+    (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) = result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
