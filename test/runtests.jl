@@ -6,7 +6,7 @@ using SparseMatrixColorings
 using Test
 
 # Load package extensions to test them with JET
-using Images: Images
+using ColorTypes: ColorTypes
 
 include("utils.jl")
 
@@ -83,8 +83,8 @@ include("utils.jl")
         end
     end
     @testset verbose = true "Package extensions" begin
-        @testset "Images.jl" begin
-            include("ext/images.jl")
+        @testset "ColorTypes.jl" begin
+            include("ext/ColorTypes.jl")
         end
     end
 end

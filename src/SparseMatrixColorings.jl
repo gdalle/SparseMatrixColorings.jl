@@ -53,7 +53,7 @@ include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
 include("examples.jl")
-include("images.jl")
+include("show_colors.jl")
 
 export NaturalOrder, RandomOrder, LargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
@@ -66,8 +66,8 @@ export compress, decompress, decompress!, decompress_single_color!
 
 function __init__()
     @static if !isdefined(Base, :get_extension)
-        @require Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0" include(
-            "../ext/SparseMatrixColoringsImagesExt.jl"
+        @require ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f" include(
+            "../ext/SparseMatrixColoringsColorTypesExt.jl"
         )
     end
 end

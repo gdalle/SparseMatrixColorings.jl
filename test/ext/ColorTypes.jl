@@ -1,7 +1,7 @@
 using SparseMatrixColorings
 using SparseMatrixColorings: show_colors
 using SparseArrays
-using Images
+using ColorTypes
 using Test
 
 S = sparse([

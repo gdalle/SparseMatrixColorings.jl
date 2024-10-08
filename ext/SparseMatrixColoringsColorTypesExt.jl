@@ -1,5 +1,6 @@
-# Visualize colored matrices using Images.jl
-module SparseMatrixColoringsImagesExt
+# Visualize colored matrices using the Julia Images ecosystem.
+# ColorTypes.jl is the most light-weight dependency to achieve this. 
+module SparseMatrixColoringsColorTypesExt
 
 if isdefined(Base, :get_extension)
     using SparseMatrixColorings:
@@ -7,14 +8,14 @@ if isdefined(Base, :get_extension)
         AbstractColoringResult,
         ColumnColoringResult,
         RowColoringResult
-    using Images: Colorant, RGB, RGBA
+    using ColorTypes: Colorant, RGB, RGBA
 else
     using ..SparseMatrixColorings:
         SparseMatrixColorings,
         AbstractColoringResult,
         ColumnColoringResult,
         RowColoringResult
-    using ..Images: Colorant, RGB, RGBA
+    using ..ColorTypes: Colorant, RGB, RGBA
 end
 
 # Default to Makie.jl's default color scheme "Wong":
