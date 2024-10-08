@@ -508,7 +508,7 @@ function decompress!(
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
 ) where {R<:Real}
-    @compat (;
+    (;
         color,
         vertices_by_tree,
         reverse_bfs_orders,
