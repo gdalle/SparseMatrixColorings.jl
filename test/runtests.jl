@@ -82,4 +82,9 @@ include("utils.jl")
             include("allocations.jl")
         end
     end
+    @testset verbose = true "Package extensions" begin
+        @testset "Images.jl" begin
+            include("ext/images.jl")
+        end
+    end
 end
