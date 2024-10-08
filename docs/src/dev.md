@@ -56,6 +56,12 @@ SparseMatrixColorings.matrix_versions
 SparseMatrixColorings.same_pattern
 ```
 
+## Visualization
+
+```@docs
+SparseMatrixColorings.show_colors
+```
+
 ## Examples
 
 ```@docs
