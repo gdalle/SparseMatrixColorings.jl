@@ -10,7 +10,7 @@ using ColorTypes: Colorant, RGB, RGBA
 # https://github.com/MakieOrg/Makie.jl/blob/e90c042d16b461e67b750e5ce53790e732281dba/src/theming.jl#L1-L16
 # Conservative 7-color palette from Points of view: Color blindness, Bang Wong - Nature Methods
 # https://www.nature.com/articles/nmeth.1618?WT.ec_id=NMETH-201106
-DEFAULT_COLOR_SCHEME = [
+const DEFAULT_COLOR_SCHEME = [
     RGB(0 / 255, 114 / 255, 178 / 255),   # blue
     RGB(230 / 255, 159 / 255, 0 / 255),   # orange
     RGB(0 / 255, 158 / 255, 115 / 255),   # green
@@ -19,7 +19,7 @@ DEFAULT_COLOR_SCHEME = [
     RGB(213 / 255, 94 / 255, 0 / 255),    # vermillion
     RGB(240 / 255, 228 / 255, 66 / 255),  # yellow
 ]
-DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
+const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
 const DEFAULT_SCALE = 1   # update docstring in src/images.jl when changing this default
 const DEFAULT_PADDING = 0 # update docstring in src/images.jl when changing this default
 
