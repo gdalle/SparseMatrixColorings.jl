@@ -31,12 +31,13 @@ DEFAULT_COLOR_SCHEME = [
     RGB(240 / 255, 228 / 255, 66 / 255),  # yellow
 ]
 DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
-const DEFAULT_SCALE = 5   # update docstring in src/images.jl when changing this default
-const DEFAULT_PADDING = 1 # update docstring in src/images.jl when changing this default
+const DEFAULT_SCALE = 1   # update docstring in src/images.jl when changing this default
+const DEFAULT_PADDING = 0 # update docstring in src/images.jl when changing this default
 
 ncolors(res::AbstractColoringResult) = maximum(res.color)
 
-# Top-level function that eagerly promotes types and allocates output buffer
+## Top-level function that handles argument errors, eagerly promotes types and allocates output buffer
+
 function SparseMatrixColorings.show_colors(
     res::AbstractColoringResult;
     colorscheme=DEFAULT_COLOR_SCHEME,
@@ -55,8 +56,8 @@ function SparseMatrixColorings.show_colors(
     return _show_colors!(out, res, colorscheme, scale, padding)
 end
 
-# eagerly promote colors to same type
 function _promote_colors(colorscheme, background)
+    # eagerly promote colors to same type
     T = promote_type(eltype(colorscheme), typeof(background))
     colorscheme = convert.(T, colorscheme)
     background = convert(T, background)
@@ -72,6 +73,8 @@ function _allocate_output(
     w = wi * (scale + padding) - padding
     return fill(background, h, w)
 end
+
+## Implementations for different AbstractColoringResult types start here
 
 function _show_colors!(out, res::AbstractColoringResult, colorscheme, scale, padding)
     return error(
@@ -104,4 +107,5 @@ function _show_colors!(out, res::RowColoringResult, colorscheme, scale, padding)
     end
     return out
 end
+
 end # module

@@ -31,9 +31,9 @@ The visualization can be customized via keyword arguments:
 ```@example img
 using ColorSchemes 
 julia_colors = ColorSchemes.julia.colors
-black = RGB(0, 0, 0)
+white = RGB(1, 1, 1)
 
-show_colors(result; colorscheme=julia_colors, background=black, scale=1, padding=0)
+show_colors(result; colorscheme=julia_colors, background=white, scale=5, padding=1)
 ```
 
 !!! tip "Terminal support"
@@ -46,8 +46,8 @@ The Julia Images ecosystem requires you to load a separate package to save image
 ```julia
 using ImageIO
 
-im = show_colors(result)
-save("coloring.png", im)
+img = show_colors(result)
+save("coloring.png", img)
 ```
 
 Refer to the [Julia Images documentation](https://juliaimages.org/stable/function_reference/#ref_io) for more information.
