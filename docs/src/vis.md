@@ -6,12 +6,14 @@ SparseMatrixColorings provides some internal utilities for visualization of matr
     This function makes use of the [Julia Images ecosystem](https://juliaimages.org/latest/).
     Using it requires loading [ColorTypes.jl](https://github.com/JuliaGraphics/ColorTypes.jl).
 
+    We recommend loading the full [Images.jl](https://github.com/JuliaImages/Images.jl) package for convenience, which includes ColorTypes.jl.
+
 ## Basic usage
 
 Currently, only `ColumnColoringResult` and `RowColoringResult` are supported.
 
 ```@example img
-using ColorTypes
+using Images
 using SparseMatrixColorings, SparseArrays
 using SparseMatrixColorings: show_colors
 
