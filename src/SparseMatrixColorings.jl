@@ -64,12 +64,4 @@ export column_groups, row_groups
 export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!
 
-function __init__()
-    @static if !isdefined(Base, :get_extension)
-        @require ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f" include(
-            "../ext/SparseMatrixColoringsColorTypesExt.jl"
-        )
-    end
-end
-
 end

@@ -2,21 +2,9 @@
 # ColorTypes.jl is the most light-weight dependency to achieve this. 
 module SparseMatrixColoringsColorTypesExt
 
-if isdefined(Base, :get_extension)
-    using SparseMatrixColorings:
-        SparseMatrixColorings,
-        AbstractColoringResult,
-        ColumnColoringResult,
-        RowColoringResult
-    using ColorTypes: Colorant, RGB, RGBA
-else
-    using ..SparseMatrixColorings:
-        SparseMatrixColorings,
-        AbstractColoringResult,
-        ColumnColoringResult,
-        RowColoringResult
-    using ..ColorTypes: Colorant, RGB, RGBA
-end
+using SparseMatrixColorings: SparseMatrixColorings
+using SparseMatrixColorings: AbstractColoringResult, ColumnColoringResult, RowColoringResult
+using ColorTypes: Colorant, RGB, RGBA
 
 # Default to Makie.jl's default color scheme "Wong":
 # https://github.com/MakieOrg/Makie.jl/blob/e90c042d16b461e67b750e5ce53790e732281dba/src/theming.jl#L1-L16
