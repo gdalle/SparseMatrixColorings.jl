@@ -64,7 +64,6 @@ export column_colors, row_colors
 export column_groups, row_groups
 export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!
-export show_colors
 
 function __init__()
     @static if !isdefined(Base, :get_extension)

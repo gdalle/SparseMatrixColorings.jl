@@ -6,7 +6,7 @@
 Return an image visualizing an [`AbstractColoringResult`](@ref).
 
 !!! warning
-    This feature requires first loading the Images.jl package.
+    Using this function requires loading [Images.jl](https://github.com/JuliaImages/Images.jl).
 
 ## Keyword arguments
 * `colorscheme`: colors used for non-zero matrix entries. 
