@@ -66,7 +66,7 @@ result = coloring(S, problem, algo)
 show_colors(result; warn=false, scale=5, pad=1)
 ```
 
-Since this visualization is ambiguous, we instead recomment subsampling a continuous colorscheme from ColorSchemes.jl:
+Since this visualization is ambiguous, we instead recommend subsampling a continuous colorscheme from ColorSchemes.jl:
 ```@example img
 ncolors = maximum(column_colors(result)) # for partition=:column
 colorscheme = get(ColorSchemes.rainbow, range(0.0, 1.0, length=ncolors))
