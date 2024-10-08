@@ -45,12 +45,14 @@ function SparseMatrixColorings.show_colors(
     scale::Int=DEFAULT_SCALE, # scale size of matrix entries to `scale × scale` pixels
     padding::Int=DEFAULT_PADDING, # padding between matrix entries
 )
-    if ncolors(res) > length(colorscheme)
-        # TODO: add option to cycle colors if colorscheme is too short?
+    ncolors(res) > length(colorscheme) &&
+    # TODO: add option to cycle colors if colorscheme is too short?
         error(
             "`colorscheme` with $(length(colorscheme)) is too small to represent matrix coloring with $(ncolors(res)) colors.",
         )
-    end
+    scale < 1 && error("keyword-argument `scale` has to be ≥ 1")
+    padding < 0 && error("keyword-argument `padding` has to be ≥ 0")
+
     colorscheme, background = _promote_colors(colorscheme, background)
     out = _allocate_output(res, background, scale, padding)
     return _show_colors!(out, res, colorscheme, scale, padding)
