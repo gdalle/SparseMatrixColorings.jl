@@ -17,7 +17,7 @@ How it works
 module SparseMatrixColoringsColorTypesExt
 
 using SparseMatrixColorings: SparseMatrixColorings
-using SparseMatrixColorings: AbstractColoringResult, ColumnColoringResult, RowColoringResult
+using SparseMatrixColorings: AbstractColoringResult, sparsity_pattern, column_colors, row_colors
 using ColorTypes: Colorant, RGB, RGBA
 
 # Default to Makie.jl's default color scheme "Wong":
@@ -37,7 +37,8 @@ const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
 const DEFAULT_SCALE = 1   # update docstring in src/images.jl when changing this default
 const DEFAULT_PAD = 0 # update docstring in src/images.jl when changing this default
 
-ncolors(res::AbstractColoringResult) = maximum(res.color)
+ncolors(res::AbstractColoringResult{s,:column}) where {s} = maximum(column_colors(res))
+ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res))
 
 ## Top-level function that handles argument errors, eagerly promotes types and allocates output buffer
 
@@ -82,18 +83,16 @@ end
 
 ## Implementations for different AbstractColoringResult types start here
 
-function show_colors!(out, res::AbstractColoringResult, colorscheme, scale, pad)
-    return error(
-        "`show_colors` is currently only implemented for `ColumnColoringResult` and `RowColoringResult`.",
-    )
-end
-
-function show_colors!(out, res::ColumnColoringResult, colorscheme, scale, pad)
+function show_colors!(
+    out, res::AbstractColoringResult{s,:column}, colorscheme, scale, pad
+) where {s}
     stencil = CartesianIndices((1:scale, 1:scale))
-    color_indices = mod1.(res.color, length(colorscheme))
+    color_indices = mod1.(res.color, length(colorscheme)) # cycle color indices if necessary
     column_colors = colorscheme[color_indices]
-    for I in CartesianIndices(res.A)
-        if !iszero(res.A[I])
+
+    pattern = sparsity_pattern(res)
+    for I in CartesianIndices(pattern)
+        if !iszero(pattern[I])
             r, c = Tuple(I)
             area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
             out[area] .= column_colors[c]
@@ -102,12 +101,16 @@ function show_colors!(out, res::ColumnColoringResult, colorscheme, scale, pad)
     return out
 end
 
-function show_colors!(out, res::RowColoringResult, colorscheme, scale, pad)
+function show_colors!(
+    out, res::AbstractColoringResult{s,:row}, colorscheme, scale, pad
+) where {s}
     stencil = CartesianIndices((1:scale, 1:scale))
-    color_indices = mod1.(res.color, length(colorscheme))
+    color_indices = mod1.(res.color, length(colorscheme)) # cycle color indices if necessary
     row_colors = colorscheme[color_indices]
-    for I in CartesianIndices(res.A)
-        if !iszero(res.A[I])
+
+    pattern = sparsity_pattern(res)
+    for I in CartesianIndices(pattern)
+        if !iszero(pattern[I])
             r, c = Tuple(I)
             area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
             out[area] .= row_colors[r]

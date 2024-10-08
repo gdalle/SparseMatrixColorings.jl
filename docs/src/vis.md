@@ -10,7 +10,7 @@ SparseMatrixColorings provides some internal utilities for visualization of matr
 
 ## Basic usage
 
-Currently, only `ColumnColoringResult` and `RowColoringResult` are supported.
+To obtain a visualization, simply call `show_colors` on a coloring result:
 
 ```@example img
 using Images
