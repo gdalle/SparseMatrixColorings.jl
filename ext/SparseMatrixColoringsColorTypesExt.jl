@@ -1,5 +1,19 @@
-# Visualize colored matrices using the Julia Images ecosystem.
-# ColorTypes.jl is the most light-weight dependency to achieve this. 
+#=
+Visualize colored matrices using the Julia Images ecosystem.
+ColorTypes.jl is the most light-weight dependency to achieve this. 
+
+This code is written prioritizing maintainability over performance
+
+How it works
+≡≡≡≡≡≡≡≡≡≡≡≡
+- First, the outer `show_colors` function gets called, which
+    - handles argument errors
+    - eagerly promotes color types in `promote_colors` to support transparency
+    - allocates an output buffer in `allocate_output`
+- The allocated output is a matrix filled with the background color
+- An internal `show_color!` function is called on the allocated output
+    - for each non-zero entry in the coloring, the output is filled in
+=#
 module SparseMatrixColoringsColorTypesExt
 
 using SparseMatrixColorings: SparseMatrixColorings
@@ -43,12 +57,12 @@ function SparseMatrixColorings.show_colors(
     scale < 1 && error("keyword-argument `scale` has to be ≥ 1")
     pad < 0 && error("keyword-argument `pad` has to be ≥ 0")
 
-    colorscheme, background = _promote_colors(colorscheme, background)
-    out = _allocate_output(res, background, scale, pad)
-    return _show_colors!(out, res, colorscheme, scale, pad)
+    colorscheme, background = promote_colors(colorscheme, background)
+    out = allocate_output(res, background, scale, pad)
+    return show_colors!(out, res, colorscheme, scale, pad)
 end
 
-function _promote_colors(colorscheme, background)
+function promote_colors(colorscheme, background)
     # eagerly promote colors to same type
     T = promote_type(eltype(colorscheme), typeof(background))
     colorscheme = convert.(T, colorscheme)
@@ -56,7 +70,7 @@ function _promote_colors(colorscheme, background)
     return colorscheme, background
 end
 
-function _allocate_output(
+function allocate_output(
     res::AbstractColoringResult, background::Colorant, scale::Int, pad::Int
 )
     Base.require_one_based_indexing(res.A)
@@ -68,13 +82,13 @@ end
 
 ## Implementations for different AbstractColoringResult types start here
 
-function _show_colors!(out, res::AbstractColoringResult, colorscheme, scale, pad)
+function show_colors!(out, res::AbstractColoringResult, colorscheme, scale, pad)
     return error(
         "`show_colors` is currently only implemented for `ColumnColoringResult` and `RowColoringResult`.",
     )
 end
 
-function _show_colors!(out, res::ColumnColoringResult, colorscheme, scale, pad)
+function show_colors!(out, res::ColumnColoringResult, colorscheme, scale, pad)
     stencil = CartesianIndices((1:scale, 1:scale))
     color_indices = mod1.(res.color, length(colorscheme))
     column_colors = colorscheme[color_indices]
@@ -88,7 +102,7 @@ function _show_colors!(out, res::ColumnColoringResult, colorscheme, scale, pad)
     return out
 end
 
-function _show_colors!(out, res::RowColoringResult, colorscheme, scale, pad)
+function show_colors!(out, res::RowColoringResult, colorscheme, scale, pad)
     stencil = CartesianIndices((1:scale, 1:scale))
     color_indices = mod1.(res.color, length(colorscheme))
     row_colors = colorscheme[color_indices]
