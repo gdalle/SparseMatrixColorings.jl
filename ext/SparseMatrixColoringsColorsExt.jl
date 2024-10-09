@@ -28,6 +28,9 @@ const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
 const DEFAULT_SCALE = 1   # update docstring in src/images.jl when changing this default
 const DEFAULT_PAD = 0 # update docstring in src/images.jl when changing this default
 
+# Sample n distinguishable colors, excluding the background color
+default_colorscheme(n, background) = distinguishable_colors(n, background; dropseed=true)
+
 ncolors(res::AbstractColoringResult{s,:column}) where {s} = maximum(column_colors(res))
 ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res))
 
@@ -35,21 +38,23 @@ ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res)
 
 function SparseMatrixColorings.show_colors(
     res::AbstractColoringResult;
-    colorscheme=distinguishable_colors(
-        ncolors(res), [RGB(1, 1, 1), RGB(0, 0, 0)]; dropseed=true
-    ),
+    colorscheme=nothing,
     background::Colorant=DEFAULT_BACKGROUND, # color used for zero matrix entries and pad
     scale::Int=DEFAULT_SCALE, # scale size of matrix entries to `scale × scale` pixels
     pad::Int=DEFAULT_PAD, # pad between matrix entries
     warn::Bool=true,
 )
-    if warn && ncolors(res) > length(colorscheme)
-        @warn "`show_colors` will reuse colors since the provided `colorscheme` has $(length(colorscheme)) colors and the matrix needs $(ncolors(res)). You can turn off this warning via the keyword argument `warn = false`, or choose a larger `colorscheme` from ColorSchemes.jl."
-    end
     scale < 1 && throw(ArgumentError("`scale` has to be ≥ 1."))
     pad < 0 && throw(ArgumentError("`pad` has to be ≥ 0."))
 
-    colorscheme, background = promote_colors(colorscheme, background)
+    if !isnothing(colorscheme)
+        if warn && ncolors(res) > length(colorscheme)
+            @warn "`show_colors` will reuse colors since the provided `colorscheme` has $(length(colorscheme)) colors and the matrix needs $(ncolors(res)). You can turn off this warning via the keyword argument `warn = false`, or choose a larger `colorscheme` from ColorSchemes.jl."
+        end
+        colorscheme, background = promote_colors(colorscheme, background)
+    else
+        colorscheme = default_colorscheme(ncolors(res), convert(RGB, background))
+    end
     out = allocate_output(res, background, scale, pad)
     return show_colors!(out, res, colorscheme, scale, pad)
 end
@@ -73,21 +78,26 @@ function allocate_output(
     return fill(background, h, w)
 end
 
+# Given a CartesianIndex I of an entry in the original matrix, 
+# this function returns the corresponding area in the output image as CartesianIndices.
+function matrix_entry_area(I::CartesianIndex, scale, pad)
+    stencil = CartesianIndices((1:scale, 1:scale))
+    return CartesianIndex(pad, pad) + (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil
+end
+
 ## Implementations for different AbstractColoringResult types start here
 
 function show_colors!(
     out, res::AbstractColoringResult{s,:column}, colorscheme, scale, pad
 ) where {s}
-    stencil = CartesianIndices((1:scale, 1:scale))
     color_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
     colors = colorscheme[color_indices]
-
     pattern = sparsity_pattern(res)
     for I in CartesianIndices(pattern)
         if !iszero(pattern[I])
             r, c = Tuple(I)
-            area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
-            out[area .+ CartesianIndex(pad, pad)] .= colors[c]
+            area = matrix_entry_area(I, scale, pad)
+            out[area] .= colors[c]
         end
     end
     return out
@@ -96,16 +106,14 @@ end
 function show_colors!(
     out, res::AbstractColoringResult{s,:row}, colorscheme, scale, pad
 ) where {s}
-    stencil = CartesianIndices((1:scale, 1:scale))
     color_indices = mod1.(row_colors(res), length(colorscheme)) # cycle color indices if necessary
     colors = colorscheme[color_indices]
-
     pattern = sparsity_pattern(res)
     for I in CartesianIndices(pattern)
         if !iszero(pattern[I])
             r, c = Tuple(I)
-            area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
-            out[area .+ CartesianIndex(pad, pad)] .= colors[r]
+            area = matrix_entry_area(I, scale, pad)
+            out[area] .= colors[r]
         end
     end
     return out
