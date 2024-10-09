@@ -122,7 +122,7 @@ end
 already_ordered(db::DegreeBuckets, v::Integer) = db.degrees[v] == -1
 
 function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
-    @compat (; buckets) = db
+    (; buckets) = db
     if direction == :up
         candidate_degree = findlast(!isempty, buckets)  # start with largest degree
     else
@@ -134,7 +134,7 @@ function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
 end
 
 function pop_from_bucket!(db::DegreeBuckets, v::Integer)
-    @compat (; degrees, buckets, positions) = db
+    (; degrees, buckets, positions) = db
     d, p = degrees[v], positions[v]
     bucket = buckets[d]
     w = bucket[end]
@@ -156,7 +156,7 @@ end
 function change_degree_and_push_into_bucket!(
     db::DegreeBuckets, v::Integer; degtype::Symbol, direction::Symbol
 )
-    @compat (; degrees, buckets, positions) = db
+    (; degrees, buckets, positions) = db
     d = degrees[v]
     d_new = new_degree(d; degtype, direction)
     new_bucket = buckets[d_new]
