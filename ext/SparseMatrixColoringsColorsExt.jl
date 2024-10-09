@@ -44,7 +44,6 @@ function SparseMatrixColorings.show_colors(
     warn::Bool=true,
 )
     if warn && ncolors(res) > length(colorscheme)
-        # TODO: add option to cycle colors if colorscheme is too short?
         @warn "`show_colors` will reuse colors since the provided `colorscheme` has $(length(colorscheme)) colors and the matrix needs $(ncolors(res)). You can turn off this warning via the keyword argument `warn = false`, or choose a larger `colorscheme` from ColorSchemes.jl."
     end
     scale < 1 && throw(ArgumentError("`scale` has to be ≥ 1."))
