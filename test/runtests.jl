@@ -6,7 +6,7 @@ using SparseMatrixColorings
 using Test
 
 # Load package extensions to test them with JET
-using ColorTypes: ColorTypes
+using Colors: Colors
 
 include("utils.jl")
 
