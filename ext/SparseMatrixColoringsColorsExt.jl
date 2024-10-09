@@ -1,6 +1,6 @@
 #=
 Visualize colored matrices using the Julia Images ecosystem.
-Color.jl is nearly the most light-weight dependency to achieve this. 
+Colors.jl is nearly the most light-weight dependency to achieve this. 
 
 This code is written prioritizing maintainability over performance
 
