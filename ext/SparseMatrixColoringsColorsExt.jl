@@ -1,6 +1,6 @@
 #=
 Visualize colored matrices using the Julia Images ecosystem.
-ColorTypes.jl is the most light-weight dependency to achieve this. 
+Color.jl is nearly the most light-weight dependency to achieve this. 
 
 This code is written prioritizing maintainability over performance
 
@@ -14,7 +14,7 @@ How it works
 - An internal `show_color!` function is called on the allocated output
     - for each non-zero entry in the coloring, the output is filled in
 =#
-module SparseMatrixColoringsColorTypesExt
+module SparseMatrixColoringsColorsExt
 
 using SparseMatrixColorings:
     SparseMatrixColorings,
@@ -22,21 +22,8 @@ using SparseMatrixColorings:
     sparsity_pattern,
     column_colors,
     row_colors
-using ColorTypes: Colorant, RGB, RGBA
+using Colors: Colorant, RGB, RGBA, distinguishable_colors
 
-# Default to Makie.jl's default color scheme "Wong":
-# https://github.com/MakieOrg/Makie.jl/blob/e90c042d16b461e67b750e5ce53790e732281dba/src/theming.jl#L1-L16
-# Conservative 7-color palette from Points of view: Color blindness, Bang Wong - Nature Methods
-# https://www.nature.com/articles/nmeth.1618?WT.ec_id=NMETH-201106
-const DEFAULT_COLOR_SCHEME = [
-    RGB(0 / 255, 114 / 255, 178 / 255),   # blue
-    RGB(230 / 255, 159 / 255, 0 / 255),   # orange
-    RGB(0 / 255, 158 / 255, 115 / 255),   # green
-    RGB(204 / 255, 121 / 255, 167 / 255), # reddish purple
-    RGB(86 / 255, 180 / 255, 233 / 255),  # sky blue
-    RGB(213 / 255, 94 / 255, 0 / 255),    # vermillion
-    RGB(240 / 255, 228 / 255, 66 / 255),  # yellow
-]
 const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
 const DEFAULT_SCALE = 1   # update docstring in src/images.jl when changing this default
 const DEFAULT_PAD = 0 # update docstring in src/images.jl when changing this default
@@ -48,7 +35,9 @@ ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res)
 
 function SparseMatrixColorings.show_colors(
     res::AbstractColoringResult;
-    colorscheme=DEFAULT_COLOR_SCHEME,
+    colorscheme=distinguishable_colors(
+        ncolors(res), [RGB(1, 1, 1), RGB(0, 0, 0)]; dropseed=true
+    ),
     background::Colorant=DEFAULT_BACKGROUND, # color used for zero matrix entries and pad
     scale::Int=DEFAULT_SCALE, # scale size of matrix entries to `scale × scale` pixels
     pad::Int=DEFAULT_PAD, # pad between matrix entries
@@ -56,11 +45,10 @@ function SparseMatrixColorings.show_colors(
 )
     if warn && ncolors(res) > length(colorscheme)
         # TODO: add option to cycle colors if colorscheme is too short?
-        @warn "`show_colors` will reuse colors since the provided color scheme is smaller than the $(ncolors(res)) matrix colors.
-        You can turn this warning off via the keyword argument `warn = false`"
+        @warn "`show_colors` will reuse colors since the provided `colorscheme` has $(length(colorscheme)) colors and the matrix needs $(ncolors(res)). You can turn off this warning via the keyword argument `warn = false`, or choose a larger `colorscheme` from ColorSchemes.jl."
     end
-    scale < 1 && error("keyword-argument `scale` has to be ≥ 1")
-    pad < 0 && error("keyword-argument `pad` has to be ≥ 0")
+    scale < 1 && throw(ArgumentError("`scale` has to be ≥ 1."))
+    pad < 0 && throw(ArgumentError("`pad` has to be ≥ 0."))
 
     colorscheme, background = promote_colors(colorscheme, background)
     out = allocate_output(res, background, scale, pad)
@@ -78,10 +66,11 @@ end
 function allocate_output(
     res::AbstractColoringResult, background::Colorant, scale::Int, pad::Int
 )
-    Base.require_one_based_indexing(res.A)
-    hi, wi = size(res.A)
-    h = hi * (scale + pad) - pad
-    w = wi * (scale + pad) - pad
+    A = sparsity_pattern(res)
+    Base.require_one_based_indexing(A)
+    hi, wi = size(A)
+    h = hi * (scale + pad) + pad
+    w = wi * (scale + pad) + pad
     return fill(background, h, w)
 end
 
@@ -91,15 +80,15 @@ function show_colors!(
     out, res::AbstractColoringResult{s,:column}, colorscheme, scale, pad
 ) where {s}
     stencil = CartesianIndices((1:scale, 1:scale))
-    color_indices = mod1.(res.color, length(colorscheme)) # cycle color indices if necessary
-    column_colors = colorscheme[color_indices]
+    color_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
+    colors = colorscheme[color_indices]
 
     pattern = sparsity_pattern(res)
     for I in CartesianIndices(pattern)
         if !iszero(pattern[I])
             r, c = Tuple(I)
             area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
-            out[area] .= column_colors[c]
+            out[area .+ CartesianIndex(pad, pad)] .= colors[c]
         end
     end
     return out
@@ -109,15 +98,15 @@ function show_colors!(
     out, res::AbstractColoringResult{s,:row}, colorscheme, scale, pad
 ) where {s}
     stencil = CartesianIndices((1:scale, 1:scale))
-    color_indices = mod1.(res.color, length(colorscheme)) # cycle color indices if necessary
-    row_colors = colorscheme[color_indices]
+    color_indices = mod1.(row_colors(res), length(colorscheme)) # cycle color indices if necessary
+    colors = colorscheme[color_indices]
 
     pattern = sparsity_pattern(res)
     for I in CartesianIndices(pattern)
         if !iszero(pattern[I])
             r, c = Tuple(I)
             area = (I - CartesianIndex(1, 1)) * (scale + pad) .+ stencil # one matrix entry
-            out[area] .= row_colors[r]
+            out[area .+ CartesianIndex(pad, pad)] .= colors[r]
         end
     end
     return out

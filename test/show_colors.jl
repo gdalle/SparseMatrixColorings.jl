@@ -1,7 +1,7 @@
 using SparseMatrixColorings
 using SparseMatrixColorings: show_colors
 using SparseArrays
-using ColorTypes
+using Colors
 using Test
 
 S = sparse([
@@ -28,7 +28,7 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
 
     pad = 2
     img = show_colors(result; scale=scale, pad=pad)
-    @test size(img) == (h * (scale + pad) - pad, w * (scale + pad) - pad)
+    @test size(img) == (h * (scale + pad) + pad, w * (scale + pad) + pad)
     @test img isa Matrix{<:Colorant}
 
     @testset "color cycling" begin
@@ -47,11 +47,11 @@ end
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     result = coloring(S, problem, algo)
     @testset "scale too small" begin
-        @test_throws ErrorException show_colors(result; scale=-24)
-        @test_throws ErrorException show_colors(result; scale=0)
+        @test_throws ArgumentError show_colors(result; scale=-24)
+        @test_throws ArgumentError show_colors(result; scale=0)
     end
     @testset "pad too small" begin
-        @test_throws ErrorException show_colors(result; pad=-1)
+        @test_throws ArgumentError show_colors(result; pad=-1)
         @test_nowarn show_colors(result; pad=0)
     end
     # @testset "Unsupported partitions" begin

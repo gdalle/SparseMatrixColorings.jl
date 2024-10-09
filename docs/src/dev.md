@@ -1,4 +1,4 @@
-# Dev docs
+# Internals
 
 ```@meta
 CollapsedDocStrings = true

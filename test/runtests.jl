@@ -54,6 +54,9 @@ include("utils.jl")
         @testset "ADTypes coloring algorithms" begin
             include("adtypes.jl")
         end
+        @testset "Visualization" begin
+            include("show_colors.jl")
+        end
     end
     @testset verbose = true "Correctness" begin
         @testset "Small instances" begin
@@ -80,11 +83,6 @@ include("utils.jl")
         end
         @testset "Allocations" begin
             include("allocations.jl")
-        end
-    end
-    @testset verbose = true "Package extensions" begin
-        @testset "ColorTypes.jl" begin
-            include("ext/ColorTypes.jl")
         end
     end
 end
