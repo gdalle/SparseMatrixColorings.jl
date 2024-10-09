@@ -270,6 +270,14 @@ function degree(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side}
     return length(neighbors(bg, Val(side), v))
 end
 
+function maximum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
+    return maximum(v -> degree(bg, Val(side), v), vertices(bg, Val(side)))
+end
+
+function minimum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
+    return minimum(v -> degree(bg, Val(side), v), vertices(bg, Val(side)))
+end
+
 function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,side}
     return length(neighbors_dist2(bg, Val(side), v))
 end
