@@ -42,6 +42,9 @@ include("utils.jl")
         @testset "Constructors" begin
             include("constructors.jl")
         end
+        @testset "Result" begin
+            include("result.jl")
+        end
         @testset "Constant coloring" begin
             include("constant.jl")
         end

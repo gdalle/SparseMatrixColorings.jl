@@ -226,7 +226,7 @@ This function corresponds to algorithm `DirectRecover2` in the paper.
 function symmetric_coefficient(
     i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
 )
-    @compat (; star, hub) = star_set
+    (; star, hub) = star_set
     if i == j
         # diagonal
         return i, color[j]
