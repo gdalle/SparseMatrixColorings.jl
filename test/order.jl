@@ -9,6 +9,7 @@ using SparseMatrixColorings:
     RandomOrder,
     degree_dist2,
     nb_vertices,
+    valid_dynamic_order,
     vertices
 using StableRNGs
 using Test
@@ -77,30 +78,25 @@ end;
     @testset "$order" for order in
                           [SmallestLast(), IncidenceDegree(), DynamicLargestFirst()]
         @testset "AdjacencyGraph" begin
-            @test all(zip(100:100:1000, 0.0:0.01:0.05)) do (n, p)
+            for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
+                yield()
                 A = sparse(Symmetric(sprand(rng, Bool, n, n, p)))
                 g = AdjacencyGraph(A)
-                vertices_in_order = vertices(g, order)
-                plausible = (  # TODO: test better
-                    length(vertices_in_order) == nb_vertices(g) &&
-                    length(unique(vertices_in_order)) == nb_vertices(g)
-                )
+                π = vertices(g, order)
+                @test valid_dynamic_order(g, π, order)
             end
         end
         @testset "BipartiteGraph" begin
-            @test all(zip(100:100:1000, 0.0:0.01:0.05)) do (n, p)
+            for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
                 m = rand((n ÷ 2, n * 2))
                 A = sprand(rng, Bool, m, n, p)
                 g = BipartiteGraph(A)
-                vertices_in_order1 = vertices(g, Val(1), order)
-                vertices_in_order2 = vertices(g, Val(2), order)
-                plausible = (
-                    length(vertices_in_order1) == nb_vertices(g, Val(1)) &&
-                    length(vertices_in_order2) == nb_vertices(g, Val(2)) &&
-                    length(unique(vertices_in_order1)) == nb_vertices(g, Val(1)) &&
-                    length(unique(vertices_in_order2)) == nb_vertices(g, Val(2))
-                )
+                π1 = vertices(g, Val(1), order)
+                π2 = vertices(g, Val(2), order)
+                @test valid_dynamic_order(g, Val(1), π1, order)
+                @test valid_dynamic_order(g, Val(2), π2, order)
+                @test !valid_dynamic_order(g, Val(1), π2, order)
             end
         end
     end
-end
+end;

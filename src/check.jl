@@ -138,3 +138,67 @@ function directly_recoverable_columns(
     end
     return true
 end
+
+"""
+    valid_dynamic_order(g::AdjacencyGraph, π::AbstractVector{Int}, order::DynamicDegreeBasedOrder)
+    valid_dynamic_order(bg::AdjacencyGraph, ::Val{side}, π::AbstractVector{Int}, order::DynamicDegreeBasedOrder)
+
+Check that a permutation `π` corresponds to a valid application of a [`DynamicDegreeBasedOrder`](@ref).
+
+This is done by checking, for each ordered vertex, that its back- or forward-degree was the smallest or largest among the remaining vertices (the specifics depend on the order parameters).
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+"""
+function valid_dynamic_order(
+    g::AdjacencyGraph, π::AbstractVector{Int}, ::DynamicDegreeBasedOrder{degtype,direction}
+) where {degtype,direction}
+    length(π) != nb_vertices(g) && return false
+    length(unique(π)) != nb_vertices(g) && return false
+    for i in eachindex(π)
+        vi = π[i]
+        yet_to_be_ordered = direction == :low2high ? π[i:end] : π[begin:i]
+        considered_for_degree = degtype == :back ? π[begin:(i - 1)] : π[(i + 1):end]
+        di = degree_in_subset(g, vi, considered_for_degree)
+        considered_for_degree_switched = copy(considered_for_degree)
+        for vj in yet_to_be_ordered
+            replace!(considered_for_degree_switched, vj => vi)
+            dj = degree_in_subset(g, vj, considered_for_degree_switched)
+            replace!(considered_for_degree_switched, vi => vj)
+            if direction == :low2high
+                dj > di && return false
+            else
+                dj < di && return false
+            end
+        end
+    end
+    return true
+end
+
+function valid_dynamic_order(
+    g::BipartiteGraph,
+    ::Val{side},
+    π::AbstractVector{Int},
+    ::DynamicDegreeBasedOrder{degtype,direction},
+) where {side,degtype,direction}
+    length(π) != nb_vertices(g, Val(side)) && return false
+    length(unique(π)) != nb_vertices(g, Val(side)) && return false
+    for i in eachindex(π)
+        vi = π[i]
+        yet_to_be_ordered = direction == :low2high ? π[i:end] : π[begin:i]
+        considered_for_degree = degtype == :back ? π[begin:(i - 1)] : π[(i + 1):end]
+        di = degree_dist2_in_subset(g, Val(side), vi, considered_for_degree)
+        considered_for_degree_switched = copy(considered_for_degree)
+        for vj in yet_to_be_ordered
+            replace!(considered_for_degree_switched, vj => vi)
+            dj = degree_dist2_in_subset(g, Val(side), vj, considered_for_degree_switched)
+            replace!(considered_for_degree_switched, vi => vj)
+            if direction == :low2high
+                dj > di && return false
+            else
+                dj < di && return false
+            end
+        end
+    end
+    return true
+end

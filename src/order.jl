@@ -88,7 +88,7 @@ Common framework for various orders based on dynamic degrees.
 # Type parameters
 
 - `degtype::Symbol`: can be `:forward` (for the forward degree) or `:back` (for the back degree)
-- `direction::Symbol`: can be `:up` (if the order is defined from lowest to highest, i.e. `1` to `n`) or `:down` (if the order is defined from highest to lowest, i.e. `n` to `1`)
+- `direction::Symbol`: can be `:low2high` (if the order is defined from lowest to highest, i.e. `1` to `n`) or `:high2low` (if the order is defined from highest to lowest, i.e. `n` to `1`)
 
 # References
 
@@ -96,14 +96,14 @@ Common framework for various orders based on dynamic degrees.
 """
 struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder end
 
-struct DegreeBuckets
+struct DegreeBuckets{B}
     degrees::Vector{Int}
-    buckets::Vector{Vector{Int}}
+    buckets::B
     positions::Vector{Int}
 end
 
 function DegreeBuckets(degrees::Vector{Int}, dmax)
-    buckets = [Int[] for d in 1:(dmax + 1)]
+    buckets = Dict(d => Int[] for d in 0:dmax)
     positions = similar(degrees, Int)
     for v in eachindex(degrees, positions)
         d = degrees[v]
@@ -111,6 +111,13 @@ function DegreeBuckets(degrees::Vector{Int}, dmax)
         positions[v] = length(buckets[d])
     end
     return DegreeBuckets(degrees, buckets, positions)
+end
+
+function degree_increasing(; degtype, direction)
+    increasing =
+        (degtype == :back && direction == :low2high) ||
+        (degtype == :forward && direction == :high2low)
+    return increasing
 end
 
 function mark_ordered!(db::DegreeBuckets, v::Integer)
@@ -123,97 +130,75 @@ already_ordered(db::DegreeBuckets, v::Integer) = db.degrees[v] == -1
 
 function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
     (; buckets) = db
-    if direction == :up
-        candidate_degree = findlast(!isempty, buckets)  # start with largest degree
+    if direction == :low2high
+        candidate_degree = maximum(d for (d, bucket) in pairs(buckets) if !isempty(bucket))
     else
-        candidate_degree = findfirst(!isempty, buckets)  # start with smallest degree
+        candidate_degree = minimum(d for (d, bucket) in pairs(buckets) if !isempty(bucket))
     end
     candidate_bucket = buckets[candidate_degree]
     candidate = pop!(candidate_bucket)
+    mark_ordered!(db, candidate)
     return candidate
 end
 
-function pop_from_bucket!(db::DegreeBuckets, v::Integer)
+function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
     (; degrees, buckets, positions) = db
     d, p = degrees[v], positions[v]
     bucket = buckets[d]
+    # select previous or next bucket for the move
+    d_new = degree_increasing(; degtype, direction) ? d + 1 : d - 1
+    bucket_new = buckets[d_new]
+    # put v at the end of its bucket by swapping
     w = bucket[end]
     bucket[p] = w
-    bucket[end] = v
     positions[w] = p
-    pop!(bucket)
-    return nothing
-end
-
-function new_degree(d::Integer; degtype::Symbol, direction::Symbol)
-    if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
-        return d + 1  # back degree increases
-    else
-        return d - 1  # forward degree decreases
-    end
-end
-
-function change_degree_and_push_into_bucket!(
-    db::DegreeBuckets, v::Integer; degtype::Symbol, direction::Symbol
-)
-    (; degrees, buckets, positions) = db
-    d = degrees[v]
-    d_new = new_degree(d; degtype, direction)
-    new_bucket = buckets[d_new]
-    push!(new_bucket, v)
+    bucket[end] = v
+    positions[v] = length(bucket)
+    # move v from the old bucket to the new one
+    @assert pop!(bucket) == v
+    push!(bucket_new, v)
     degrees[v] = d_new
-    positions[v] = length(new_bucket)
+    positions[v] = length(bucket_new)
     return nothing
 end
 
 function vertices(
     g::AdjacencyGraph, ::DynamicDegreeBasedOrder{degtype,direction}
 ) where {degtype,direction}
-    # Initialize degrees
-    if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
-        degrees = [0 + 1 for v in vertices(g)]  # back degree increases
+    if degree_increasing(; degtype, direction)
+        degrees = zeros(Int, nb_vertices(g))
     else
-        degrees = [degree(g, v) + 1 for v in vertices(g)]  # forward degree decreases
+        degrees = [degree(g, v) for v in vertices(g)]
     end
-    # Initialize buckets and positions
-    degree_buckets = DegreeBuckets(degrees, maximum_degree(g))
-    order = Int[]
+    db = DegreeBuckets(degrees, maximum_degree(g))
+    π = Int[]
     for _ in 1:nb_vertices(g)
-        # Pick the candidate as the remaining vertex with largest or smallest degree
-        u = pop_next_candidate!(degree_buckets; direction)
-        if direction == :up
-            push!(order, u)  # order grows from 1 to n
-        else
-            pushfirst!(order, u)  # order grows from n to 1
-        end
+        u = pop_next_candidate!(db; direction)
+        direction == :low2high ? push!(π, u) : pushfirst!(π, u)
         for v in neighbors(g, u)
-            # Discard neighbor if it has already been ordered
-            already_ordered(degree_buckets, v) && continue
-            # Modify the neighbor's old bucket by swapping and popping
-            pop_from_bucket!(degree_buckets, v)
-            # Modify the neighbor's new bucket by pushing and reindexing
-            change_degree_and_push_into_bucket!(degree_buckets, v; degtype, direction)
+            already_ordered(db, v) && continue
+            update_bucket!(db, v; degtype, direction)
         end
-        mark_ordered!(degree_buckets, u)
     end
-    return order
+    return π
 end
 
 function vertices(
     g::BipartiteGraph, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
 ) where {side,degtype,direction}
     other_side = 3 - side
-    if (degtype == :back && direction == :up) || (degtype == :forward && direction == :down)
-        degrees = [0 + 1 for v in vertices(g, Val(side))]
+    if degree_increasing(; degtype, direction)
+        degrees = zeros(Int, nb_vertices(g, Val(side)))
     else
-        degrees = [degree_dist2(g, Val(side), v) + 1 for v in vertices(g, Val(side))]  # TODO: optimize
+        degrees = [degree_dist2(g, Val(side), v) for v in vertices(g, Val(side))]  # TODO: optimize
     end
-    degree_buckets = DegreeBuckets(degrees, maximum_degree_dist2(g, Val(side)))  # TODO: optimize
-    order = Int[]
+    maxd2 = maximum(v -> degree_dist2(g, Val(side), v), vertices(g, Val(side)))  # TODO: optimize
+    db = DegreeBuckets(degrees, maxd2)
+    π = Int[]
     visited = falses(nb_vertices(g, Val(side)))
     for _ in 1:nb_vertices(g, Val(side))
-        u = pop_next_candidate!(degree_buckets; direction)
-        direction == :up ? push!(order, u) : pushfirst!(order, u)
+        u = pop_next_candidate!(db; direction)
+        direction == :low2high ? push!(π, u) : pushfirst!(π, u)
         for w in neighbors(g, Val(side), u)
             for v in neighbors(g, Val(other_side), w)
                 if v == u || visited[v]
@@ -221,15 +206,13 @@ function vertices(
                 else
                     visited[v] = true
                 end
-                already_ordered(degree_buckets, v) && continue
-                pop_from_bucket!(degree_buckets, v)
-                change_degree_and_push_into_bucket!(degree_buckets, v; degtype, direction)
+                already_ordered(db, v) && continue
+                update_bucket!(db, v; degtype, direction)
             end
         end
-        mark_ordered!(degree_buckets, u)
         fill!(visited, false)
     end
-    return order
+    return π
 end
 
 """
@@ -241,7 +224,7 @@ Order vertices with the incidence degree heuristic.
 
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const IncidenceDegree = DynamicDegreeBasedOrder{:back,:up}
+const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
 
 """
     SmallestLast()
@@ -252,7 +235,7 @@ Order vertices with the smallest last heuristic.
 
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const SmallestLast = DynamicDegreeBasedOrder{:back,:down}
+const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
 
 """
     DynamicLargestFirst()
@@ -263,4 +246,4 @@ Order vertices with the dynamic largest first heuristic.
     
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:up}
+const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
