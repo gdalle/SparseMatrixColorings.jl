@@ -1,6 +1,6 @@
 # Visualization
 
-SparseMatrixColorings provides some internal utilities for visualization of matrix colorings via the un-exported function [`show_colors`](@ref).
+SparseMatrixColorings provides some internal utilities for visualization of matrix colorings via the un-exported function [`SparseMatrixColorings.show_colors`](@ref).
 
 !!! warning
     This function makes use of the [JuliaImages](https://juliaimages.org) ecosystem.
