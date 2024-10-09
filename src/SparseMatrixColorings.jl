@@ -56,6 +56,7 @@ include("examples.jl")
 include("show_colors.jl")
 
 export NaturalOrder, RandomOrder, LargestFirst
+export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export ConstantColoringAlgorithm
 export coloring
