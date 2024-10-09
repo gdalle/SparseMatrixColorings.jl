@@ -53,6 +53,7 @@ include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
 include("examples.jl")
+include("show_colors.jl")
 
 export NaturalOrder, RandomOrder, LargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult

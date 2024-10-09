@@ -11,7 +11,9 @@ makedocs(;
     authors="Guillaume Dalle and Alexis Montoison",
     sitename="SparseMatrixColorings.jl",
     format=Documenter.HTML(),
-    pages=["Home" => "index.md", "api.md", "dev.md"],
+    pages=[
+        "Home" => "index.md", "api.md", "Developer Documentation" => ["dev.md", "vis.md"]
+    ],
     plugins=[links],
 )
 
