@@ -490,7 +490,7 @@ function LinearSystemColoringResult(
 ) where {R}
     group = group_by_color(color)
     C = length(group)  # ncolors
-    S = ag.S
+    S = pattern(ag)
     rv = rowvals(S)
 
     # build T such that T * strict_upper_nonzeros(A) = B

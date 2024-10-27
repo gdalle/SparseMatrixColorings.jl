@@ -401,7 +401,7 @@ function decompress!(
 )
     (; color, star_set) = result
     (; star, hub, spokes) = star_set
-    S = result.ag.S
+    S = pattern(result.ag)
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
@@ -544,7 +544,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    S = result.ag.S
+    S = pattern(result.ag)
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
