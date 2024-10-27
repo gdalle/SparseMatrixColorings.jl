@@ -1,4 +1,4 @@
-# Dev docs
+# Internals
 
 ```@meta
 CollapsedDocStrings = true
@@ -55,6 +55,12 @@ SparseMatrixColorings.valid_dynamic_order
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
 SparseMatrixColorings.same_pattern
+```
+
+## Visualization
+
+```@docs
+SparseMatrixColorings.show_colors
 ```
 
 ## Examples
