@@ -49,6 +49,7 @@ SparseMatrixColorings.BicoloringResult
 SparseMatrixColorings.directly_recoverable_columns
 SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
+SparseMatrixColorings.valid_dynamic_order
 ```
 
 ## Matrix handling

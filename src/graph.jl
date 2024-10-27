@@ -171,6 +171,25 @@ end
 maximum_degree(g::AbstractAdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::AbstractAdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
+function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
+    for w in neighbors(g, v)
+        if w == u
+            return true
+        end
+    end
+    return false
+end
+
+function degree_in_subset(g::AdjacencyGraph, v::Integer, subset::AbstractVector{Int})
+    d = 0
+    for u in subset
+        if has_neighbor(g, v, u)
+            d += 1
+        end
+    end
+    return d
+end
+
 ## Bipartite graph
 
 """
@@ -245,6 +264,18 @@ function neighbors(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side}
     return view(rowvals(S), nzrange(S, v))
 end
 
+function neighbors_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,side}
+    # TODO: make more efficient
+    other_side = 3 - side
+    neigh = Set{T}()
+    for u in neighbors(bg, Val(side), v)
+        for w in neighbors(bg, Val(other_side), u)
+            w != v && push!(neigh, w)
+        end
+    end
+    return neigh
+end
+
 function degree(bg::BipartiteGraph, ::Val{side}, v::Integer) where {side}
     return length(neighbors(bg, Val(side), v))
 end
@@ -258,15 +289,33 @@ function minimum_degree(bg::BipartiteGraph, ::Val{side}) where {side}
 end
 
 function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,side}
-    # not efficient, for testing purposes only
+    return length(neighbors_dist2(bg, Val(side), v))
+end
+
+function has_neighbor_dist2(
+    bg::BipartiteGraph, ::Val{side}, v::Integer, u::Integer
+) where {side}
     other_side = 3 - side
-    neighbors_dist2 = Set{T}()
-    for u in neighbors(bg, Val(side), v)
-        for w in neighbors(bg, Val(other_side), u)
-            w != v && push!(neighbors_dist2, w)
+    for w1 in neighbors(bg, Val(side), v)
+        for w2 in neighbors(bg, Val(other_side), w1)
+            if w2 == u
+                return true
+            end
         end
     end
-    return length(neighbors_dist2)
+    return false
+end
+
+function degree_dist2_in_subset(
+    bg::BipartiteGraph, ::Val{side}, v::Integer, subset::AbstractVector{Int}
+) where {side}
+    d = 0
+    for u in subset
+        if has_neighbor_dist2(bg, Val(side), v, u)
+            d += 1
+        end
+    end
+    return d
 end
 
 ## Adjacency graph from bipartite
