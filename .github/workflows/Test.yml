@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        julia-version: ['lts', '1', 'pre']
+        julia-version: ['1.10', '1']
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
           version: ${{ matrix.julia-version }}
           arch: x64
       - uses: julia-actions/julia-downgrade-compat@v1
-        if: ${{ matrix.version == 'lts' }}
+        if: ${{ matrix.version == '1.10' }}
         with:
           skip: LinearAlgebra, Random, SparseArrays
       - uses: julia-actions/cache@v2

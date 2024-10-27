@@ -58,23 +58,32 @@ function row_groups end
 """
     group_by_color(color::Vector{Int})
 
-Create `group::Vector{Vector{Int}}` such that `i ∈ group[c]` iff `color[i] == c`.
+Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] == c`.
 
 Assumes the colors are contiguously numbered from `1` to some `cmax`.
 """
 function group_by_color(color::AbstractVector{<:Integer})
     cmin, cmax = extrema(color)
-    @assert cmin == 1
-    group_sizes = zeros(Int, cmax)
+    @assert cmin >= 1
+    # Compute group sizes and offsets for a joint storage
+    group_sizes = zeros(Int, cmax)  # allocation 1, size cmax
     for c in color
         group_sizes[c] += 1
     end
-    group = [Vector{Int}(undef, group_sizes[c]) for c in 1:cmax]
-    fill!(group_sizes, 1)
+    group_offsets = cumsum(group_sizes)  # allocation 2, size cmax
+    # Concatenate all groups inside a single vector
+    group_flat = similar(color)  # allocation 3, size n
     for (k, c) in enumerate(color)
-        pos = group_sizes[c]
-        group[c][pos] = k
-        group_sizes[c] += 1
+        i = group_offsets[c] - group_sizes[c] + 1
+        group_flat[i] = k
+        group_sizes[c] -= 1
+    end
+    # Create views into contiguous blocks of the group vector
+    group = Vector{typeof(view(group_flat, 1:1))}(undef, cmax)  # allocation 4, size cmax
+    for c in 1:cmax
+        i = 1 + (c == 1 ? 0 : group_offsets[c - 1])
+        j = group_offsets[c]
+        group[c] = view(group_flat, i:j)
     end
     return group
 end
@@ -110,7 +119,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct ColumnColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
+struct ColumnColoringResult{M<:AbstractMatrix,G<:BipartiteGraph,V} <:
        AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
     A::M
@@ -119,7 +128,7 @@ struct ColumnColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
     "one integer color for each column or row (depending on `partition`)"
     color::Vector{Int}
     "color groups for columns or rows (depending on `partition`)"
-    group::Vector{Vector{Int}}
+    group::V
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
     compressed_indices::Vector{Int}
 end
@@ -156,12 +165,12 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct RowColoringResult{M<:AbstractMatrix,G<:BipartiteGraph} <:
+struct RowColoringResult{M<:AbstractMatrix,G<:BipartiteGraph,V} <:
        AbstractColoringResult{:nonsymmetric,:row,:direct}
     A::M
     bg::G
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::V
     compressed_indices::Vector{Int}
 end
 
@@ -197,12 +206,12 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph} <:
+struct StarSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V} <:
        AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::V
     star_set::StarSet
     compressed_indices::Vector{Int}
 end
@@ -241,14 +250,18 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,R} <:
+struct TreeSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V,R} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::V
     vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    diagonal_indices::Vector{Int}
+    diagonal_nzind::Vector{Int}
+    lower_triangle_offsets::Vector{Int}
+    upper_triangle_offsets::Vector{Int}
     buffer::Vector{R}
 end
 
@@ -262,6 +275,29 @@ function TreeSetColoringResult(
     S = pattern(ag)
     nvertices = length(color)
     group = group_by_color(color)
+
+    # Vector for the decompression of the diagonal coefficients
+    diagonal_indices = Int[]
+    diagonal_nzind = Int[]
+    ndiag = 0
+
+    n = size(S, 1)
+    rv = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rv[k]
+            if i == j
+                push!(diagonal_indices, i)
+                push!(diagonal_nzind, k)
+                ndiag += 1
+            end
+        end
+    end
+
+    # Vectors for the decompression of the off-diagonal coefficients
+    nedges = (nnz(S) - ndiag) ÷ 2
+    lower_triangle_offsets = Vector{Int}(undef, nedges)
+    upper_triangle_offsets = Vector{Int}(undef, nedges)
 
     # forest is a structure DisjointSets from DataStructures.jl
     # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
@@ -324,6 +360,9 @@ function TreeSetColoringResult(
     # Create a queue with a fixed size nvmax
     queue = Vector{Int}(undef, nvmax)
 
+    # Index in lower_triangle_offsets and upper_triangle_offsets
+    index_offsets = 0
+
     for k in 1:ntrees
         tree = trees[k]
 
@@ -364,6 +403,36 @@ function TreeSetColoringResult(
                         queue_end += 1
                         queue[queue_end] = neighbor
                     end
+
+                    # Update lower_triangle_offsets and upper_triangle_offsets
+                    i = leaf
+                    j = neighbor
+                    col_i = view(rv, nzrange(S, i))
+                    col_j = view(rv, nzrange(S, j))
+                    index_offsets += 1
+
+                    #! format: off
+                    # S[i,j] is in the lower triangular part of S
+                    if in_triangle(i, j, :L)
+                        # uplo = :L or uplo = :F
+                        # S[i,j] is stored at index_ij = (S.colptr[j+1] - offset_L) in S.nzval
+                        lower_triangle_offsets[index_offsets] = length(col_j) - searchsortedfirst(col_j, i) + 1
+
+                        # uplo = :U or uplo = :F
+                        # S[j,i] is stored at index_ji = (S.colptr[i] + offset_U) in S.nzval
+                        upper_triangle_offsets[index_offsets] = searchsortedfirst(col_i, j)::Int - 1
+
+                    # S[i,j] is in the upper triangular part of S
+                    else
+                        # uplo = :U or uplo = :F
+                        # S[i,j] is stored at index_ij = (S.colptr[j] + offset_U) in S.nzval
+                        upper_triangle_offsets[index_offsets] = searchsortedfirst(col_j, i)::Int - 1
+
+                        # uplo = :L or uplo = :F
+                        # S[j,i] is stored at index_ji = (S.colptr[i+1] - offset_L) in S.nzval
+                        lower_triangle_offsets[index_offsets] = length(col_i) - searchsortedfirst(col_i, j) + 1
+                    end
+                    #! format: on
                 end
             end
         end
@@ -374,7 +443,17 @@ function TreeSetColoringResult(
     buffer = Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
-        A, ag, color, group, vertices_by_tree, reverse_bfs_orders, buffer
+        A,
+        ag,
+        color,
+        group,
+        vertices_by_tree,
+        reverse_bfs_orders,
+        diagonal_indices,
+        diagonal_nzind,
+        lower_triangle_offsets,
+        upper_triangle_offsets,
+        buffer,
     )
 end
 
@@ -395,12 +474,12 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,R,F} <:
+struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
     color::Vector{Int}
-    group::Vector{Vector{Int}}
+    group::V
     strict_upper_nonzero_inds::Vector{Tuple{Int,Int}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
     T_factorization::F  # TODO: adjust type

@@ -1,4 +1,4 @@
-# Dev docs
+# Internals
 
 ```@meta
 CollapsedDocStrings = true
@@ -57,6 +57,12 @@ SparseMatrixColorings.structurally_orthogonal_columns
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
 SparseMatrixColorings.same_pattern
+```
+
+## Visualization
+
+```@docs
+SparseMatrixColorings.show_colors
 ```
 
 ## Examples

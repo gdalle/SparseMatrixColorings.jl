@@ -1,5 +1,7 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterInterLinks = "d12716ef-a0f6-4df4-a9f1-a5a34e75c656"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
 SparseMatrixColorings = "0a514795-09f3-496d-8182-132a7b665d35"

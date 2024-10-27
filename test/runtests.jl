@@ -5,6 +5,9 @@ using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
+# Load package extensions to test them with JET
+using Colors: Colors
+
 include("utils.jl")
 
 @testset verbose = true "SparseMatrixColorings" begin
@@ -42,11 +45,17 @@ include("utils.jl")
         @testset "Constructors" begin
             include("constructors.jl")
         end
+        @testset "Result" begin
+            include("result.jl")
+        end
         @testset "Constant coloring" begin
             include("constant.jl")
         end
         @testset "ADTypes coloring algorithms" begin
             include("adtypes.jl")
+        end
+        @testset "Visualization" begin
+            include("show_colors.jl")
         end
     end
     @testset verbose = true "Correctness" begin
