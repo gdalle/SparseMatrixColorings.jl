@@ -34,6 +34,10 @@ default_colorscheme(n, background) = distinguishable_colors(n, background; drops
 ncolors(res::AbstractColoringResult{s,:column}) where {s} = maximum(column_colors(res))
 ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res))
 
+function ncolors(res::AbstractColoringResult{s,:bidirectional}) where {s}
+    return maximum(row_colors(res)) + maximum(column_colors(res))
+end
+
 ## Top-level function that handles argument errors, eagerly promotes types and allocates output buffer
 
 function SparseMatrixColorings.show_colors(
@@ -114,6 +118,31 @@ function show_colors!(
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
             out[area] .= colors[r]
+        end
+    end
+    return out
+end
+
+function show_colors!(
+    out, res::AbstractColoringResult{s,:bidirectional}, colorscheme, scale, pad
+) where {s}
+    ccolor_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
+    row_shift = maximum(column_colors(res))
+    rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme)) # cycle color indices if necessary
+    ccolors = colorscheme[ccolor_indices]
+    rcolors = colorscheme[rcolor_indices]
+    pattern = sparsity_pattern(res)
+    for I in CartesianIndices(pattern)
+        if !iszero(pattern[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            for i in axes(area, 1), j in axes(area, 2)
+                if j > i
+                    out[area[i, j]] = ccolors[c]
+                elseif i > j
+                    out[area[i, j]] = rcolors[r]
+                end
+            end
         end
     end
     return out

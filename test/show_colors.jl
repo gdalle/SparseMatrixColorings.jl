@@ -12,7 +12,7 @@ S = sparse([
 ]);
 algo = GreedyColoringAlgorithm(; decompression=:direct)
 
-@testset "$partition" for partition in (:column, :row)
+@testset "$partition" for partition in (:column, :row, :bidirectional)
     problem = ColoringProblem(; structure=:nonsymmetric, partition=partition)
     result = coloring(S, problem, algo)
 
@@ -54,9 +54,4 @@ end
         @test_throws ArgumentError show_colors(result; pad=-1)
         @test_nowarn show_colors(result; pad=0)
     end
-    # @testset "Unsupported partitions" begin
-    #     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional) # TODO: not implemented by SMC
-    #     result = coloring(S, problem, algo)
-    #     @test_throws ErrorException show_colors(result)
-    # end
 end
