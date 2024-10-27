@@ -47,4 +47,8 @@ AbstractOrder
 NaturalOrder
 RandomOrder
 LargestFirst
+SmallestLast
+IncidenceDegree
+DynamicLargestFirst
+DynamicDegreeBasedOrder
 ```
