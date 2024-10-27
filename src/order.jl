@@ -6,11 +6,14 @@ Abstract supertype for the vertex order used inside [`GreedyColoringAlgorithm`](
 In this algorithm, the rows and columns of a matrix form a graph, and the vertices are colored one after the other in a greedy fashion.
 Depending on how the vertices are ordered, the number of colors necessary may vary.
 
-# Subtypes
+# Options
 
 - [`NaturalOrder`](@ref)
 - [`RandomOrder`](@ref)
 - [`LargestFirst`](@ref)
+- [`IncidenceDegree`](@ref) (experimental)
+- [`SmallestLast`](@ref) (experimental)
+- [`DynamicLargestFirst`](@ref) (experimental)
 """
 abstract type AbstractOrder end
 
@@ -83,12 +86,21 @@ end
 """
     DynamicDegreeBasedOrder{degtype,direction}
 
-Common framework for various orders based on dynamic degrees.
+Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically computed degree.
+
+!!! danger
+    This order is still experimental and needs more tests, correctness is not yet guaranteed.
 
 # Type parameters
 
 - `degtype::Symbol`: can be `:forward` (for the forward degree) or `:back` (for the back degree)
 - `direction::Symbol`: can be `:low2high` (if the order is defined from lowest to highest, i.e. `1` to `n`) or `:high2low` (if the order is defined from highest to lowest, i.e. `n` to `1`)
+
+# Concrete variants
+
+- [`IncidenceDegree`](@ref)
+- [`SmallestLast`](@ref)
+- [`DynamicLargestFirst`](@ref)
 
 # References
 
@@ -218,7 +230,10 @@ end
 """
     IncidenceDegree()
 
-Order vertices with the incidence degree heuristic.
+Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic back degree.
+
+!!! danger
+    This order is still experimental and needs more tests, correctness is not yet guaranteed.
 
 # See also
 
@@ -229,7 +244,10 @@ const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
 """
     SmallestLast()
 
-Order vertices with the smallest last heuristic.
+Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest using the dynamic back degree.
+
+!!! danger
+    This order is still experimental and needs more tests, correctness is not yet guaranteed.
 
 # See also
 
@@ -240,7 +258,10 @@ const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
 """
     DynamicLargestFirst()
 
-Order vertices with the dynamic largest first heuristic.
+Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic forward degree.
+
+!!! danger
+    This order is still experimental and needs more tests, correctness is not yet guaranteed.
 
 # See also
     
