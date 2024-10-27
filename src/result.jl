@@ -548,6 +548,7 @@ struct BicoloringResult{
     M<:AbstractMatrix,
     G<:AdjacencyFromBipartiteGraph,
     decompression,
+    V,
     SR<:AbstractColoringResult{:symmetric,:column,decompression},
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
@@ -559,9 +560,9 @@ struct BicoloringResult{
     "one integer color for each row"
     row_color::Vector{Int}
     "color groups for columns"
-    column_group::Vector{Vector{Int}}
+    column_group::V
     "color groups for rows"
-    row_group::Vector{Vector{Int}}
+    row_group::V
     "result for the coloring of the symmetric 2x2 block matrix"
     symmetric_result::SR
 end
