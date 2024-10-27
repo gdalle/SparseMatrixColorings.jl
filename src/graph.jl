@@ -299,7 +299,7 @@ function AdjacencyFromBipartiteGraph(A::AbstractMatrix; kwargs...)
 end
 
 function nb_vertices(abg::AdjacencyFromBipartiteGraph)
-    @compat (; bg) = abg
+    (; bg) = abg
     m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
     return m + n
 end
@@ -311,7 +311,7 @@ end
 (a::Adder)(x) = x + a.y
 
 function neighbors(abg::AdjacencyFromBipartiteGraph, v::Integer)
-    @compat (; bg) = abg
+    (; bg) = abg
     m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
     if 1 <= v <= n
         j = v  # v is a column, it doesn't need shifting
