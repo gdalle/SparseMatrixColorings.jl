@@ -3,7 +3,6 @@ using SparseArrays
 using SparseMatrixColorings:
     SparsityPatternCSC,
     AdjacencyGraph,
-    AdjacencyFromBipartiteGraph,
     BipartiteGraph,
     degree,
     degree_dist2,
