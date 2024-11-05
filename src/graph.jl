@@ -100,16 +100,6 @@ end
 ## Adjacency graph
 
 """
-    AbstractAdjacencyGraph{T}
-
-Supertype for various adjacency graph implementations:
-
-- [`AdjacencyGraph`](@ref)
-- [`AdjacencyFromBipartiteGraph`](@ref)
-"""
-abstract type AbstractAdjacencyGraph{T} end
-
-"""
     AdjacencyGraph{T}
 
 Undirected graph without self-loops representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
@@ -131,7 +121,7 @@ The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct AdjacencyGraph{T} <: AbstractAdjacencyGraph{T}
+struct AdjacencyGraph{T}
     S::SparsityPatternCSC{T}
 end
 
@@ -140,7 +130,7 @@ AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
-vertices(g::AbstractAdjacencyGraph) = 1:nb_vertices(g)
+vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
 
 function neighbors(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
@@ -148,7 +138,7 @@ function neighbors(g::AdjacencyGraph, v::Integer)
     return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
 end
 
-function degree(g::AbstractAdjacencyGraph, v::Integer)
+function degree(g::AdjacencyGraph, v::Integer)
     d = 0
     for u in neighbors(g, v)
         if u != v
@@ -158,7 +148,7 @@ function degree(g::AbstractAdjacencyGraph, v::Integer)
     return d
 end
 
-function nb_edges(g::AbstractAdjacencyGraph)
+function nb_edges(g::AdjacencyGraph)
     ne = 0
     for v in vertices(g)
         for u in neighbors(g, v)
@@ -168,8 +158,8 @@ function nb_edges(g::AbstractAdjacencyGraph)
     return ne ÷ 2
 end
 
-maximum_degree(g::AbstractAdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
-minimum_degree(g::AbstractAdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
+maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
+minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
     for w in neighbors(g, v)
@@ -316,72 +306,4 @@ function degree_dist2_in_subset(
         end
     end
     return d
-end
-
-## Adjacency graph from bipartite
-
-"""
-    AdjacencyFromBipartiteGraph{T}
-
-Custom version of [`AdjacencyGraph`](@ref) constructed from a [`BipartiteGraph`](@ref).
-If the bipartite graph represents a matrix `A` of size `(m, n)`, then this graph represents the block matrix `[0 A; A' 0]` of size `(n+m) x (n+m)`.
-
-Vertices are ordered as follows:
-
-- from `1` to `n`: column vertices
-- from `n+1` to `n+m`: row vertices
-
-# Constructors
-
-    AdjacencyFromBipartiteGraph(A::AbstractMatrix)
-
-# Fields
-
-- `bg::BipartiteGraph{T}`: bipartite graph representation of the matrix `A`
-"""
-struct AdjacencyFromBipartiteGraph{T} <: AbstractAdjacencyGraph{T}
-    bg::BipartiteGraph{T}
-end
-
-function AdjacencyFromBipartiteGraph(A::AbstractMatrix; kwargs...)
-    return AdjacencyFromBipartiteGraph(BipartiteGraph(A; kwargs...))
-end
-
-function nb_vertices(abg::AdjacencyFromBipartiteGraph)
-    (; bg) = abg
-    m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
-    return m + n
-end
-
-struct Adder{T}
-    y::T
-end
-
-(a::Adder)(x) = x + a.y
-
-function neighbors(abg::AdjacencyFromBipartiteGraph, v::Integer)
-    (; bg) = abg
-    m, n = nb_vertices(bg, Val(1)), nb_vertices(bg, Val(2))
-    if 1 <= v <= n
-        j = v  # v is a column, it doesn't need shifting
-        neigh = neighbors(bg, Val(2), j)
-        correction = Adder(n)  # its neighbors are rows, they need shifting
-    else
-        i = v - n  # v is a row, it needs shifting
-        @assert 1 <= i <= m
-        neigh = neighbors(bg, Val(1), i)
-        correction = Adder(0)  # its neighbors are columns, they don't need shifting
-    end
-    return Iterators.map(correction, neigh)
-end
-
-function pattern(abg::AdjacencyFromBipartiteGraph)
-    # TODO: slow
-    S = SparseMatrixCSC(pattern(abg.bg, Val(2)))
-    m, n = size(S)
-    T = eltype(S)
-    return SparsityPatternCSC([
-        spzeros(T, n, n) transpose(S)
-        S spzeros(T, m, m)
-    ])
 end

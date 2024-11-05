@@ -661,16 +661,16 @@ end
 
 ## BicoloringResult
 
-function decompress!(
-    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
-)
+function _reconstruct_B!(result::BicoloringResult, Br::AbstractMatrix, Bc::AbstractMatrix)
+    (; A, col_color_ind, row_color_ind) = result
     m, n = size(A)
-    T = Base.promote_eltype(Br, Bc)
-    symmetric_color = column_colors(result.symmetric_result)
-    _, col_color_ind = remap_colors(symmetric_color[1:n])
-    _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
-    B = Matrix{T}(undef, n + m, maximum(symmetric_color))
-    fill!(B, zero(T))
+    R = Base.promote_eltype(Br, Bc)
+    if eltype(result.B) == R
+        B = result.B
+    else
+        B = similar(R, result.B)
+    end
+    fill!(B, zero(R))
     for c in axes(B, 2)
         if haskey(col_color_ind, c)  # some columns were colored with c
             @views copyto!(B[(n + 1):(n + m), c], Bc[:, col_color_ind[c]])
@@ -679,7 +679,28 @@ function decompress!(
             @views copyto!(B[1:n, c], Br[row_color_ind[c], :])
         end
     end
-    bigA = decompress(B, result.symmetric_result)
-    copyto!(A, bigA[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    return B
+end
+
+function decompress!(
+    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    m, n = size(A)
+    B = _reconstruct_B!(result, Br, Bc)
+    A_and_Aᵀ = decompress(B, result.symmetric_result)
+    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    (; large_colptr, large_rowval, symmetric_result) = result
+    m, n = size(A)
+    B = _reconstruct_B!(result, Br, Bc)
+    # pretend A is larger
+    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
+    # decompress lower triangle only
+    decompress!(A_and_noAᵀ, B, symmetric_result, :L)
     return A
 end
