@@ -238,8 +238,8 @@ function coloring(
         transpose(A)
     end
     A_and_Aᵀ = [
-        spzeros(T, n, n) Aᵀ
-        A spzeros(T, m, m)
+        spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
+        SparseMatrixCSC(A) spzeros(T, m, m)
     ]  # TODO: slow
     ag = AdjacencyGraph(A_and_Aᵀ)
     if decompression == :direct

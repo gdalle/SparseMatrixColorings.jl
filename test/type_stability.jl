@@ -33,6 +33,8 @@ rng = StableRNG(63)
         (:nonsymmetric, :row, :direct),
         (:symmetric, :column, :direct),
         (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
     ]
         @test_opt target_modules = (SparseMatrixColorings,) coloring(
             A,
@@ -72,6 +74,8 @@ end;
         (:nonsymmetric, :row, :direct),
         (:symmetric, :column, :direct),
         (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
     ]
         @testset "A::$(typeof(A))" for A in matrix_versions(A0)
             result = coloring(
@@ -80,32 +84,43 @@ end;
                 GreedyColoringAlgorithm(; decompression);
                 decompression_eltype=eltype(A),
             )
-            B = compress(A, result)
-            @testset "Full decompression" begin
-                @test_opt compress(A, result)
-                @test_opt decompress(B, result) ≈ A0
-                @test_opt decompress!(respectful_similar(A), B, result)
-            end
-            @testset "Single-color decompression" begin
-                if decompression == :direct
-                    b = if partition == :column
-                        B[:, 1]
-                    else
-                        B[1, :]
+            if partition == :bidirectional
+                Br, Bc = compress(A, result)
+                @testset "Full decompression" begin
+                    @test_opt compress(A, result)
+                    @test_opt decompress(Br, Bc, result) ≈ A0
+                    @test_opt decompress!(respectful_similar(A), Br, Bc, result)
+                end
+            else
+                B = compress(A, result)
+                @testset "Full decompression" begin
+                    @test_opt compress(A, result)
+                    @test_opt decompress(B, result) ≈ A0
+                    @test_opt decompress!(respectful_similar(A), B, result)
+                end
+                @testset "Single-color decompression" begin
+                    if decompression == :direct
+                        b = if partition == :column
+                            B[:, 1]
+                        else
+                            B[1, :]
+                        end
+                        @test_opt decompress_single_color!(
+                            respectful_similar(A), b, 1, result
+                        )
                     end
-                    @test_opt decompress_single_color!(respectful_similar(A), b, 1, result)
                 end
-            end
-            @testset "Triangle decompression" begin
-                if structure == :symmetric
-                    @test_opt decompress!(respectful_similar(triu(A)), B, result, :U)
+                @testset "Triangle decompression" begin
+                    if structure == :symmetric
+                        @test_opt decompress!(respectful_similar(triu(A)), B, result, :U)
+                    end
                 end
-            end
-            @testset "Single-color triangle decompression" begin
-                if structure == :symmetric && decompression == :direct
-                    @test_opt decompress_single_color!(
-                        respectful_similar(triu(A)), B[:, 1], 1, result, :U
-                    )
+                @testset "Single-color triangle decompression" begin
+                    if structure == :symmetric && decompression == :direct
+                        @test_opt decompress_single_color!(
+                            respectful_similar(triu(A)), B[:, 1], 1, result, :U
+                        )
+                    end
                 end
             end
         end
