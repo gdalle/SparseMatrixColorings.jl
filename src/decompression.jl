@@ -668,7 +668,7 @@ function _reconstruct_B!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abstr
     if eltype(result.B) == R
         B = result.B
     else
-        B = similar(R, result.B)
+        B = similar(result.B, R)
     end
     fill!(B, zero(R))
     for c in axes(B, 2)
