@@ -26,7 +26,7 @@ function test_coloring_decompression(
 
         if structure == :nonsymmetric && issymmetric(A)
             result = coloring(
-                A, problem, algo; decompression_eltype=Float64, symmetric_pattern=true
+                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
             )
         else
             result = coloring(A, problem, algo; decompression_eltype=Float64)
@@ -149,7 +149,13 @@ function test_bicoloring_decompression(
 ) where {decompression}
     @testset "$(typeof(A))" for A in matrix_versions(A0)
         yield()
-        result = coloring(A, problem, algo; decompression_eltype=Float64)
+        if issymmetric(A)
+            result = coloring(
+                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
+            )
+        else
+            result = coloring(A, problem, algo; decompression_eltype=Float64)
+        end
         Br, Bc = compress(A, result)
         @test size(Br, 1) == length(unique(row_colors(result)))
         @test size(Bc, 2) == length(unique(column_colors(result)))

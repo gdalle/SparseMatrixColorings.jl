@@ -76,6 +76,11 @@ end;
         A0 = sprand(rng, m, n, p)
         test_bicoloring_decompression(A0, problem, algo)
     end
+    @testset "$((; n, p))" for (n, p) in symmetric_params
+        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
+        color0 = column_coloring(A0, algo)
+        test_bicoloring_decompression(A0, problem, algo)
+    end
 end;
 
 @testset "Bicoloring & substitution decompression" begin
