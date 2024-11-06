@@ -120,6 +120,7 @@ end
 function show_colors!(
     out, res::AbstractColoringResult{s,:bidirectional}, colorscheme, scale, pad
 ) where {s}
+    scale < 3 && throw(ArgumentError("`scale` has to be ≥ 3 to visualize bicoloring"))
     ccolor_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
     row_shift = maximum(column_colors(res))
     rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme)) # cycle color indices if necessary
