@@ -12,9 +12,7 @@ The docstrings on this page describe internals, they are not part of the public 
 ```@docs
 SparseMatrixColorings.SparsityPatternCSC
 SparseMatrixColorings.BipartiteGraph
-SparseMatrixColorings.AbstractAdjacencyGraph
 SparseMatrixColorings.AdjacencyGraph
-SparseMatrixColorings.AdjacencyFromBipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 transpose

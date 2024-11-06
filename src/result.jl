@@ -206,7 +206,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V} <:
+struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V} <:
        AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
@@ -217,9 +217,9 @@ struct StarSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V} <:
 end
 
 function StarSetColoringResult(
-    A::AbstractMatrix, ag::AbstractAdjacencyGraph, color::Vector{Int}, star_set::StarSet
+    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
 )
-    S = pattern(ag)
+    S = ag.S
     group = group_by_color(color)
     n = size(S, 1)
     rv = rowvals(S)
@@ -250,7 +250,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V,R} <:
+struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -267,12 +267,12 @@ end
 
 function TreeSetColoringResult(
     A::AbstractMatrix,
-    ag::AbstractAdjacencyGraph,
+    ag::AdjacencyGraph,
     color::Vector{Int},
     tree_set::TreeSet,
     decompression_eltype::Type{R},
 ) where {R}
-    S = pattern(ag)
+    S = ag.S
     nvertices = length(color)
     group = group_by_color(color)
 
@@ -474,7 +474,7 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AbstractAdjacencyGraph,V,R,F} <:
+struct LinearSystemColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R,F} <:
        AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -490,7 +490,7 @@ function LinearSystemColoringResult(
 ) where {R}
     group = group_by_color(color)
     C = length(group)  # ncolors
-    S = pattern(ag)
+    S = ag.S
     rv = rowvals(S)
 
     # build T such that T * strict_upper_nonzeros(A) = B
@@ -546,10 +546,11 @@ $TYPEDFIELDS
 """
 struct BicoloringResult{
     M<:AbstractMatrix,
-    G<:AdjacencyFromBipartiteGraph,
+    G<:AdjacencyGraph,
     decompression,
     V,
     SR<:AbstractColoringResult{:symmetric,:column,decompression},
+    R,
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
     A::M
@@ -565,6 +566,16 @@ struct BicoloringResult{
     row_group::V
     "result for the coloring of the symmetric 2x2 block matrix"
     symmetric_result::SR
+    "column color to index"
+    col_color_ind::Dict{Int,Int}
+    "row color to index"
+    row_color_ind::Dict{Int,Int}
+    "combination of `Br` and `Bc`"
+    B::Matrix{R}
+    "CSC storage of `A_and_noAᵀ - `colptr`"
+    large_colptr::Vector{Int}
+    "CSC storage of `A_and_noAᵀ - `rowval`"
+    large_rowval::Vector{Int}
 end
 
 column_colors(result::BicoloringResult) = result.column_color
@@ -575,14 +586,35 @@ row_groups(result::BicoloringResult) = result.row_group
 
 function BicoloringResult(
     A::AbstractMatrix,
-    abg::AdjacencyFromBipartiteGraph,
+    ag::AdjacencyGraph,
     column_color::Vector{Int},
     row_color::Vector{Int},
     symmetric_result::AbstractColoringResult{:symmetric,:column},
-)
+    decompression_eltype::Type{R},
+) where {R}
+    m, n = size(A)
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
+    symmetric_color = column_colors(symmetric_result)
+    _, col_color_ind = remap_colors(symmetric_color[1:n])
+    _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
+    B = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
+    large_colptr = copy(ag.S.colptr)
+    large_rowval = copy(ag.S.rowval)
+    large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
+    large_rowval = large_rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
     return BicoloringResult(
-        A, abg, column_color, row_color, column_group, row_group, symmetric_result
+        A,
+        ag,
+        column_color,
+        row_color,
+        column_group,
+        row_group,
+        symmetric_result,
+        col_color_ind,
+        row_color_ind,
+        B,
+        large_colptr,
+        large_rowval,
     )
 end
