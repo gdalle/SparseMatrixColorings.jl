@@ -26,6 +26,7 @@ ConstantColoringAlgorithm
 AbstractColoringResult
 column_colors
 row_colors
+ncolors
 column_groups
 row_groups
 sparsity_pattern

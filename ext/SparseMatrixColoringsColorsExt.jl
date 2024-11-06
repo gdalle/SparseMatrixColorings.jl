@@ -21,7 +21,8 @@ using SparseMatrixColorings:
     AbstractColoringResult,
     sparsity_pattern,
     column_colors,
-    row_colors
+    row_colors,
+    ncolors
 using Colors: Colorant, RGB, RGBA, distinguishable_colors
 
 const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
@@ -30,13 +31,6 @@ const DEFAULT_PAD = 0 # update docstring in src/images.jl when changing this def
 
 # Sample n distinguishable colors, excluding the background color
 default_colorscheme(n, background) = distinguishable_colors(n, background; dropseed=true)
-
-ncolors(res::AbstractColoringResult{s,:column}) where {s} = maximum(column_colors(res))
-ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res))
-
-function ncolors(res::AbstractColoringResult{s,:bidirectional}) where {s}
-    return maximum(row_colors(res)) + maximum(column_colors(res))
-end
 
 ## Top-level function that handles argument errors, eagerly promotes types and allocates output buffer
 

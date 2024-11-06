@@ -78,7 +78,6 @@ end;
     end
     @testset "$((; n, p))" for (n, p) in symmetric_params
         A0 = sparse(Symmetric(sprand(rng, n, n, p)))
-        color0 = column_coloring(A0, algo)
         test_bicoloring_decompression(A0, problem, algo)
     end
 end;
@@ -88,6 +87,10 @@ end;
     algo = GreedyColoringAlgorithm(RandomOrder(rng); decompression=:substitution)
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
+        test_bicoloring_decompression(A0, problem, algo)
+    end
+    @testset "$((; n, p))" for (n, p) in symmetric_params
+        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
         test_bicoloring_decompression(A0, problem, algo)
     end
 end;

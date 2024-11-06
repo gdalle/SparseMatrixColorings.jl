@@ -251,17 +251,7 @@ function coloring(
             A_and_Aᵀ, ag, color, tree_set, decompression_eltype
         )
     end
-    column_color, _ = remap_colors(color[1:n])
-    row_color, _ = remap_colors(color[(n + 1):(n + m)])
-    return BicoloringResult(
-        A, ag, column_color, row_color, symmetric_result, decompression_eltype
-    )
-end
-
-function remap_colors(color::Vector{Int})
-    col_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
-    remapped_cols = [col_to_ind[c] for c in color]
-    return remapped_cols, col_to_ind
+    return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
 end
 
 ## ADTypes interface

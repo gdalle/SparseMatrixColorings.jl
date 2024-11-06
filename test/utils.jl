@@ -40,6 +40,12 @@ function test_coloring_decompression(
 
         B = compress(A, result)
 
+        if partition == :column
+            @test ncolors(result) == size(B, 2)
+        elseif partition == :row
+            @test ncolors(result) == size(B, 1)
+        end
+
         @testset "Reference" begin
             @test sparsity_pattern(result) === A  # identity of objects
             !isnothing(color0) && @test color == color0
@@ -159,6 +165,7 @@ function test_bicoloring_decompression(
         Br, Bc = compress(A, result)
         @test size(Br, 1) == length(unique(row_colors(result)))
         @test size(Bc, 2) == length(unique(column_colors(result)))
+        @test ncolors(result) == size(Br, 1) + size(Bc, 2)
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified

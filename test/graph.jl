@@ -8,9 +8,7 @@ using SparseMatrixColorings:
     degree_dist2,
     nb_vertices,
     nb_edges,
-    neighbors,
-    star_coloring,
-    acyclic_coloring
+    neighbors
 using Test
 
 ## SparsityPatternCSC

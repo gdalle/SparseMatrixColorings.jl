@@ -75,10 +75,10 @@ function compress(
 end
 
 """
-    decompress(B::AbstractMatrix, result::AbstractColoringResult)
+    decompress(B::AbstractMatrix, result::AbstractColoringResult{_,:column/:row})
     decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
 
-Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
+Decompress `B` (or the tuple `(Br,Bc)`) into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 The in-place alternative is [`decompress!`](@ref).
 
 Compression means summing either the columns or the rows of `A` which share the same color.
@@ -144,15 +144,15 @@ end
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult, [uplo=:F]
+        result::AbstractColoringResult{_,:column/:row}, [uplo=:F]
     )
 
     decompress!(
         A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix
-        result::AbstractColoringResult{_,:bidirectional}, [uplo=:F]
+        result::AbstractColoringResult{_,:bidirectional}
     )
 
-Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
+Decompress `B` (or the tuple `(Br,Bc)`) in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
 The out-of-place alternative is [`decompress`](@ref).
 
 !!! note
@@ -401,7 +401,7 @@ function decompress!(
 )
     (; color, star_set) = result
     (; star, hub, spokes) = star_set
-    S = pattern(result.ag)
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
@@ -433,7 +433,7 @@ function decompress_single_color!(
 )
     (; color, group, star_set) = result
     (; hub, spokes) = star_set
-    S = pattern(result.ag)
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     for i in axes(A, 1)
         if !iszero(S[i, i]) && color[i] == c
@@ -460,7 +460,7 @@ function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
     (; compressed_indices) = result
-    S = pattern(result.ag)
+    S = result.ag.S
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -490,7 +490,7 @@ function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
     (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    S = pattern(result.ag)
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -544,7 +544,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    S = pattern(result.ag)
+    S = result.ag.S
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
@@ -637,7 +637,7 @@ function decompress!(
     uplo::Symbol=:F,
 )
     (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) = result
-    S = pattern(result.ag)
+    S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR

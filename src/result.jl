@@ -56,6 +56,25 @@ Return a vector `group` such that for every color `c`, `group[c]` contains the i
 function row_groups end
 
 """
+    ncolors(result::AbstractColoringResult)
+
+Return the number of different colors used to color the matrix.
+
+For bidirectional partitions, this number is the sum of the number of row colors and the number of column colors.
+"""
+function ncolors(res::AbstractColoringResult{structure,:column}) where {structure}
+    return maximum(column_colors(res))
+end
+
+function ncolors(res::AbstractColoringResult{structure,:row}) where {structure}
+    return maximum(row_colors(res))
+end
+
+function ncolors(res::AbstractColoringResult{structure,:bidirectional}) where {structure}
+    return maximum(row_colors(res)) + maximum(column_colors(res))
+end
+
+"""
     group_by_color(color::Vector{Int})
 
 Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] == c`.
@@ -531,6 +550,12 @@ end
 
 ## Bicoloring result
 
+function remap_colors(color::Vector{Int})
+    col_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
+    remapped_cols = [col_to_ind[c] for c in color]
+    return remapped_cols, col_to_ind
+end
+
 """
 $TYPEDEF
 
@@ -587,22 +612,19 @@ row_groups(result::BicoloringResult) = result.row_group
 function BicoloringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph,
-    column_color::Vector{Int},
-    row_color::Vector{Int},
     symmetric_result::AbstractColoringResult{:symmetric,:column},
     decompression_eltype::Type{R},
 ) where {R}
     m, n = size(A)
+    symmetric_color = column_colors(symmetric_result)
+    column_color, col_color_ind = remap_colors(symmetric_color[1:n])
+    row_color, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    symmetric_color = column_colors(symmetric_result)
-    _, col_color_ind = remap_colors(symmetric_color[1:n])
-    _, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
     B = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
     large_colptr = copy(ag.S.colptr)
-    large_rowval = copy(ag.S.rowval)
     large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
-    large_rowval = large_rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
+    large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
     return BicoloringResult(
         A,
         ag,

@@ -11,8 +11,8 @@ The docstrings on this page describe internals, they are not part of the public 
 
 ```@docs
 SparseMatrixColorings.SparsityPatternCSC
-SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.AdjacencyGraph
+SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 transpose
