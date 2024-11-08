@@ -60,7 +60,7 @@ export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFir
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export ConstantColoringAlgorithm
 export coloring
-export column_colors, row_colors
+export column_colors, row_colors, ncolors
 export column_groups, row_groups
 export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!

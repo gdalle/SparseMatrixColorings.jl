@@ -21,7 +21,8 @@ using SparseMatrixColorings:
     AbstractColoringResult,
     sparsity_pattern,
     column_colors,
-    row_colors
+    row_colors,
+    ncolors
 using Colors: Colorant, RGB, RGBA, distinguishable_colors
 
 const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
@@ -30,9 +31,6 @@ const DEFAULT_PAD = 0 # update docstring in src/images.jl when changing this def
 
 # Sample n distinguishable colors, excluding the background color
 default_colorscheme(n, background) = distinguishable_colors(n, background; dropseed=true)
-
-ncolors(res::AbstractColoringResult{s,:column}) where {s} = maximum(column_colors(res))
-ncolors(res::AbstractColoringResult{s,:row}) where {s} = maximum(row_colors(res))
 
 ## Top-level function that handles argument errors, eagerly promotes types and allocates output buffer
 
@@ -114,6 +112,32 @@ function show_colors!(
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
             out[area] .= colors[r]
+        end
+    end
+    return out
+end
+
+function show_colors!(
+    out, res::AbstractColoringResult{s,:bidirectional}, colorscheme, scale, pad
+) where {s}
+    scale < 3 && throw(ArgumentError("`scale` has to be ≥ 3 to visualize bicoloring"))
+    ccolor_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
+    row_shift = maximum(column_colors(res))
+    rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme)) # cycle color indices if necessary
+    ccolors = colorscheme[ccolor_indices]
+    rcolors = colorscheme[rcolor_indices]
+    pattern = sparsity_pattern(res)
+    for I in CartesianIndices(pattern)
+        if !iszero(pattern[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            for i in axes(area, 1), j in axes(area, 2)
+                if j > i
+                    out[area[i, j]] = ccolors[c]
+                elseif i > j
+                    out[area[i, j]] = rcolors[r]
+                end
+            end
         end
     end
     return out

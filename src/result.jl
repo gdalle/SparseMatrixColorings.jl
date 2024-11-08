@@ -56,6 +56,25 @@ Return a vector `group` such that for every color `c`, `group[c]` contains the i
 function row_groups end
 
 """
+    ncolors(result::AbstractColoringResult)
+
+Return the number of different colors used to color the matrix.
+
+For bidirectional partitions, this number is the sum of the number of row colors and the number of column colors.
+"""
+function ncolors(res::AbstractColoringResult{structure,:column}) where {structure}
+    return length(column_groups(res))
+end
+
+function ncolors(res::AbstractColoringResult{structure,:row}) where {structure}
+    return length(row_groups(res))
+end
+
+function ncolors(res::AbstractColoringResult{structure,:bidirectional}) where {structure}
+    return length(row_groups(res)) + length(column_groups(res))
+end
+
+"""
     group_by_color(color::Vector{Int})
 
 Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] == c`.
@@ -526,5 +545,109 @@ function LinearSystemColoringResult(
         strict_upper_nonzero_inds,
         strict_upper_nonzeros_A,
         T_factorization,
+    )
+end
+
+## Bicoloring result
+
+"""
+    remap_colors(color::Vector{Int})
+
+Renumber the colors in `color` using their index in the vector `sort(unique(color))`, so that they are forced to go from `1` to some `cmax` contiguously.
+
+Return a tuple `(remapped_colors, color_to_ind)` such that `remapped_colors` is a vector containing the renumbered colors and `color_to_ind` is a dictionary giving the translation between old and new color numberings.
+
+For all vertex indices `i` we have:
+
+    remapped_color[i] = color_to_ind[color[i]]
+"""
+function remap_colors(color::Vector{Int})
+    color_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
+    remapped_colors = [color_to_ind[c] for c in color]
+    return remapped_colors, color_to_ind
+end
+
+"""
+$TYPEDEF
+
+Storage for the result of a bidirectional coloring with direct or substitution decompression, based on the symmetric coloring of a 2x2 block matrix.
+
+# Fields
+
+$TYPEDFIELDS
+
+# See also
+
+- [`AbstractColoringResult`](@ref)
+"""
+struct BicoloringResult{
+    M<:AbstractMatrix,
+    G<:AdjacencyGraph,
+    decompression,
+    V,
+    SR<:AbstractColoringResult{:symmetric,:column,decompression},
+    R,
+} <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
+    "matrix that was colored"
+    A::M
+    "adjacency graph that was used for coloring (constructed from the bipartite graph)"
+    abg::G
+    "one integer color for each column"
+    column_color::Vector{Int}
+    "one integer color for each row"
+    row_color::Vector{Int}
+    "color groups for columns"
+    column_group::V
+    "color groups for rows"
+    row_group::V
+    "result for the coloring of the symmetric 2x2 block matrix"
+    symmetric_result::SR
+    "column color to index"
+    col_color_ind::Dict{Int,Int}
+    "row color to index"
+    row_color_ind::Dict{Int,Int}
+    "combination of `Br` and `Bc` (almost a concatenation up to color remapping)"
+    Br_and_Bc::Matrix{R}
+    "CSC storage of `A_and_noAᵀ - `colptr`"
+    large_colptr::Vector{Int}
+    "CSC storage of `A_and_noAᵀ - `rowval`"
+    large_rowval::Vector{Int}
+end
+
+column_colors(result::BicoloringResult) = result.column_color
+column_groups(result::BicoloringResult) = result.column_group
+
+row_colors(result::BicoloringResult) = result.row_color
+row_groups(result::BicoloringResult) = result.row_group
+
+function BicoloringResult(
+    A::AbstractMatrix,
+    ag::AdjacencyGraph,
+    symmetric_result::AbstractColoringResult{:symmetric,:column},
+    decompression_eltype::Type{R},
+) where {R}
+    m, n = size(A)
+    symmetric_color = column_colors(symmetric_result)
+    column_color, col_color_ind = remap_colors(symmetric_color[1:n])
+    row_color, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
+    column_group = group_by_color(column_color)
+    row_group = group_by_color(row_color)
+    Br_and_Bc = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
+    large_colptr = copy(ag.S.colptr)
+    large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
+    large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
+    return BicoloringResult(
+        A,
+        ag,
+        column_color,
+        row_color,
+        column_group,
+        row_group,
+        symmetric_result,
+        col_color_ind,
+        row_color_ind,
+        Br_and_Bc,
+        large_colptr,
+        large_rowval,
     )
 end

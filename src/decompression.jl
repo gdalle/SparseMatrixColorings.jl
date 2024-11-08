@@ -9,9 +9,6 @@ Compress `A` given a coloring `result` of the sparsity pattern of `A`.
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is undone by calling [`decompress`](@ref) or [`decompress!`](@ref).
 
-!!! warning
-    At the moment, `:bidirectional` partitions are not implemented.
-
 # Example
 
 ```jldoctest
@@ -63,10 +60,25 @@ function compress(A, result::AbstractColoringResult{structure,:row}) where {stru
     return B
 end
 
-"""
-    decompress(B::AbstractMatrix, result::AbstractColoringResult)
+function compress(
+    A, result::AbstractColoringResult{structure,:bidirectional}
+) where {structure}
+    row_group = row_groups(result)
+    column_group = column_groups(result)
+    Br = stack(row_group; dims=1) do g
+        dropdims(sum(A[g, :]; dims=1); dims=1)
+    end
+    Bc = stack(column_group; dims=2) do g
+        dropdims(sum(A[:, g]; dims=2); dims=2)
+    end
+    return Br, Bc
+end
 
-Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
+"""
+    decompress(B::AbstractMatrix, result::AbstractColoringResult{_,:column/:row})
+    decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
+
+Decompress `B` (or the tuple `(Br,Bc)`) into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 The in-place alternative is [`decompress!`](@ref).
 
 Compression means summing either the columns or the rows of `A` which share the same color.
@@ -120,13 +132,27 @@ function decompress(B::AbstractMatrix, result::AbstractColoringResult)
     return decompress!(A, B, result)
 end
 
+function decompress(
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::AbstractColoringResult{structure,:bidirectional},
+) where {structure}
+    A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
+    return decompress!(A, Br, Bc, result)
+end
+
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult, [uplo=:F]
+        result::AbstractColoringResult{_,:column/:row}, [uplo=:F]
     )
 
-Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
+    decompress!(
+        A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix
+        result::AbstractColoringResult{_,:bidirectional}
+    )
+
+Decompress `B` (or the tuple `(Br,Bc)`) in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
 The out-of-place alternative is [`decompress`](@ref).
 
 !!! note
@@ -630,5 +656,62 @@ function decompress!(
             A[j, i] = strict_upper_nonzeros_A[l]
         end
     end
+    return A
+end
+
+## BicoloringResult
+
+function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::AbstractMatrix)
+    #=
+    Say we have an original matrix `A` of size `(n, m)` and we build an augmented matrix `A_and_Aᵀ = [zeros(n, n) Aᵀ; A zeros(m, m)]`.
+    Its first `1:n` columns have the form `[zeros(n); A[:, j]]` and its following `n+1:n+m` columns have the form `[A[i, :]; zeros(m)]`.
+    The symmetric column coloring is performed on `A_and_Aᵀ` and the column-wise compression of `A_and_Aᵀ` should return a matrix `Br_and_Bc`.
+    But in reality, `Br_and_Bc` is computed as two partial compressions: the row-wise compression `Br` (corresponding to `Aᵀ`) and the columnwise compression `Bc` (corresponding to `A`).
+    Before symmetric decompression, we must reconstruct `Br_and_Bc` from `Br` and `Bc`, knowing that the symmetric colors (those making up `Br_and_Bc`) are present in either a row of `Br`, a column of `Bc`, or both.
+    Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
+    The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
+    The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
+    We use the dictionaries `col_color_ind` and `row_color_ind` to map from symmetric colors to row/column colors.
+    =#
+    (; A, col_color_ind, row_color_ind) = result
+    m, n = size(A)
+    R = Base.promote_eltype(Br, Bc)
+    if eltype(result.Br_and_Bc) == R
+        Br_and_Bc = result.Br_and_Bc
+    else
+        Br_and_Bc = similar(result.Br_and_Bc, R)
+    end
+    fill!(Br_and_Bc, zero(R))
+    for c in axes(Br_and_Bc, 2)
+        if haskey(row_color_ind, c)  # some rows were colored with symmetric color c
+            copyto!(view(Br_and_Bc, 1:n, c), view(Br, row_color_ind[c], :))
+        end
+        if haskey(col_color_ind, c)  # some columns were colored with symmetric c
+            copyto!(view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, col_color_ind[c]))
+        end
+    end
+    return Br_and_Bc
+end
+
+function decompress!(
+    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    m, n = size(A)
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
+    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
+    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    (; large_colptr, large_rowval, symmetric_result) = result
+    m, n = size(A)
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
+    # pretend A is larger
+    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
+    # decompress lower triangle only
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     return A
 end

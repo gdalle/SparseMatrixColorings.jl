@@ -145,17 +145,13 @@ function degree(g::AdjacencyGraph, v::Integer)
 end
 
 function nb_edges(g::AdjacencyGraph)
-    S = pattern(g)
     ne = 0
-    for j in vertices(g)
-        for k in nzrange(S, j)
-            i = rowvals(S)[k]
-            if i > j
-                ne += 1
-            end
+    for v in vertices(g)
+        for u in neighbors(g, v)
+            ne += 1
         end
     end
-    return ne
+    return ne ÷ 2
 end
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))

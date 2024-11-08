@@ -1,6 +1,6 @@
 function check_valid_problem(structure::Symbol, partition::Symbol)
     valid = (
-        (structure == :nonsymmetric && partition in (:column, :row)) ||
+        (structure == :nonsymmetric && partition in (:column, :row, :bidirectional)) ||
         (structure == :symmetric && partition == :column)
     )
     if !valid
@@ -49,7 +49,7 @@ Matrix coloring is often used in automatic differentiation, and here is the tran
 | -------- | ------- | --------------- | ---------------- | ----------- |
 | Jacobian | forward | `:nonsymmetric` | `:column`        | yes         |
 | Jacobian | reverse | `:nonsymmetric` | `:row`           | yes         |
-| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | no          |
+| Jacobian | mixed   | `:nonsymmetric` | `:bidirectional` | yes         |
 | Hessian  | -       | `:symmetric`    | `:column`        | yes         |
 | Hessian  | -       | `:symmetric`    | `:row`           | no          |
 """
@@ -221,6 +221,37 @@ function coloring(
     ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order)
     return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
+end
+
+function coloring(
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{decompression};
+    decompression_eltype::Type{R}=Float64,
+    symmetric_pattern::Bool=false,
+) where {decompression,R}
+    m, n = size(A)
+    T = eltype(A)
+    Aᵀ = if symmetric_pattern || A isa Union{Symmetric,Hermitian}
+        A
+    else
+        transpose(A)
+    end  # TODO: fuse with next step?
+    A_and_Aᵀ = [
+        spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
+        SparseMatrixCSC(A) spzeros(T, m, m)
+    ]  # TODO: slow
+    ag = AdjacencyGraph(A_and_Aᵀ)
+    if decompression == :direct
+        color, star_set = star_coloring(ag, algo.order)
+        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
+    else
+        color, tree_set = acyclic_coloring(ag, algo.order)
+        symmetric_result = TreeSetColoringResult(
+            A_and_Aᵀ, ag, color, tree_set, decompression_eltype
+        )
+    end
+    return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
 end
 
 ## ADTypes interface

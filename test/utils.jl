@@ -26,7 +26,7 @@ function test_coloring_decompression(
 
         if structure == :nonsymmetric && issymmetric(A)
             result = coloring(
-                A, problem, algo; decompression_eltype=Float64, symmetric_pattern=true
+                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
             )
         else
             result = coloring(A, problem, algo; decompression_eltype=Float64)
@@ -39,6 +39,12 @@ function test_coloring_decompression(
         push!(color_vec, color)
 
         B = compress(A, result)
+
+        if partition == :column
+            @test ncolors(result) == size(B, 2)
+        elseif partition == :row
+            @test ncolors(result) == size(B, 1)
+        end
 
         @testset "Reference" begin
             @test sparsity_pattern(result) === A  # identity of objects
@@ -139,6 +145,33 @@ function test_coloring_decompression(
 
     @testset "Coherence between all colorings" begin
         @test all(color_vec .== Ref(color_vec[1]))
+    end
+end
+
+function test_bicoloring_decompression(
+    A0::AbstractMatrix,
+    problem::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{decompression};
+) where {decompression}
+    @testset "$(typeof(A))" for A in matrix_versions(A0)
+        yield()
+        if issymmetric(A)
+            result = coloring(
+                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
+            )
+        else
+            result = coloring(A, problem, algo; decompression_eltype=Float64)
+        end
+        Br, Bc = compress(A, result)
+        @test size(Br, 1) == length(unique(row_colors(result)))
+        @test size(Bc, 2) == length(unique(column_colors(result)))
+        @test ncolors(result) == size(Br, 1) + size(Bc, 2)
+        @testset "Full decompression" begin
+            @test decompress(Br, Bc, result) ≈ A0
+            @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
+            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
+            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
+        end
     end
 end
 
