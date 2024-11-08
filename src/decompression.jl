@@ -684,10 +684,10 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     fill!(Br_and_Bc, zero(R))
     for c in axes(Br_and_Bc, 2)
         if haskey(row_color_ind, c)  # some rows were colored with symmetric color c
-            @views copyto!(Br_and_Bc[1:n, c], Br[row_color_ind[c], :])
+            copyto!(view(Br_and_Bc, 1:n, c), view(Br, row_color_ind[c], :))
         end
         if haskey(col_color_ind, c)  # some columns were colored with symmetric c
-            @views copyto!(Br_and_Bc[(n + 1):(n + m), c], Bc[:, col_color_ind[c]])
+            copyto!(view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, col_color_ind[c]))
         end
     end
     return Br_and_Bc

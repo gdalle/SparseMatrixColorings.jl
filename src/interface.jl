@@ -236,7 +236,7 @@ function coloring(
         A
     else
         transpose(A)
-    end
+    end  # TODO: fuse with next step?
     A_and_Aᵀ = [
         spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
         SparseMatrixCSC(A) spzeros(T, m, m)
