@@ -47,7 +47,7 @@ function compress end
 function compress(A, result::AbstractColoringResult{structure,:column}) where {structure}
     group = column_groups(result)
     B = stack(group; dims=2) do g
-        dropdims(sum(view(A, :, g); dims=2); dims=2)
+        dropdims(sum(A[:, g]; dims=2); dims=2)
     end
     return B
 end
@@ -55,7 +55,7 @@ end
 function compress(A, result::AbstractColoringResult{structure,:row}) where {structure}
     group = row_groups(result)
     B = stack(group; dims=1) do g
-        dropdims(sum(view(A, g, :); dims=1); dims=1)
+        dropdims(sum(A[g, :]; dims=1); dims=1)
     end
     return B
 end
@@ -66,10 +66,10 @@ function compress(
     row_group = row_groups(result)
     column_group = column_groups(result)
     Br = stack(row_group; dims=1) do g
-        dropdims(sum(view(A, g, :); dims=1); dims=1)
+        dropdims(sum(A[g, :]; dims=1); dims=1)
     end
     Bc = stack(column_group; dims=2) do g
-        dropdims(sum(view(A, :, g); dims=2); dims=2)
+        dropdims(sum(A[:, g]; dims=2); dims=2)
     end
     return Br, Bc
 end
