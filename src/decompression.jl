@@ -676,7 +676,7 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     (; A, col_color_ind, row_color_ind) = result
     m, n = size(A)
     R = Base.promote_eltype(Br, Bc)
-    if eltype(result.B) == R
+    if eltype(result.Br_and_Bc) == R
         Br_and_Bc = result.Br_and_Bc
     else
         Br_and_Bc = similar(result.Br_and_Bc, R)
