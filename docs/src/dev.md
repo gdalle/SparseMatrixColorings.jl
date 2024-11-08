@@ -39,6 +39,7 @@ SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.BicoloringResult
+SparseMatrixColorings.remap_colors
 ```
 
 ## Testing

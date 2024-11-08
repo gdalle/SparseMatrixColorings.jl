@@ -63,15 +63,15 @@ Return the number of different colors used to color the matrix.
 For bidirectional partitions, this number is the sum of the number of row colors and the number of column colors.
 """
 function ncolors(res::AbstractColoringResult{structure,:column}) where {structure}
-    return maximum(column_colors(res))
+    return length(column_groups(res))
 end
 
 function ncolors(res::AbstractColoringResult{structure,:row}) where {structure}
-    return maximum(row_colors(res))
+    return length(row_groups(res))
 end
 
 function ncolors(res::AbstractColoringResult{structure,:bidirectional}) where {structure}
-    return maximum(row_colors(res)) + maximum(column_colors(res))
+    return length(row_groups(res)) + length(column_groups(res))
 end
 
 """
@@ -550,10 +550,21 @@ end
 
 ## Bicoloring result
 
+"""
+    remap_colors(color::Vector{Int})
+
+Renumber the colors in `color` using their index in the vector `sort(unique(color))`, so that they are forced to go from `1` to some `cmax` contiguously.
+
+Return a tuple `(remapped_colors, color_to_ind)` such that `remapped_colors` is a vector containing the renumbered colors and `color_to_ind` is a dictionary giving the translation between old and new color numberings.
+
+For all vertex indices `i` we have:
+
+    remapped_color[i] = color_to_ind[color[i]]
+"""
 function remap_colors(color::Vector{Int})
-    col_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
-    remapped_cols = [col_to_ind[c] for c in color]
-    return remapped_cols, col_to_ind
+    color_to_ind = Dict(c => i for (i, c) in enumerate(sort(unique(color))))
+    remapped_colors = [color_to_ind[c] for c in color]
+    return remapped_colors, color_to_ind
 end
 
 """
@@ -595,8 +606,8 @@ struct BicoloringResult{
     col_color_ind::Dict{Int,Int}
     "row color to index"
     row_color_ind::Dict{Int,Int}
-    "combination of `Br` and `Bc`"
-    B::Matrix{R}
+    "combination of `Br` and `Bc` (almost a concatenation up to color remapping)"
+    Br_and_Bc::Matrix{R}
     "CSC storage of `A_and_noAᵀ - `colptr`"
     large_colptr::Vector{Int}
     "CSC storage of `A_and_noAᵀ - `rowval`"
@@ -621,7 +632,7 @@ function BicoloringResult(
     row_color, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    B = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
+    Br_and_Bc = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
     large_colptr = copy(ag.S.colptr)
     large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
     large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
@@ -635,7 +646,7 @@ function BicoloringResult(
         symmetric_result,
         col_color_ind,
         row_color_ind,
-        B,
+        Br_and_Bc,
         large_colptr,
         large_rowval,
     )
