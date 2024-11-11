@@ -3,7 +3,10 @@
 """
     show_colors(result; kwargs...)
 
-Return an image visualizing an [`AbstractColoringResult`](@ref), with the help of the the [JuliaImages](https://juliaimages.org) ecosystem.
+Create a visualization for an [`AbstractColoringResult`](@ref), with the help of the the [JuliaImages](https://juliaimages.org) ecosystem.
+
+- For `:column` or `:row` colorings, it returns a tuple `(A_img, B_img)`.
+- For `:bidirectional` colorings, it returns a tuple `(A_img, Br_img, Bc_img)`.
 
 !!! warning
     This function is implemented in a package extension, using it requires loading [Colors.jl](https://github.com/JuliaGraphics/Colors.jl).
