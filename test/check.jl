@@ -133,5 +133,11 @@ end
     ]
 
     # success
+
     @test structurally_biorthogonal(A, [1, 2, 2, 3], [1, 2, 2, 2, 3])
+
+    # failure
+
+    @test !structurally_biorthogonal(A, [1, 2, 2, 2, 3], [1, 2, 2, 3])
+    @test !structurally_biorthogonal(A, [1, 1, 1, 2], [1, 1, 1, 1, 2])
 end
