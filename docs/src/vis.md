@@ -63,11 +63,13 @@ We demonstrate this on a bidirectional coloring.
 ```@example img
 
 S = sparse([
-    1 1 1 1 1 1 1
-    1 0 0 0 0 0 1
-    1 0 0 0 0 0 1
-    1 0 0 0 0 0 1
-    1 1 1 1 1 1 1
+    1 1 1 1 1 1 1 1 1
+    1 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 1
+    1 0 0 0 0 0 0 0 1
+    1 1 1 1 1 1 1 1 1
 ])
 
 problem_bi = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
