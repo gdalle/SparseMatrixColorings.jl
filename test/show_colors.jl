@@ -63,7 +63,7 @@ end
 
 @testset "Errors" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
-    result = coloring(S, problem, algo)
+    result = coloring(A, problem, algo)
     @testset "scale too small" begin
         @test_throws ArgumentError show_colors(result; scale=-24)
         @test_throws ArgumentError show_colors(result; scale=0)
