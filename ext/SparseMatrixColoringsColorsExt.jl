@@ -22,7 +22,8 @@ using SparseMatrixColorings:
     sparsity_pattern,
     column_colors,
     row_colors,
-    ncolors
+    ncolors,
+    compress
 using Colors: Colorant, RGB, RGBA, distinguishable_colors
 
 const DEFAULT_BACKGROUND = RGBA(0, 0, 0, 0)
@@ -53,8 +54,8 @@ function SparseMatrixColorings.show_colors(
     else
         colorscheme = default_colorscheme(ncolors(res), convert(RGB, background))
     end
-    out = allocate_output(res, background, scale, pad)
-    return show_colors!(out, res, colorscheme, scale, pad)
+    outs = allocate_outputs(res, background, scale, pad)
+    return show_colors!(outs..., res, colorscheme, scale, pad)
 end
 
 function promote_colors(colorscheme, background)
@@ -65,15 +66,41 @@ function promote_colors(colorscheme, background)
     return colorscheme, background
 end
 
-function allocate_output(
-    res::AbstractColoringResult, background::Colorant, scale::Int, pad::Int
-)
+function allocate_outputs(
+    res::Union{AbstractColoringResult{s,:column},AbstractColoringResult{s,:row}},
+    background::Colorant,
+    scale::Int,
+    pad::Int,
+) where {s}
     A = sparsity_pattern(res)
+    B = compress(A, res)
     Base.require_one_based_indexing(A)
-    hi, wi = size(A)
-    h = hi * (scale + pad) + pad
-    w = wi * (scale + pad) + pad
-    return fill(background, h, w)
+    Base.require_one_based_indexing(B)
+    hA, wA = size(A) .* (scale + pad) .+ pad
+    hB, wB = size(B) .* (scale + pad) .+ pad
+    A_img = fill(background, hA, wA)
+    B_img = fill(background, hB, wB)
+    return A_img, B_img
+end
+
+function allocate_outputs(
+    res::AbstractColoringResult{s,:bidirectional},
+    background::Colorant,
+    scale::Int,
+    pad::Int,
+) where {s}
+    A = sparsity_pattern(res)
+    Br, Bc = compress(A, res)
+    Base.require_one_based_indexing(A)
+    Base.require_one_based_indexing(Br)
+    Base.require_one_based_indexing(Bc)
+    hA, wA = size(A) .* (scale + pad) .+ pad
+    hBr, wBr = size(Br) .* (scale + pad) .+ pad
+    hBc, wBc = size(Bc) .* (scale + pad) .+ pad
+    A_img = fill(background, hA, wA)
+    Br_img = fill(background, hBr, wBr)
+    Bc_img = fill(background, hBc, wBc)
+    return A_img, Br_img, Bc_img
 end
 
 # Given a CartesianIndex I of an entry in the original matrix, 
@@ -86,61 +113,120 @@ end
 ## Implementations for different AbstractColoringResult types start here
 
 function show_colors!(
-    out, res::AbstractColoringResult{s,:column}, colorscheme, scale, pad
+    A_img::AbstractMatrix{<:Colorant},
+    B_img::AbstractMatrix{<:Colorant},
+    res::AbstractColoringResult{s,:column},
+    colorscheme,
+    scale,
+    pad,
 ) where {s}
-    color_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
-    colors = colorscheme[color_indices]
-    pattern = sparsity_pattern(res)
-    for I in CartesianIndices(pattern)
-        if !iszero(pattern[I])
+    # cycle color indices if necessary
+    A_color_indices = mod1.(column_colors(res), length(colorscheme))
+    B_color_indices = mod1.(1:ncolors(res), length(colorscheme))
+    A_colors = colorscheme[A_color_indices]
+    B_colors = colorscheme[B_color_indices]
+    A = sparsity_pattern(res)
+    B = compress(A, res)
+    for I in CartesianIndices(A)
+        if !iszero(A[I])
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
-            out[area] .= colors[c]
+            A_img[area] .= A_colors[c]
         end
     end
-    return out
+    for I in CartesianIndices(B)
+        if !iszero(B[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            B_img[area] .= B_colors[c]
+        end
+    end
+    return A_img, B_img
 end
 
 function show_colors!(
-    out, res::AbstractColoringResult{s,:row}, colorscheme, scale, pad
+    A_img::AbstractMatrix{<:Colorant},
+    B_img::AbstractMatrix{<:Colorant},
+    res::AbstractColoringResult{s,:row},
+    colorscheme,
+    scale,
+    pad,
 ) where {s}
-    color_indices = mod1.(row_colors(res), length(colorscheme)) # cycle color indices if necessary
-    colors = colorscheme[color_indices]
-    pattern = sparsity_pattern(res)
-    for I in CartesianIndices(pattern)
-        if !iszero(pattern[I])
+    # cycle color indices if necessary
+    A_color_indices = mod1.(row_colors(res), length(colorscheme))
+    B_color_indices = mod1.(1:ncolors(res), length(colorscheme))
+    A_colors = colorscheme[A_color_indices]
+    B_colors = colorscheme[B_color_indices]
+    A = sparsity_pattern(res)
+    B = compress(A, res)
+    for I in CartesianIndices(A)
+        if !iszero(A[I])
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
-            out[area] .= colors[r]
+            A_img[area] .= A_colors[r]
         end
     end
-    return out
+    for I in CartesianIndices(B)
+        if !iszero(B[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            B_img[area] .= B_colors[r]
+        end
+    end
+    return A_img, B_img
 end
 
 function show_colors!(
-    out, res::AbstractColoringResult{s,:bidirectional}, colorscheme, scale, pad
+    A_img::AbstractMatrix{<:Colorant},
+    Br_img::AbstractMatrix{<:Colorant},
+    Bc_img::AbstractMatrix{<:Colorant},
+    res::AbstractColoringResult{s,:bidirectional},
+    colorscheme,
+    scale,
+    pad,
 ) where {s}
     scale < 3 && throw(ArgumentError("`scale` has to be ≥ 3 to visualize bicoloring"))
-    ccolor_indices = mod1.(column_colors(res), length(colorscheme)) # cycle color indices if necessary
+    # cycle color indices if necessary
     row_shift = maximum(column_colors(res))
-    rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme)) # cycle color indices if necessary
-    ccolors = colorscheme[ccolor_indices]
-    rcolors = colorscheme[rcolor_indices]
-    pattern = sparsity_pattern(res)
-    for I in CartesianIndices(pattern)
-        if !iszero(pattern[I])
+    A_ccolor_indices = mod1.(column_colors(res), length(colorscheme))
+    A_rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme))
+    B_ccolor_indices = mod1.(1:maximum(column_colors(res)), length(colorscheme))
+    B_rcolor_indices =
+        mod1.((row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme))
+    A_ccolors = colorscheme[A_ccolor_indices]
+    A_rcolors = colorscheme[A_rcolor_indices]
+    B_ccolors = colorscheme[B_ccolor_indices]
+    B_rcolors = colorscheme[B_rcolor_indices]
+    A = sparsity_pattern(res)
+    Br, Bc = compress(A, res)
+    for I in CartesianIndices(A)
+        if !iszero(A[I])
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
             for i in axes(area, 1), j in axes(area, 2)
                 if j > i
-                    out[area[i, j]] = ccolors[c]
+                    A_img[area[i, j]] = A_ccolors[c]
                 elseif i > j
-                    out[area[i, j]] = rcolors[r]
+                    A_img[area[i, j]] = A_rcolors[r]
                 end
             end
         end
     end
-    return out
+    for I in CartesianIndices(Br)
+        if !iszero(Br[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            Br_img[area] .= B_rcolors[r]
+        end
+    end
+    for I in CartesianIndices(Bc)
+        if !iszero(Bc[I])
+            r, c = Tuple(I)
+            area = matrix_entry_area(I, scale, pad)
+            Bc_img[area] .= B_ccolors[c]
+        end
+    end
+    return A_img, Br_img, Bc_img
 end
 
 end # module

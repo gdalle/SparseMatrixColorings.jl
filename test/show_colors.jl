@@ -17,32 +17,32 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
     result = coloring(S, problem, algo)
 
     if partition != :bidirectional
-        img = show_colors(result)
-        @test size(img) == size(S)
-        @test img isa Matrix{<:Colorant}
+        A_img, _ = show_colors(result)
+        @test size(A_img) == size(S)
+        @test A_img isa Matrix{<:Colorant}
     end
 
     h, w = size(S)
     scale = 3
-    img = show_colors(result; scale=scale)
-    @test size(img) == (h * scale, w * scale)
-    @test img isa Matrix{<:Colorant}
+    A_img, _ = show_colors(result; scale=scale)
+    @test size(A_img) == (h * scale, w * scale)
+    @test A_img isa Matrix{<:Colorant}
 
     pad = 2
-    img = show_colors(result; scale=scale, pad=pad)
-    @test size(img) == (h * (scale + pad) + pad, w * (scale + pad) + pad)
-    @test img isa Matrix{<:Colorant}
+    A_img, _ = show_colors(result; scale=scale, pad=pad)
+    @test size(A_img) == (h * (scale + pad) + pad, w * (scale + pad) + pad)
+    @test A_img isa Matrix{<:Colorant}
 
     if partition != :bidirectional
         @testset "color cycling" begin
             colorscheme = [RGB(0, 0, 0), RGB(1, 1, 1)] # 2 colors, whereas S requires 3
-            img = @test_logs (:warn,) show_colors(result; colorscheme)
-            @test size(img) == size(S)
-            @test img isa Matrix{<:Colorant}
+            A_img, _ = @test_logs (:warn,) show_colors(result; colorscheme)
+            @test size(A_img) == size(S)
+            @test A_img isa Matrix{<:Colorant}
 
-            img = show_colors(result; colorscheme, warn=false)
-            @test size(img) == size(S)
-            @test img isa Matrix{<:Colorant}
+            A_img, _ = show_colors(result; colorscheme, warn=false)
+            @test size(A_img) == size(S)
+            @test A_img isa Matrix{<:Colorant}
         end
     end
 end
