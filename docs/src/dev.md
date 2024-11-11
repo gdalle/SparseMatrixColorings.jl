@@ -48,6 +48,7 @@ SparseMatrixColorings.remap_colors
 SparseMatrixColorings.directly_recoverable_columns
 SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
+SparseMatrixColorings.structurally_biorthogonal
 SparseMatrixColorings.valid_dynamic_order
 ```
 

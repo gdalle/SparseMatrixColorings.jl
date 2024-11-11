@@ -59,13 +59,16 @@ function test_coloring_decompression(
                     if partition == :column
                         @test structurally_orthogonal_columns(A0, color)
                         @test directly_recoverable_columns(A0, color)
-                    else
+                    elseif partition == :row
                         @test structurally_orthogonal_columns(transpose(A0), color)
                         @test directly_recoverable_columns(transpose(A0), color)
                     end
                 else
-                    @test symmetrically_orthogonal_columns(A0, color)
-                    @test directly_recoverable_columns(A0, color)
+                    # structure == :symmetric
+                    if partition == :column
+                        @test symmetrically_orthogonal_columns(A0, color)
+                        @test directly_recoverable_columns(A0, color)
+                    end
                 end
             end
         end
