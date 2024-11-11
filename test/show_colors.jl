@@ -4,7 +4,7 @@ using SparseArrays
 using Colors
 using Test
 
-S = sparse([
+A = sparse([
     0 0 1 1 0 1
     1 0 0 0 1 0
     0 1 0 0 1 0
@@ -14,36 +14,50 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
 
 @testset "$partition" for partition in (:column, :row, :bidirectional)
     problem = ColoringProblem(; structure=:nonsymmetric, partition=partition)
-    result = coloring(S, problem, algo)
+    result = coloring(A, problem, algo)
 
     if partition != :bidirectional
-        A_img, _ = show_colors(result)
-        @test size(A_img) == size(S)
+        B = compress(A, result)
+
+        A_img, B_img = show_colors(result)
+        @test size(A_img) == size(A)
+        @test size(B_img) == size(B)
         @test A_img isa Matrix{<:Colorant}
-    end
+        @test B_img isa Matrix{<:Colorant}
 
-    h, w = size(S)
-    scale = 3
-    A_img, _ = show_colors(result; scale=scale)
-    @test size(A_img) == (h * scale, w * scale)
-    @test A_img isa Matrix{<:Colorant}
+        scale = 3
+        A_img, B_img = show_colors(result; scale=scale)
+        @test size(A_img) == size(A) .* scale
+        @test size(B_img) == size(B) .* scale
+        @test A_img isa Matrix{<:Colorant}
 
-    pad = 2
-    A_img, _ = show_colors(result; scale=scale, pad=pad)
-    @test size(A_img) == (h * (scale + pad) + pad, w * (scale + pad) + pad)
-    @test A_img isa Matrix{<:Colorant}
+        pad = 2
+        A_img, B_img = show_colors(result; scale=scale, pad=pad)
+        @test size(A_img) == size(A) .* (scale + pad) .+ pad
+        @test size(B_img) == size(B) .* (scale + pad) .+ pad
+        @test A_img isa Matrix{<:Colorant}
 
-    if partition != :bidirectional
         @testset "color cycling" begin
             colorscheme = [RGB(0, 0, 0), RGB(1, 1, 1)] # 2 colors, whereas S requires 3
             A_img, _ = @test_logs (:warn,) show_colors(result; colorscheme)
-            @test size(A_img) == size(S)
+            @test size(A_img) == size(A)
             @test A_img isa Matrix{<:Colorant}
 
             A_img, _ = show_colors(result; colorscheme, warn=false)
-            @test size(A_img) == size(S)
+            @test size(A_img) == size(A)
             @test A_img isa Matrix{<:Colorant}
         end
+    else
+        Br, Bc = compress(A, result)
+
+        scale = 3
+        A_img, Br_img, Bc_img = show_colors(result; scale=scale)
+        @test size(A_img) == size(A) .* scale
+        @test size(Br_img) == size(Br) .* scale
+        @test size(Bc_img) == size(Bc) .* scale
+        @test A_img isa Matrix{<:Colorant}
+        @test Br_img isa Matrix{<:Colorant}
+        @test Bc_img isa Matrix{<:Colorant}
     end
 end
 
