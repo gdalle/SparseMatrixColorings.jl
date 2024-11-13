@@ -10,7 +10,8 @@ using SparseMatrixColorings:
     matrix_versions,
     respectful_similar,
     structurally_orthogonal_columns,
-    symmetrically_orthogonal_columns
+    symmetrically_orthogonal_columns,
+    structurally_biorthogonal
 using Test
 
 function test_coloring_decompression(
@@ -166,9 +167,16 @@ function test_bicoloring_decompression(
             result = coloring(A, problem, algo; decompression_eltype=Float64)
         end
         Br, Bc = compress(A, result)
-        @test size(Br, 1) == length(unique(row_colors(result)))
-        @test size(Bc, 2) == length(unique(column_colors(result)))
+        row_color, column_color = row_colors(result), column_colors(result)
+        @test size(Br, 1) == length(unique(row_color))
+        @test size(Bc, 2) == length(unique(column_color))
         @test ncolors(result) == size(Br, 1) + size(Bc, 2)
+
+        if decompression == :direct
+            @testset "Recoverability" begin
+                @test structurally_biorthogonal(A0, row_color, column_color)
+            end
+        end
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
