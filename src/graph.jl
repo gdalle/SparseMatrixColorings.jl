@@ -100,7 +100,7 @@ end
 
 Undirected graph without self-loops representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
 
-The adjacency graph of a symmetrix matric `A ∈ ℝ^{n × n}` is `G(A) = (V, E)` where
+The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)` where
 
 - `V = 1:n` is the set of rows or columns `i`/`j`
 - `(i, j) ∈ E` whenever `A[i, j] ≠ 0` and `i ≠ j`

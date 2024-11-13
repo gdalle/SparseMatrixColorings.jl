@@ -1,18 +1,42 @@
 function proper_length_coloring(
-    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
-    if length(color) != size(A, 2)
+    m, n = size(A)
+    if length(color) != n
         if verbose
-            @warn "$(length(color)) colors provided for $(size(A, 2)) columns."
+            @warn "$(length(color)) colors provided for $n columns."
         end
         return false
     end
     return true
 end
 
+function proper_length_bicoloring(
+    A::AbstractMatrix,
+    row_color::AbstractVector{<:Integer},
+    column_color::AbstractVector{<:Integer};
+    verbose::Bool=false,
+)
+    m, n = size(A)
+    bool = true
+    if length(row_color) != m
+        if verbose
+            @warn "$(length(row_color)) colors provided for $m rows."
+        end
+        bool = false
+    end
+    if length(column_color) != n
+        if verbose
+            @warn "$(length(column_color)) colors provided for $n columns."
+        end
+        bool = false
+    end
+    return bool
+end
+
 """
     structurally_orthogonal_columns(
-        A::AbstractMatrix, color::AbstractVector{<:Integer}
+        A::AbstractMatrix, color::AbstractVector{<:Integer};
         verbose=false
     )
 
@@ -56,8 +80,8 @@ end
     )
 
 Return `true` if coloring the columns of the symmetric matrix `A` with the vector `color` results in a partition that is symmetrically orthogonal, and `false` otherwise.
-    
-A partition of the columns of a symmetrix matrix `A` is _symmetrically orthogonal_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+A partition of the columns of a symmetric matrix `A` is _symmetrically orthogonal_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
 
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the column `A[:, i]` has no other column with a nonzero in row `j`
@@ -94,6 +118,57 @@ function symmetrically_orthogonal_columns(
                 For coefficient (i=$i, j=$j) with column colors (ci=$ci, cj=$cj):
                 - In color ci=$ci, columns $gi_incompatible_columns all have nonzeros in row j=$j.
                 - In color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
+                """
+            end
+            return false
+        end
+    end
+    return true
+end
+
+"""
+    structurally_biorthogonal(
+        A::AbstractMatrix, row_color::AbstractVector{<:Integer}, column_color::AbstractVector{<:Integer};
+        verbose=false
+    )
+
+Return `true` if bicoloring of the matrix `A` with the vectors `row_color` and `column_color` results in a bipartition that is structurally biorthogonal, and `false` otherwise.
+
+A bipartition of the rows and columns of a matrix `A` is _structurally biorthogonal_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
+2. the group containing the row `A[i, :]` has no other row with a nonzero in column `j`
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+"""
+function structurally_biorthogonal(
+    A::AbstractMatrix,
+    row_color::AbstractVector{<:Integer},
+    column_color::AbstractVector{<:Integer};
+    verbose::Bool=false,
+)
+    if !proper_length_bicoloring(A, row_color, column_color; verbose)
+        return false
+    end
+    column_group = group_by_color(column_color)
+    row_group = group_by_color(row_color)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(A[i, j]) && continue
+        ci, cj = row_color[i], column_color[j]
+        gi, gj = row_group[ci], column_group[cj]
+        A_gj_rowi = view(A, i, gj)
+        A_gi_columnj = view(A, gi, j)
+        nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
+        nonzeros_gi_columnj = count(!iszero, A_gi_columnj)
+        if nonzeros_gj_rowi > 1 && nonzeros_gi_columnj > 1
+            if verbose
+                gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
+                gi_incompatible_rows = gi[findall(!iszero, A_gi_columnj)]
+                @warn """
+                For coefficient (i=$i, j=$j) with row color ci=$ci and column color cj=$cj:
+                - In row color ci=$ci, rows $gi_incompatible_rows all have nonzeros in column j=$j.
+                - In column color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
                 """
             end
             return false

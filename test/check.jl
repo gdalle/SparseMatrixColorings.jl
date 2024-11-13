@@ -2,6 +2,7 @@ using LinearAlgebra
 using SparseMatrixColorings:
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
+    structurally_biorthogonal,
     directly_recoverable_columns,
     what_fig_41,
     efficient_fig_1
@@ -121,4 +122,38 @@ For coefficient (i=2, j=3) with column colors (ci=3, cj=1):
     @test !directly_recoverable_columns(A, [1, 2, 1, 3, 1, 4, 3, 4, 1, 2])
     @test !directly_recoverable_columns(A, [1, 2, 1, 3, 1, 4, 2, 5, 1, 2])
     @test !directly_recoverable_columns(A, [1, 2, 1, 4, 1, 4, 3, 5, 1, 2])
+end
+
+@testset "Structurally biorthogonal" begin
+    A = [
+        1 5 7 9 11
+        2 0 0 0 12
+        3 0 0 0 13
+        4 6 8 10 14
+    ]
+
+    # success
+
+    @test structurally_biorthogonal(A, [1, 2, 2, 3], [1, 2, 2, 2, 3])
+
+    # failure
+
+    @test !structurally_biorthogonal(A, [1, 2, 2, 3], [1, 2, 2, 2])
+    @test !structurally_biorthogonal(A, [1, 2, 2, 3, 4], [1, 2, 2, 2, 3])
+    @test !structurally_biorthogonal(A, [1, 1, 1, 2], [1, 1, 1, 1, 2])
+
+    @test_logs (:warn, "4 colors provided for 5 columns.") !structurally_biorthogonal(
+        A, [1, 2, 2, 3], [1, 2, 2, 2]; verbose=true
+    )
+    @test_logs (:warn, "5 colors provided for 4 rows.") !structurally_biorthogonal(
+        A, [1, 2, 2, 3, 4], [1, 2, 2, 2, 3]; verbose=true
+    )
+    @test_logs (
+        :warn,
+        """
+For coefficient (i=1, j=1) with row color ci=1 and column color cj=1:
+- In row color ci=1, rows [1, 2, 3] all have nonzeros in column j=1.
+- In column color cj=1, columns [1, 2, 3, 4] all have nonzeros in row i=1.
+""",
+    ) !structurally_biorthogonal(A, [1, 1, 1, 2], [1, 1, 1, 1, 2]; verbose=true)
 end
