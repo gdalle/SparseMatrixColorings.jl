@@ -33,22 +33,42 @@ function vertices(bg::BipartiteGraph, ::Val{side}, ::NaturalOrder) where {side}
 end
 
 """
-    RandomOrder(rng=default_rng())
+    RandomOrder(rng=default_rng(), seed=nothing)
 
-Instance of [`AbstractOrder`](@ref) which sorts vertices using a random permutation.
+Instance of [`AbstractOrder`](@ref) which sorts vertices using a random permutation, generated from `rng` with a given `seed`.
+
+- If `seed = nothing`, the `rng` will never be re-seeded. Therefore, two consecutive calls to `vertices(g, order)` will give different results.
+- If `seed isa Integer`, the `rng` will be re-seeded before each sample. Therefore, two consecutive calls to `vertices(g, order)` will give the same result.
+
+!!! warning
+    Do not use a seed with the `default_rng()`, otherwise you will affect the global state of your program.
+    If you need reproducibility, create a new `rng` specifically for your `RandomOrder`.
+    The package [StableRNGs.jl](https://github.com/JuliaRandom/StableRNGs.jl) offers random number generators whose behavior is stable across Julia versions.
 """
-struct RandomOrder{R<:AbstractRNG} <: AbstractOrder
+struct RandomOrder{R<:AbstractRNG,S<:Union{Integer,Nothing}} <: AbstractOrder
     rng::R
+    seed::S
 end
 
+RandomOrder(rng::AbstractRNG) = RandomOrder(rng, nothing)
 RandomOrder() = RandomOrder(default_rng())
 
 function vertices(g::AdjacencyGraph, order::RandomOrder)
-    return randperm(order.rng, nb_vertices(g))
+    (; rng, seed) = order
+    if isnothing(seed)
+        return randperm(rng, nb_vertices(g))
+    else
+        return randperm(Random.seed!(rng, seed), nb_vertices(g))
+    end
 end
 
 function vertices(bg::BipartiteGraph, ::Val{side}, order::RandomOrder) where {side}
-    return randperm(order.rng, nb_vertices(bg, Val(side)))
+    (; rng, seed) = order
+    if isnothing(seed)
+        return randperm(rng, nb_vertices(bg, Val(side)))
+    else
+        return randperm(Random.seed!(rng, seed), nb_vertices(bg, Val(side)))
+    end
 end
 
 """
