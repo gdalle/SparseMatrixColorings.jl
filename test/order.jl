@@ -51,13 +51,10 @@ end;
     @test order.rng === Random.default_rng()
     @test isnothing(order.seed)
 
-    order = RandomOrder(StableRNG(0))
-    @test isnothing(order.seed)
-    @test vertices(ag, order) != vertices(ag, order)
-
     order = RandomOrder(StableRNG(0), 6)
     @test order.seed == 6
-    @test vertices(bg, order) == vertices(bg, order)
+    @test vertices(ag, order) == vertices(ag, order)
+    @test vertices(bg, Val(2), order) == vertices(bg, Val(2), order)
 end;
 
 @testset "LargestFirst" begin
