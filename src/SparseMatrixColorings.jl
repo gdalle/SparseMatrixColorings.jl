@@ -28,7 +28,7 @@ using LinearAlgebra:
     ldiv!,
     parent,
     transpose
-using Random: AbstractRNG, default_rng, randperm
+using Random: Random, AbstractRNG, default_rng, randperm
 using SparseArrays:
     SparseArrays,
     SparseMatrixCSC,

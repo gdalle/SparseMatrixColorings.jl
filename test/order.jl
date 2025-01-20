@@ -11,6 +11,7 @@ using SparseMatrixColorings:
     nb_vertices,
     valid_dynamic_order,
     vertices
+using Random
 using StableRNGs
 using Test
 
@@ -31,10 +32,10 @@ rng = StableRNG(63)
 end;
 
 @testset "RandomOrder" begin
-    A = sprand(rng, Bool, 5, 5, 0.5)
+    A = sprand(rng, Bool, 10, 10, 0.5)
     ag = AdjacencyGraph(A)
-    @test sort(vertices(ag, RandomOrder(rng))) == 1:5
-    @test sort(vertices(ag, RandomOrder())) == 1:5
+    @test sort(vertices(ag, RandomOrder(rng))) == 1:10
+    @test sort(vertices(ag, RandomOrder())) == 1:10
 
     A = sprand(rng, Bool, 5, 4, 0.5)
     bg = BipartiteGraph(A)
@@ -45,6 +46,18 @@ end;
     bg = BipartiteGraph(A)
     @test sort(vertices(bg, Val(2), RandomOrder(rng))) == 1:4
     @test sort(vertices(bg, Val(2), RandomOrder())) == 1:4
+
+    order = RandomOrder()
+    @test order.rng === Random.default_rng()
+    @test isnothing(order.seed)
+
+    order = RandomOrder(StableRNG(0))
+    @test isnothing(order.seed)
+    @test vertices(ag, order) != vertices(ag, order)
+
+    order = RandomOrder(StableRNG(0), 6)
+    @test order.seed == 6
+    @test vertices(ag, order) == vertices(ag, order)
 end;
 
 @testset "LargestFirst" begin
