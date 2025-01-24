@@ -35,5 +35,5 @@ Some parts of the articles (like definitions) are thus copied verbatim in the do
 
 ## Citing
 
-Please cite this software using the Zenodo DOI of the version you used.
-The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest version.
+Please cite this software using the provided `CITATION.cff` file.
+The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest version on Zenodo.

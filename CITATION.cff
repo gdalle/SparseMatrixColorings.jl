@@ -1,0 +1,30 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: SparseMatrixColorings.jl
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Guillaume
+    family-names: Dalle
+    orcid: 'https://orcid.org/0000-0003-4866-1687'
+  - given-names: Alexis
+    family-names: Montoison
+    orcid: 'https://orcid.org/0000-0002-3403-5450'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.11314275
+    description: Zenodo
+repository-code: 'https://github.com/gdalle/SparseMatrixColorings.jl'
+abstract: >-
+  Coloring algorithms for sparse Jacobian and Hessian
+  matrices
+keywords:
+  - graph coloring
+  - sparse matrices
+  - automatic differentiation
+  - julia programming language
+license: MIT
