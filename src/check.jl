@@ -253,7 +253,7 @@ function directly_recoverable_columns(
     B_unique = Set(unique(B))
     if !issubset(A_unique, push!(B_unique, zero(eltype(B))))
         if verbose
-            @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable." A_unique B_unique
+            @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable."
             return false
         end
         return false
