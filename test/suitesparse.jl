@@ -95,7 +95,7 @@ what_table_41_42 = CSV.read(
         @test nb_edges(ag) == row[:E]
         @test maximum_degree(ag) == row[:Δ]
         @test minimum_degree(ag) == row[:δ]
-        color_N, _ = star_coloring(ag, NaturalOrder())
+        color_N, _ = star_coloring(ag, NaturalOrder(); postprocessing=false)
         @test_skip row[:KS1] <= length(unique(color_N)) <= row[:KS2]  # TODO: find better
         yield()
     end
