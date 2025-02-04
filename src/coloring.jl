@@ -535,7 +535,7 @@ function postprocess!(
 )
     (; S) = g
     # flag which colors are actually used during decompression
-    color_used = zeros(Bool, maximum(color))
+    color_used = falses(maximum(color))
     # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
     for i in axes(S, 1)
         if !iszero(S[i, i])
