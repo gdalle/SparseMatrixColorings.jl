@@ -65,7 +65,7 @@ A _star coloring_ is a distance-1 coloring such that every path on 4 vertices us
 
 The vertices are colored in a greedy fashion, following the `order` supplied.
 
-If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" colors) as long as they are not needed during decompression.
+If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
 # See also
 
@@ -104,7 +104,7 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
                 for x in neighbors(g, w)
                     (x == v || iszero(color[x])) && continue
                     wx = _sort(w, x)
-                    if x == hub[star[wx]]  # potential Case 2 (will always be false if the hub is negative)
+                    if x == hub[star[wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -207,7 +207,7 @@ function _update_stars!(
                 hub[star[vq]] = v  # this may already be true
                 star[vw] = star[vq]
             else  # vw forms a new star
-                push!(hub, -max(v, w))  # star is trivial so we set the hub to a negative value, but it allows us to choose one of the two vertices
+                push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
                 star[vw] = length(hub)
             end
         end
@@ -265,7 +265,7 @@ An _acyclic coloring_ is a distance-1 coloring with the further restriction that
 
 The vertices are colored in a greedy fashion, following the `order` supplied.
 
-If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" colors) as long as they are not needed during decompression.
+If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
 # See also
 
@@ -550,7 +550,7 @@ function postprocess!(
             color_used[color[j]] = true
         end
     else
-        # only the colors inside the trees are used
+        # only the colors of non-leaf vertices are used
         (; reverse_bfs_orders) = star_or_tree_set
         for k in eachindex(reverse_bfs_orders)
             for (i, j) in reverse_bfs_orders[k]
