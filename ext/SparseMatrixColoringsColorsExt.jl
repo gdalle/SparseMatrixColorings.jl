@@ -131,7 +131,9 @@ function show_colors!(
         if !iszero(A[I])
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
-            A_img[area] .= A_colors[c]
+            if column_colors(res)[c] > 0
+                A_img[area] .= A_colors[c]
+            end
         end
     end
     for I in CartesianIndices(B)
@@ -163,7 +165,9 @@ function show_colors!(
         if !iszero(A[I])
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, pad)
-            A_img[area] .= A_colors[r]
+            if row_colors(res)[r] > 0
+                A_img[area] .= A_colors[r]
+            end
         end
     end
     for I in CartesianIndices(B)
@@ -205,9 +209,13 @@ function show_colors!(
             area = matrix_entry_area(I, scale, pad)
             for i in axes(area, 1), j in axes(area, 2)
                 if j > i
-                    A_img[area[i, j]] = A_ccolors[c]
+                    if column_colors(res)[c] > 0
+                        A_img[area[i, j]] = A_ccolors[c]
+                    end
                 elseif i > j
-                    A_img[area[i, j]] = A_rcolors[r]
+                    if row_colors(res)[r] > 0
+                        A_img[area[i, j]] = A_rcolors[r]
+                    end
                 end
             end
         end

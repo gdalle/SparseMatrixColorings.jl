@@ -46,16 +46,24 @@ function compress end
 
 function compress(A, result::AbstractColoringResult{structure,:column}) where {structure}
     group = column_groups(result)
-    B = stack(group; dims=2) do g
-        dropdims(sum(A[:, g]; dims=2); dims=2)
+    if isempty(group)
+        B = similar(A, size(A, 1), 0)
+    else
+        B = stack(group; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
     end
     return B
 end
 
 function compress(A, result::AbstractColoringResult{structure,:row}) where {structure}
     group = row_groups(result)
-    B = stack(group; dims=1) do g
-        dropdims(sum(A[g, :]; dims=1); dims=1)
+    if isempty(group)
+        B = similar(A, 0, size(A, 2))
+    else
+        B = stack(group; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
     end
     return B
 end
@@ -65,11 +73,19 @@ function compress(
 ) where {structure}
     row_group = row_groups(result)
     column_group = column_groups(result)
-    Br = stack(row_group; dims=1) do g
-        dropdims(sum(A[g, :]; dims=1); dims=1)
+    if isempty(row_group)
+        Br = similar(A, 0, size(A, 2))
+    else
+        Br = stack(row_group; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
     end
-    Bc = stack(column_group; dims=2) do g
-        dropdims(sum(A[:, g]; dims=2); dims=2)
+    if isempty(column_group)
+        Bc = similar(A, size(A, 1), 0)
+    else
+        Bc = stack(column_group; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
     end
     return Br, Bc
 end
@@ -410,7 +426,7 @@ function decompress!(
         end
     end
     for s in eachindex(hub, spokes)
-        j = abs(hub[s])
+        j = hub[s]
         cj = color[j]
         for i in spokes[s]
             if in_triangle(i, j, uplo)

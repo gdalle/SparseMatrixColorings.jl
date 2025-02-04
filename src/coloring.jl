@@ -54,7 +54,7 @@ function partial_distance2_coloring!(
 end
 
 """
-    star_coloring(g::AdjacencyGraph, order::AbstractOrder)
+    star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
 
 Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
 
@@ -65,6 +65,8 @@ A _star coloring_ is a distance-1 coloring such that every path on 4 vertices us
 
 The vertices are colored in a greedy fashion, following the `order` supplied.
 
+If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" colors) as long as they are not needed during decompression.
+
 # See also
 
 - [`AdjacencyGraph`](@ref)
@@ -74,7 +76,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
-function star_coloring(g::AdjacencyGraph, order::AbstractOrder)
+function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
     # Initialize data structures
     nv = nb_vertices(g)
     color = zeros(Int, nv)
@@ -82,7 +84,7 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
     star = Dict{Tuple{Int,Int},Int}()
-    hub = Int[]
+    hub = Int[]  # one hub for each star, including the trivial ones
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -102,7 +104,7 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder)
                 for x in neighbors(g, w)
                     (x == v || iszero(color[x])) && continue
                     wx = _sort(w, x)
-                    if x == hub[star[wx]]  # potential Case 2
+                    if x == hub[star[wx]]  # potential Case 2 (will always be false if the hub is negative)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -116,7 +118,12 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder)
         end
         _update_stars!(star, hub, g, v, color, first_neighbor)
     end
-    return color, StarSet(star, hub)
+    hub .= abs.(hub)  # make all hubs actual (positive) hubs before creating StarSet
+    star_set = StarSet(star, hub)
+    if postprocessing
+        postprocess!(color, star_set, g)
+    end
+    return color, star_set
 end
 
 """
@@ -131,7 +138,7 @@ $TYPEDFIELDS
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
     star::Dict{Tuple{Int,Int},Int}
-    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
+    "a mapping from star indices to their hub (hubs of single-edge stars are picked arbitrarily)"
     hub::Vector{Int}
     "a mapping from star indices to the vector of their spokes"
     spokes::Vector{Vector{Int}}
@@ -141,9 +148,9 @@ function StarSet(star, hub)
     spokes = [Int[] for s in eachindex(hub)]
     for ((i, j), s) in pairs(star)
         h = hub[s]
-        if i == abs(h)
+        if i == h
             push!(spokes[s], j)
-        elseif j == abs(h)
+        elseif j == h
             push!(spokes[s], i)
         end
     end
@@ -200,7 +207,7 @@ function _update_stars!(
                 hub[star[vq]] = v  # this may already be true
                 star[vw] = star[vq]
             else  # vw forms a new star
-                push!(hub, -max(v, w))  # hub is undefined so we set it to a negative value, but it allows us to remember one of the two vertices
+                push!(hub, -max(v, w))  # star is trivial so we set the hub to a negative value, but it allows us to choose one of the two vertices
                 star[vw] = length(hub)
             end
         end
@@ -247,7 +254,7 @@ function symmetric_coefficient(
 end
 
 """
-    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder)
+    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -258,6 +265,8 @@ An _acyclic coloring_ is a distance-1 coloring with the further restriction that
 
 The vertices are colored in a greedy fashion, following the `order` supplied.
 
+If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" colors) as long as they are not needed during decompression.
+
 # See also
 
 - [`AdjacencyGraph`](@ref)
@@ -267,7 +276,7 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder)
+function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
@@ -319,8 +328,11 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder)
     for edge in forest.revmap
         find_root!(forest, edge)
     end
-
-    return color, TreeSet(forest)
+    tree_set = TreeSet(forest, nb_vertices(g))
+    if postprocessing
+        postprocess!(color, tree_set, g)
+    end
+    return color, tree_set
 end
 
 function _prevent_cycle!(
@@ -401,4 +413,159 @@ $TYPEDFIELDS
 struct TreeSet
     "a forest of two-colored trees"
     forest::DisjointSets{Tuple{Int,Int}}
+    vertices_by_tree::Vector{Vector{Int}}
+    reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+end
+
+function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Integer)
+    # forest is a structure DisjointSets from DataStructures.jl
+    # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
+    # - forest.revmap: a dictionary that does the reverse of intmap, mapping an integer k to an edge (i, j)
+    # - forest.internal.ngroups: the number of trees in the forest
+    ntrees = forest.internal.ngroups
+
+    # dictionary that maps a tree's root to the index of the tree
+    roots = Dict{Int,Int}()
+
+    # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
+    trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
+
+    # counter of the number of roots found
+    k = 0
+    for edge in forest.revmap
+        i, j = edge
+        # forest has already been compressed so this doesn't change its state
+        # I wanted to use find_root but it is deprecated
+        root_edge = find_root!(forest, edge)
+        root = forest.intmap[root_edge]
+
+        # Update roots
+        if !haskey(roots, root)
+            k += 1
+            roots[root] = k
+        end
+
+        # index of the tree T that contains this edge
+        index_tree = roots[root]
+
+        # Update the neighbors of i in the tree T
+        if !haskey(trees[index_tree], i)
+            trees[index_tree][i] = [j]
+        else
+            push!(trees[index_tree][i], j)
+        end
+
+        # Update the neighbors of j in the tree T
+        if !haskey(trees[index_tree], j)
+            trees[index_tree][j] = [i]
+        else
+            push!(trees[index_tree][j], i)
+        end
+    end
+
+    # degrees is a vector of integers that stores the degree of each vertex in a tree
+    degrees = Vector{Int}(undef, nvertices)
+
+    # list of vertices for each tree in the forest
+    vertices_by_tree = [collect(keys(trees[i])) for i in 1:ntrees]
+
+    # reverse breadth first (BFS) traversal order for each tree in the forest
+    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
+
+    # nvmax is the number of vertices of the biggest tree in the forest
+    nvmax = mapreduce(length, max, vertices_by_tree; init=0)
+
+    # Create a queue with a fixed size nvmax
+    queue = Vector{Int}(undef, nvmax)
+
+    for k in 1:ntrees
+        tree = trees[k]
+
+        # Initialize the queue to store the leaves
+        queue_start = 1
+        queue_end = 0
+
+        # compute the degree of each vertex in the tree
+        for (vertex, neighbors) in tree
+            degree = length(neighbors)
+            degrees[vertex] = degree
+
+            # the vertex is a leaf
+            if degree == 1
+                queue_end += 1
+                queue[queue_end] = vertex
+            end
+        end
+
+        # continue until all leaves are treated
+        while queue_start <= queue_end
+            leaf = queue[queue_start]
+            queue_start += 1
+
+            # Mark the vertex as removed
+            degrees[leaf] = 0
+
+            for neighbor in tree[leaf]
+                if degrees[neighbor] != 0
+                    # (leaf, neighbor) represents the next edge to visit during decompression
+                    push!(reverse_bfs_orders[k], (leaf, neighbor))
+
+                    # reduce the degree of the neighbor
+                    degrees[neighbor] -= 1
+
+                    # check if the neighbor is now a leaf
+                    if degrees[neighbor] == 1
+                        queue_end += 1
+                        queue[queue_end] = neighbor
+                    end
+                end
+            end
+        end
+    end
+
+    return TreeSet(forest, vertices_by_tree, reverse_bfs_orders)
+end
+
+## Postprocessing, mirrors decompression code
+
+function postprocess!(
+    color::AbstractVector{<:Integer},
+    star_or_tree_set::Union{StarSet,TreeSet},
+    g::AdjacencyGraph,
+)
+    (; S) = g
+    # flag which colors are actually used during decompression
+    color_used = zeros(Bool, maximum(color))
+    # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
+    for i in axes(S, 1)
+        if !iszero(S[i, i])
+            color_used[color[i]] = true
+        end
+    end
+    if star_or_tree_set isa StarSet
+        # only the colors of the hubs are used
+        (; hub) = star_or_tree_set
+        for s in eachindex(hub)
+            j = hub[s]
+            color_used[color[j]] = true
+        end
+    else
+        # only the colors inside the trees are used
+        (; reverse_bfs_orders) = star_or_tree_set
+        for k in eachindex(reverse_bfs_orders)
+            for (i, j) in reverse_bfs_orders[k]
+                color_used[color[j]] = true
+            end
+        end
+    end
+    # assign the neutral color to every vertex with a useless color
+    for i in eachindex(color)
+        ci = color[i]
+        if !color_used[ci]
+            color[i] = 0
+        end
+    end
+    # remap colors to decrease the highest one by filling gaps
+    color .= remap_colors(color)[1]
+    return color
 end

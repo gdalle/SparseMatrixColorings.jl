@@ -9,5 +9,12 @@ using Test
         @test all(1:maximum(color)) do c
             all(color[group[c]] .== c) && issorted(group[c])
         end
+
+        color = rand(0:cmax, n)
+        group = group_by_color(color)
+        @test length(group) == maximum(color)
+        @test all(1:maximum(color)) do c
+            all(color[group[c]] .== c) && issorted(group[c])
+        end
     end
 end

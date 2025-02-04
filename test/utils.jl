@@ -168,8 +168,8 @@ function test_bicoloring_decompression(
         end
         Br, Bc = compress(A, result)
         row_color, column_color = row_colors(result), column_colors(result)
-        @test size(Br, 1) == length(unique(row_color))
-        @test size(Bc, 2) == length(unique(column_color))
+        @test size(Br, 1) == length(unique(row_color[row_color .> 0]))
+        @test size(Bc, 2) == length(unique(column_color[column_color .> 0]))
         @test ncolors(result) == size(Br, 1) + size(Bc, 2)
 
         if decompression == :direct
