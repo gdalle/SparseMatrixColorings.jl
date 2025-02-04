@@ -558,14 +558,17 @@ function postprocess!(
             end
         end
     end
-    # assign the neutral color to every vertex with a useless color
-    for i in eachindex(color)
-        ci = color[i]
-        if !color_used[ci]
-            color[i] = 0
+    # if at least one of the colors is useless, modify the color assignments of vertices
+    if any(!, color_used)
+        # assign the neutral color to every vertex with a useless color
+        for i in eachindex(color)
+            ci = color[i]
+            if !color_used[ci]
+                color[i] = 0
+            end
         end
+        # remap colors to decrease the highest one by filling gaps
+        color .= remap_colors(color)[1]
     end
-    # remap colors to decrease the highest one by filling gaps
-    color .= remap_colors(color)[1]
     return color
 end
