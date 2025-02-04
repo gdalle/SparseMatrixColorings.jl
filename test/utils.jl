@@ -86,6 +86,7 @@ function test_coloring_decompression(
                 A2 = respectful_similar(A)
                 A2 .= zero(eltype(A2))
                 for c in unique(color)
+                    c == 0 && continue
                     if partition == :column
                         decompress_single_color!(A2, B[:, c], c, result)
                     elseif partition == :row
@@ -125,6 +126,7 @@ function test_coloring_decompression(
                 A4both .= zero(eltype(A))
 
                 for c in unique(color)
+                    c == 0 && continue
                     decompress_single_color!(A4upper, B[:, c], c, result, :U)
                     decompress_single_color!(A4lower, B[:, c], c, result, :L)
                     decompress_single_color!(A4both, B[:, c], c, result, :F)
@@ -149,6 +151,9 @@ function test_coloring_decompression(
 
     @testset "Coherence between all colorings" begin
         @test all(color_vec .== Ref(color_vec[1]))
+        if !all(color_vec .== Ref(color_vec[1]))
+            @show color_vec
+        end
     end
 end
 

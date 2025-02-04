@@ -51,50 +51,70 @@ end;
 
 @testset "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset "$((; n, p))" for (n, p) in symmetric_params
-        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
-        color0 = symmetric_coloring(A0, algo)
-        test_coloring_decompression(A0, problem, algo; color0)
+    @testset for algo in (
+        GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct),
+        GreedyColoringAlgorithm(; postprocessing=true, decompression=:direct),
+    )
+        @testset "$((; n, p))" for (n, p) in symmetric_params
+            A0 = sparse(Symmetric(sprand(rng, n, n, p)))
+            color0 = algo.postprocessing ? nothing : symmetric_coloring(A0, algo)
+            test_coloring_decompression(A0, problem, algo; color0)
+        end
     end
 end;
 
 @testset "Symmetric coloring & substitution decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    algo = GreedyColoringAlgorithm(; decompression=:substitution)
-    @testset "$((; n, p))" for (n, p) in symmetric_params
-        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
-        # TODO: find tests for recoverability
-        test_coloring_decompression(A0, problem, algo)
+    @testset for algo in (
+        GreedyColoringAlgorithm(; postprocessing=false, decompression=:substitution),
+        GreedyColoringAlgorithm(; postprocessing=true, decompression=:substitution),
+    )
+        @testset "$((; n, p))" for (n, p) in symmetric_params
+            A0 = sparse(Symmetric(sprand(rng, n, n, p)))
+            # TODO: find tests for recoverability
+            test_coloring_decompression(A0, problem, algo)
+        end
     end
 end;
 
 @testset "Bicoloring & direct decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
-    algo = GreedyColoringAlgorithm(
-        RandomOrder(rng); postprocessing=true, decompression=:direct
+    @testset for algo in (
+        GreedyColoringAlgorithm(
+            RandomOrder(rng); postprocessing=false, decompression=:direct
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(rng); postprocessing=true, decompression=:direct
+        ),
     )
-    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
-        A0 = sprand(rng, m, n, p)
-        test_bicoloring_decompression(A0, problem, algo)
-    end
-    @testset "$((; n, p))" for (n, p) in symmetric_params
-        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
-        test_bicoloring_decompression(A0, problem, algo)
+        @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+            A0 = sprand(rng, m, n, p)
+            test_bicoloring_decompression(A0, problem, algo)
+        end
+        @testset "$((; n, p))" for (n, p) in symmetric_params
+            A0 = sparse(Symmetric(sprand(rng, n, n, p)))
+            test_bicoloring_decompression(A0, problem, algo)
+        end
     end
 end;
 
 @testset "Bicoloring & substitution decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
-    algo = GreedyColoringAlgorithm(
-        RandomOrder(rng); postprocessing=true, decompression=:substitution
+    @testset for algo in (
+        GreedyColoringAlgorithm(
+            RandomOrder(rng); postprocessing=false, decompression=:substitution
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(rng); postprocessing=true, decompression=:substitution
+        ),
     )
-    @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
-        A0 = sprand(rng, m, n, p)
-        test_bicoloring_decompression(A0, problem, algo)
-    end
-    @testset "$((; n, p))" for (n, p) in symmetric_params
-        A0 = sparse(Symmetric(sprand(rng, n, n, p)))
-        test_bicoloring_decompression(A0, problem, algo)
+        @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+            A0 = sprand(rng, m, n, p)
+            test_bicoloring_decompression(A0, problem, algo)
+        end
+        @testset "$((; n, p))" for (n, p) in symmetric_params
+            A0 = sparse(Symmetric(sprand(rng, n, n, p)))
+            test_bicoloring_decompression(A0, problem, algo)
+        end
     end
 end;

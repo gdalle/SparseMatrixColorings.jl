@@ -429,10 +429,14 @@ function LinearSystemColoringResult(
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
         cj = color[j]
-        ki = (ci - 1) * n + j  # A[i, j] appears in B[j, ci]
-        kj = (cj - 1) * n + i  # A[i, j] appears in B[i, cj]
-        T[ki, l] = 1
-        T[kj, l] = 1
+        if ci > 0
+            ki = (ci - 1) * n + j  # A[i, j] appears in B[j, ci]
+            T[ki, l] = 1
+        end
+        if cj > 0
+            kj = (cj - 1) * n + i  # A[i, j] appears in B[i, cj]
+            T[kj, l] = 1
+        end
     end
     T_factorization = factorize(T)
 

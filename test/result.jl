@@ -18,3 +18,16 @@ using Test
         end
     end
 end
+
+@testset "Empty compression" begin
+    A = rand(10, 10)
+    color = zeros(Int, 10)
+    problem = ColoringProblem{:nonsymmetric,:column}()
+    algo = ConstantColoringAlgorithm(A, color; partition=:column)
+    B = compress(A, coloring(A, problem, algo))
+    @test size(B, 2) == 0
+    problem = ColoringProblem{:nonsymmetric,:row}()
+    algo = ConstantColoringAlgorithm(A, color; partition=:row)
+    B = compress(A, coloring(A, problem, algo))
+    @test size(B, 1) == 0
+end

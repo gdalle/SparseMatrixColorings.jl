@@ -105,23 +105,10 @@ function symmetrically_orthogonal_columns(
     for i in axes(A, 2), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
-        gi, gj = group[ci], group[cj]
-        A_gj_rowi = view(A, i, gj)
-        A_gi_rowj = view(A, j, gi)
-        nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
-        nonzeros_gi_rowj = count(!iszero, A_gi_rowj)
-        if nonzeros_gj_rowi > 1 && nonzeros_gi_rowj > 1
-            if verbose
-                gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
-                gi_incompatible_columns = gi[findall(!iszero, A_gi_rowj)]
-                @warn """
-                For coefficient (i=$i, j=$j) with column colors (ci=$ci, cj=$cj):
-                - In color ci=$ci, columns $gi_incompatible_columns all have nonzeros in row j=$j.
-                - In color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
-                """
-            end
-            return false
-        end
+        check = _bilateral_check(
+            A; i, j, ci, cj, row_group=group, column_group=group, verbose
+        )
+        !check && return false
     end
     return true
 end
@@ -156,63 +143,78 @@ function structurally_biorthogonal(
     for i in axes(A, 1), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = row_color[i], column_color[j]
-        if ci == 0 && cj == 0
+        check = _bilateral_check(A; i, j, ci, cj, row_group, column_group, verbose)
+        !check && return false
+    end
+    return true
+end
+
+function _bilateral_check(
+    A::AbstractMatrix;
+    i::Integer,
+    j::Integer,
+    ci::Integer,
+    cj::Integer,
+    row_group::AbstractVector,
+    column_group::AbstractVector,
+    verbose::Bool,
+)
+    if ci == 0 && cj == 0
+        if verbose
+            @warn """
+                For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+                - Row color ci=$ci is neutral.
+                - Column color cj=$cj is neutral.
+                """
+        end
+        return false
+    elseif ci == 0 && cj != 0
+        gj = column_group[cj]
+        A_gj_rowi = view(A, i, gj)
+        nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
+        if nonzeros_gj_rowi > 1
             if verbose
+                gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
                 @warn """
-                    For coefficient (i=$i, j=$j) with row color ci=$ci and column color cj=$cj:
-                    - Row color ci=$ci is neutral.
-                    - Column color cj=$cj is neutral.
-                    """
+                For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+                - Row color ci=$ci is neutral.
+                - In column color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
+                """
             end
             return false
-        elseif ci == 0 && cj != 0
-            gj = column_group[cj]
-            A_gj_rowi = view(A, i, gj)
-            nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
-            if nonzeros_gj_rowi > 1
-                if verbose
-                    gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
-                    @warn """
-                    For coefficient (i=$i, j=$j) with row color ci=$ci and column color cj=$cj:
-                    - Row color ci=$ci is neutral.
-                    - In column color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
-                    """
-                end
-                return false
+        end
+    elseif ci != 0 && cj == 0
+        gi = row_group[ci]
+        A_gi_columnj = view(A, gi, j)
+        nonzeros_gi_columnj = count(!iszero, A_gi_columnj)
+        if nonzeros_gi_columnj > 1
+            if verbose
+                gi_incompatible_rows = gi[findall(!iszero, A_gi_columnj)]
+                @warn """
+                For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+                - In row color ci=$ci, rows $gi_incompatible_rows all have nonzeros in column j=$j.
+                - Column color cj=$cj is neutral.
+                """
             end
-        elseif ci != 0 && cj == 0
-            gi = row_group[ci]
-            A_gi_columnj = view(A, gi, j)
-            nonzeros_gi_columnj = count(!iszero, A_gi_columnj)
-            if nonzeros_gi_columnj > 1
-                if verbose
-                    gi_incompatible_rows = gi[findall(!iszero, A_gi_columnj)]
-                    @warn """
-                    For coefficient (i=$i, j=$j) with row color ci=$ci and column color cj=$cj:
-                    - In row color ci=$ci, rows $gi_incompatible_rows all have nonzeros in column j=$j.
-                    - Column color cj=$cj is neutral.
-                    """
-                end
-                return false
+            return false
+        end
+    else
+        gi, gj = row_group[ci], column_group[cj]
+        A_gj_rowi = view(A, i, gj)
+        A_gi_columnj = view(A, gi, j)
+        nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
+        nonzeros_gi_columnj = count(!iszero, A_gi_columnj)
+        if nonzeros_gj_rowi > 1 && nonzeros_gi_columnj > 1
+            if verbose
+                gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
+                gi_incompatible_rows = gi[findall(!iszero, A_gi_columnj)]
+                @warn """
+                For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+                - In row color ci=$ci, rows $gi_incompatible_rows all have nonzeros in column j=$j.
+                - In column color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
+                """
             end
-        else
-            gi, gj = row_group[ci], column_group[cj]
-            A_gj_rowi = view(A, i, gj)
-            A_gi_columnj = view(A, gi, j)
-            nonzeros_gj_rowi = count(!iszero, A_gj_rowi)
-            nonzeros_gi_columnj = count(!iszero, A_gi_columnj)
-            if nonzeros_gj_rowi > 1 && nonzeros_gi_columnj > 1
-                if verbose
-                    gj_incompatible_columns = gj[findall(!iszero, A_gj_rowi)]
-                    gi_incompatible_rows = gi[findall(!iszero, A_gi_columnj)]
-                    @warn """
-                    For coefficient (i=$i, j=$j) with row color ci=$ci and column color cj=$cj:
-                    - In row color ci=$ci, rows $gi_incompatible_rows all have nonzeros in column j=$j.
-                    - In column color cj=$cj, columns $gj_incompatible_columns all have nonzeros in row i=$i.
-                    """
-                end
-                return false
-            end
+            return false
         end
     end
     return true
@@ -240,14 +242,18 @@ function directly_recoverable_columns(
         return false
     end
     group = group_by_color(color)
-    B = stack(group; dims=2) do g
-        dropdims(sum(A[:, g]; dims=2); dims=2)
+    B = if isempty(group)
+        similar(A, size(A, 1), 0)
+    else
+        stack(group; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
     end
     A_unique = Set(unique(A))
     B_unique = Set(unique(B))
-    if !issubset(A_unique, B_unique)
+    if !issubset(A_unique, push!(B_unique, zero(eltype(B))))
         if verbose
-            @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable."
+            @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable." A_unique B_unique
             return false
         end
         return false
