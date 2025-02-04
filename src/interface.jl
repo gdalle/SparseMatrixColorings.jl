@@ -232,15 +232,22 @@ function coloring(
 ) where {decompression,R}
     m, n = size(A)
     T = eltype(A)
-    Aᵀ = if symmetric_pattern || A isa Union{Symmetric,Hermitian}
-        A
-    else
-        transpose(A)
-    end  # TODO: fuse with next step?
-    A_and_Aᵀ = [
-        spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
-        SparseMatrixCSC(A) spzeros(T, m, m)
-    ]  # TODO: slow
+
+    # build A_and_Aᵀ
+    sparse_A = A isa SparseMatrixCSC ? A : SparseMatrixCSC(A)
+    nnzA = nnz(A)
+    colptr = Vector{Int}(undef, m + n + 1)
+    rowval = Vector{Int}(undef, 2 * nnzA)
+    nzval = Vector{T}(undef, 2 * nnzA)
+    colptr[1:(n + 1)] .= sparse_A.colptr
+    rowval[1:nnzA] .= sparse_A.rowval .+ n
+    nzval[1:nnzA] .= sparse_A.nzval
+    sparse_Aᵀ = SparseMatrixCSC(sparse_A')
+    colptr[(n + 1):(m + n + 1)] .= sparse_Aᵀ.colptr .+ nnzA
+    rowval[(nnzA + 1):end] .= sparse_Aᵀ.rowval
+    nzval[(nnzA + 1):end] .= sparse_Aᵀ.nzval
+    A_and_Aᵀ = SparseMatrixCSC(m + n, m + n, colptr, rowval, nzval)
+
     ag = AdjacencyGraph(A_and_Aᵀ)
     if decompression == :direct
         color, star_set = star_coloring(ag, algo.order)
