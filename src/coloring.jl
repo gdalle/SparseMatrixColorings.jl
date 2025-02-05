@@ -417,7 +417,7 @@ struct TreeSet
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
 end
 
-function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Integer)
+function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     # forest is a structure DisjointSets from DataStructures.jl
     # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
     # - forest.revmap: a dictionary that does the reverse of intmap, mapping an integer k to an edge (i, j)
