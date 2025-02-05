@@ -69,10 +69,11 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder())
-    GreedyColoringAlgorithm(order=NaturalOrder(); decompression=:direct)
+    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false)
+    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, decompression=:direct)
 
 - `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
+- `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 !!! warning
@@ -96,20 +97,23 @@ See their respective docstrings for details.
 struct GreedyColoringAlgorithm{decompression,O<:AbstractOrder} <:
        ADTypes.AbstractColoringAlgorithm
     order::O
+    postprocessing::Bool
 end
 
 function GreedyColoringAlgorithm{decompression}(
-    order::AbstractOrder=NaturalOrder()
+    order::AbstractOrder=NaturalOrder(); postprocessing::Bool=false
 ) where {decompression}
     check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
 end
 
 function GreedyColoringAlgorithm(
-    order::AbstractOrder=NaturalOrder(); decompression::Symbol=:direct
+    order::AbstractOrder=NaturalOrder();
+    postprocessing::Bool=false,
+    decompression::Symbol=:direct,
 )
     check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
 end
 
 """
@@ -208,7 +212,7 @@ function coloring(
     decompression_eltype::Type=Float64,
 )
     ag = AdjacencyGraph(A)
-    color, star_set = star_coloring(ag, algo.order)
+    color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     return StarSetColoringResult(A, ag, color, star_set)
 end
 
@@ -219,7 +223,7 @@ function coloring(
     decompression_eltype::Type=Float64,
 )
     ag = AdjacencyGraph(A)
-    color, tree_set = acyclic_coloring(ag, algo.order)
+    color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
 end
 
@@ -243,10 +247,12 @@ function coloring(
     ]  # TODO: slow
     ag = AdjacencyGraph(A_and_Aᵀ)
     if decompression == :direct
-        color, star_set = star_coloring(ag, algo.order)
+        color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
     else
-        color, tree_set = acyclic_coloring(ag, algo.order)
+        color, tree_set = acyclic_coloring(
+            ag, algo.order; postprocessing=algo.postprocessing
+        )
         symmetric_result = TreeSetColoringResult(
             A_and_Aᵀ, ag, color, tree_set, decompression_eltype
         )
@@ -270,6 +276,7 @@ end
 
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
     ag = AdjacencyGraph(A)
-    color, star_set = star_coloring(ag, algo.order)
+    # never postprocess because end users do not expect zeros
+    color, star_set = star_coloring(ag, algo.order; postprocessing=false)
     return color
 end
