@@ -562,7 +562,7 @@ function postprocess!(
     end
     if star_or_tree_set isa StarSet
         # only the colors of the hubs are used
-        (; hub) = star_or_tree_set
+        (; hub, spokes) = star_or_tree_set
         nb_trivial_star = 0
 
         # Iterate through all non-trivial stars
