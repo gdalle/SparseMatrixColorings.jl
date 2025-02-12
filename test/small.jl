@@ -91,6 +91,8 @@ end;
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     order = RandomOrder(StableRNG(0), 0)
 
+    # Rectangle
+
     A = spzeros(Bool, 10, 20)
     A[:, 1] .= 1
     A[:, end] .= 1
@@ -115,4 +117,27 @@ end;
         A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=true)
     )
     @test ncolors(result) == 4  # optimal number
+
+    # Arrowhead
+
+    A = spzeros(Bool, 10, 10)
+    for i in axes(A, 1)
+        A[1, i] = 1
+        A[i, 1] = 1
+        A[i, i] = 1
+    end
+
+    result = coloring(
+        A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
+    )
+    @test ncolors(coloring(A, problem, GreedyColoringAlgorithm{:substitution}(order))) <
+        ncolors(coloring(A, problem, GreedyColoringAlgorithm{:direct}(order)))
+
+    @test ncolors(
+        coloring(
+            A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=true)
+        ),
+    ) < ncolors(
+        coloring(A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true))
+    )
 end
