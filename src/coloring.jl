@@ -302,6 +302,10 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
     forest = DisjointSets{Tuple{Int,Int}}()
+    sizehint!(forest.intmap, ne)
+    sizehint!(forest.revmap, ne)
+    sizehint!(forest.internal.parents, ne)
+    sizehint!(forest.internal.ranks, ne)
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
