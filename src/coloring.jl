@@ -79,6 +79,7 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
     # Initialize data structures
     nv = nb_vertices(g)
+    ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
@@ -581,8 +582,12 @@ function postprocess!(
             for s in eachindex(hub)
                 j = hub[s]
                 if j < 0
+                    i = spokes[s][1]
                     j = abs(j)
-                    color_used[color[j]] = true
+                    if !color_used[color[i]] && !color_used[color[j]]
+                        # We arbitrarily set one vertex as hub
+                        color_used[color[j]] = true
+                    end
                 end
             end
         end
