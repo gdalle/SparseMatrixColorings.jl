@@ -467,7 +467,7 @@ For all vertex indices `i` we have:
     remapped_color[i] = color_to_ind[color[i]]
 """
 function remap_colors(color::Vector{Int})
-    sorted_colors = sort!(color |> unique)
+    sorted_colors = sort!(unique(color))
     offset = sorted_colors[1] == 0 ? 1 : 0
     color_to_ind = Dict(c => i - offset for (i, c) in enumerate(sorted_colors))
     remapped_colors = [color_to_ind[c] for c in color]
