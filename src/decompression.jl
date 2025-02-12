@@ -426,7 +426,7 @@ function decompress!(
         end
     end
     for s in eachindex(hub, spokes)
-        j = hub[s]
+        j = abs(hub[s])
         cj = color[j]
         for i in spokes[s]
             if in_triangle(i, j, uplo)

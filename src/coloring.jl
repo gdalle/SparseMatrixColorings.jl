@@ -84,7 +84,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
     star = Dict{Tuple{Int,Int},Int}()
+    sizehint!(star, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
+    nb_spokes = Int[]  # number of spokes for each star
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -116,10 +118,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
                 break
             end
         end
-        _update_stars!(star, hub, g, v, color, first_neighbor)
+        _update_stars!(star, hub, nb_spokes, g, v, color, first_neighbor)
     end
-    hub .= abs.(hub)  # make all hubs actual (positive) hubs before creating StarSet
-    star_set = StarSet(star, hub)
+    star_set = StarSet(star, hub, nb_spokes)
     if postprocessing
         postprocess!(color, star_set, g)
     end
@@ -138,20 +139,31 @@ $TYPEDFIELDS
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
     star::Dict{Tuple{Int,Int},Int}
-    "a mapping from star indices to their hub (hubs of single-edge stars are picked arbitrarily)"
+    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
     "a mapping from star indices to the vector of their spokes"
     spokes::Vector{Vector{Int}}
 end
 
-function StarSet(star, hub)
-    spokes = [Int[] for s in eachindex(hub)]
+function StarSet(star::Dict{Tuple{Int,Int},Int},
+                 hub::Vector{Int},
+                 nb_spokes::Vector{Int})
+    # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
+    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
+
+    # Reuse nb_spokes as counters to track the current index while filling the spokes
+    fill!(nb_spokes, 0)
+
     for ((i, j), s) in pairs(star)
-        h = hub[s]
+        h = abs(hub[s])
+        nb_spokes[s] += 1
+        index = nb_spokes[s]
+
+        # Assign the non-hub vertex (spoke) to the correct position in spokes
         if i == h
-            push!(spokes[s], j)
+            spokes[s][index] = j
         elseif j == h
-            push!(spokes[s], i)
+            spokes[s][index] = i
         end
     end
     return StarSet(star, hub, spokes)
@@ -181,6 +193,7 @@ function _update_stars!(
     # modified
     star::Dict{<:Tuple,<:Integer},
     hub::AbstractVector{<:Integer},
+    nb_spokes::AbstractVector{<:Integer},
     # not modified
     g::AdjacencyGraph,
     v::Integer,
@@ -194,8 +207,10 @@ function _update_stars!(
         for x in neighbors(g, w)
             if x != v && color[x] == color[v]  # vw, wx ∈ E
                 wx = _sort(w, x)
-                hub[star[wx]] = w  # this may already be true
-                star[vw] = star[wx]
+                star_wx = star[wx]
+                hub[star_wx] = w  # this may already be true
+                nb_spokes[star_wx] += 1
+                star[vw] = star_wx
                 x_exists = true
                 break
             end
@@ -204,10 +219,13 @@ function _update_stars!(
             (p, q) = first_neighbor[color[w]]
             if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
                 vq = _sort(v, q)
-                hub[star[vq]] = v  # this may already be true
-                star[vw] = star[vq]
+                star_vq = star[vq]
+                hub[star_vq] = v  # this may already be true
+                nb_spokes[star_vq] += 1
+                star[vw] = star_vq
             else  # vw forms a new star
                 push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
+                push!(nb_spokes, 1)
                 star[vw] = length(hub)
             end
         end
@@ -546,9 +564,27 @@ function postprocess!(
     if star_or_tree_set isa StarSet
         # only the colors of the hubs are used
         (; hub) = star_or_tree_set
+        nb_trivial_star = 0
+
+        # Iterate through all non-trivial stars
         for s in eachindex(hub)
             j = hub[s]
-            color_used[color[j]] = true
+            if j > 0
+                color_used[color[j]] = true
+            else
+                nb_trivial_star += 1
+            end
+        end
+
+        # Process the trivial stars (if any)
+        if nb_trivial_star > 0
+            for s in eachindex(hub)
+                j = hub[s]
+                if j < 0
+                    j = abs(j)
+                    color_used[color[j]] = true
+                end
+            end
         end
     else
         # only the colors of non-leaf vertices are used
