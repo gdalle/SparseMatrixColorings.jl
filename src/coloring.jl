@@ -558,10 +558,11 @@ function postprocess!(
             color_used[color[i]] = true
         end
     end
+
     if star_or_tree_set isa StarSet
         # only the colors of the hubs are used
         (; hub, spokes) = star_or_tree_set
-        nb_trivial_star = 0
+        nb_trivial_stars = 0
 
         # Iterate through all non-trivial stars
         for s in eachindex(hub)
@@ -569,12 +570,12 @@ function postprocess!(
             if j > 0
                 color_used[color[j]] = true
             else
-                nb_trivial_star += 1
+                nb_trivial_stars += 1
             end
         end
 
         # Process the trivial stars (if any)
-        if nb_trivial_star > 0
+        if nb_trivial_stars > 0
             for s in eachindex(hub)
                 j = hub[s]
                 if j < 0
@@ -595,12 +596,43 @@ function postprocess!(
     else
         # only the colors of non-leaf vertices are used
         (; reverse_bfs_orders) = star_or_tree_set
+        nb_trivial_trees = 0
+
+        # Iterate through all non-trivial trees
         for k in eachindex(reverse_bfs_orders)
-            for (i, j) in reverse_bfs_orders[k]
-                color_used[color[j]] = true
+            reverse_bfs_order = reverse_bfs_orders[k]
+            # Check if we have more than one edge in the tree
+            if length(reverse_bfs_order) > 1
+                # TODO: Optimize by avoiding iteration over all edges
+                # Only one edge is needed if we know if it is a normal tree or a star
+                for (i, j) in reverse_bfs_order
+                    color_used[color[j]] = true
+                end
+            else
+                nb_trivial_trees += 1
+            end
+        end
+
+        # Process the trivial trees (if any)
+        if nb_trivial_trees > 0
+            for k in eachindex(reverse_bfs_orders)
+                reverse_bfs_order = reverse_bfs_orders[k]
+                # Check if we have exactly one edge in the tree
+                if length(vertices_by_tree[k]) == 1
+                    (i, j) = reverse_bfs_orders[k][1]
+                    if color_used[color[i]]
+                        # Make i the root to avoid possibly adding one more used color
+                        # Switch it with the (only) leaf
+                        reverse_bfs_orders[k][1] = (j, i)
+                    else
+                        # Keep j as the root
+                        color_used[color[j]] = true
+                    end
+                end
             end
         end
     end
+
     # if at least one of the colors is useless, modify the color assignments of vertices
     if any(!, color_used)
         # assign the neutral color to every vertex with a useless color
