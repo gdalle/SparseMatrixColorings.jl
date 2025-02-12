@@ -219,15 +219,28 @@ function vertices(
     g::BipartiteGraph, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
 ) where {side,degtype,direction}
     other_side = 3 - side
-    if degree_increasing(; degtype, direction)
-        degrees = zeros(Int, nb_vertices(g, Val(side)))
-    else
-        degrees = [degree_dist2(g, Val(side), v) for v in vertices(g, Val(side))]  # TODO: optimize
+    # compute dist-2 degrees in an optimized way
+    n = nb_vertices(g, Val(side))
+    degrees_dist2 = zeros(Int, n)
+    dist2_neighbor = falses(n)
+    for v in vertices(g, Val(side))
+        fill!(dist2_neighbor, false)
+        for w1 in neighbors(g, Val(side), v)
+            for w2 in neighbors(g, Val(other_side), w1)
+                dist2_neighbor[w2] = true
+            end
+        end
+        degrees_dist2[v] = sum(dist2_neighbor)
     end
-    maxd2 = maximum(v -> degree_dist2(g, Val(side), v), vertices(g, Val(side)))  # TODO: optimize
+    if degree_increasing(; degtype, direction)
+        degrees = zeros(Int, n)
+    else
+        degrees = degrees_dist2
+    end
+    maxd2 = maximum(degrees_dist2)
     db = DegreeBuckets(degrees, maxd2)
     π = Int[]
-    visited = falses(nb_vertices(g, Val(side)))
+    visited = falses(n)
     for _ in 1:nb_vertices(g, Val(side))
         u = pop_next_candidate!(db; direction)
         direction == :low2high ? push!(π, u) : pushfirst!(π, u)
