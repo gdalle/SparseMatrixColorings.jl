@@ -108,7 +108,6 @@ end;
     )
     @test ncolors(result) == 4  # optimal number
 
-    # TODO: find example where subsitution is strictly better
     result = coloring(
         A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=false)
     )
