@@ -618,12 +618,12 @@ function postprocess!(
             for k in eachindex(reverse_bfs_orders)
                 reverse_bfs_order = reverse_bfs_orders[k]
                 # Check if we have exactly one edge in the tree
-                if length(vertices_by_tree[k]) == 1
-                    (i, j) = reverse_bfs_orders[k][1]
+                if length(reverse_bfs_order) == 1
+                    (i, j) = reverse_bfs_order[1]
                     if color_used[color[i]]
                         # Make i the root to avoid possibly adding one more used color
                         # Switch it with the (only) leaf
-                        reverse_bfs_orders[k][1] = (j, i)
+                        reverse_bfs_order[1] = (j, i)
                     else
                         # Keep j as the root
                         color_used[color[j]] = true
