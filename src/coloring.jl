@@ -146,9 +146,7 @@ struct StarSet
     spokes::Vector{Vector{Int}}
 end
 
-function StarSet(star::Dict{Tuple{Int,Int},Int},
-                 hub::Vector{Int},
-                 nb_spokes::Vector{Int})
+function StarSet(star::Dict{Tuple{Int,Int},Int}, hub::Vector{Int}, nb_spokes::Vector{Int})
     # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
     spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
 
