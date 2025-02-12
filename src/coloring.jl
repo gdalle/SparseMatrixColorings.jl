@@ -428,8 +428,6 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 $TYPEDFIELDS
 """
 struct TreeSet
-    "a forest of two-colored trees"
-    forest::DisjointSets{Tuple{Int,Int}}
     vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
 end
@@ -540,7 +538,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
         end
     end
 
-    return TreeSet(forest, vertices_by_tree, reverse_bfs_orders)
+    return TreeSet(vertices_by_tree, reverse_bfs_orders)
 end
 
 ## Postprocessing, mirrors decompression code
