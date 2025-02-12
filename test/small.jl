@@ -8,6 +8,7 @@ using SparseMatrixColorings:
     what_fig_61,
     efficient_fig_1,
     efficient_fig_4
+using StableRNGs
 using Test
 
 @testset "Column coloring & decompression" begin
@@ -85,3 +86,33 @@ end;
         test_coloring_decompression(A0, problem, algo; B0, color0)
     end
 end;
+
+@testset "Bidirectional coloring" begin
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    order = RandomOrder(StableRNG(0), 0)
+
+    A = spzeros(Bool, 10, 20)
+    A[:, 1] .= 1
+    A[:, end] .= 1
+    A[1, :] .= 1
+    A[end, :] .= 1
+
+    result = coloring(
+        A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=false)
+    )
+    @test ncolors(result) == 6  # two more than necessary
+    result = coloring(
+        A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
+    )
+    @test ncolors(result) == 4  # optimal number
+
+    # TODO: find example where subsitution is strictly better
+    result = coloring(
+        A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=false)
+    )
+    @test ncolors(result) == 6  # two more than necessary
+    result = coloring(
+        A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=true)
+    )
+    @test ncolors(result) == 4  # optimal number
+end
