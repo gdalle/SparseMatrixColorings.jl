@@ -580,8 +580,13 @@ function postprocess!(
                 if j < 0
                     i = spokes[s][1]
                     j = abs(j)
-                    if !color_used[color[i]] && !color_used[color[j]]
-                        # We arbitrarily set one vertex as hub
+                    if color_used[color[i]]
+                        # Make i the hub to avoid possibly adding one more used color
+                        # Switch it with the (only) spoke
+                        hub[s] = i
+                        spokes[s][1] = j
+                    else
+                        # Keep j as the hub
                         color_used[color[j]] = true
                     end
                 end
