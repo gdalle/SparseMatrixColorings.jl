@@ -91,6 +91,30 @@ end;
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     order = RandomOrder(StableRNG(0), 0)
 
+    @testset "Anti-diagonal" begin
+        A = sparse([0 0 0 1; 0 0 1 0; 0 1 0 0; 1 0 0 0])
+
+        result = coloring(
+            A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=false)
+        )
+        @test ncolors(result) == 2
+
+        result = coloring(
+            A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=true)
+        )
+        @test ncolors(result) == 1
+
+        result = coloring(
+            A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=false)
+        )
+        @test ncolors(result) == 2
+
+        result = coloring(
+            A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=true)
+        )
+        @test ncolors(result) == 1
+    end
+
     @testset "Triangle" begin
         A = sparse([1 1 0; 0 1 1; 1 0 1])
 
