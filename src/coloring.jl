@@ -485,7 +485,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     degrees = Vector{Int}(undef, nvertices)
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = Vector{Vector{Tuple{Int,Int}}}[Tuple{Int,Int}[] for i in 1:ntrees]
+    reverse_bfs_orders = Vector{Tuple{Int,Int}}[Tuple{Int,Int}[] for i in 1:ntrees]
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
