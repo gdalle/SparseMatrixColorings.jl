@@ -517,7 +517,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, buffer) = result
+    (; ag, color, reverse_bfs_orders, is_star, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -540,17 +540,27 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
-        # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
-            buffer_right_type[vertex] = zero(R)
+        # We need the buffer only when the tree is not a star (trivial or non-trivial)
+        if !is_star[k]
+            # Reset the buffer to zero for all vertices in a tree (except the root)
+            for (vertex, _) in reverse_bfs_orders[k]
+                buffer_right_type[vertex] = zero(R)
+            end
+
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[k][end]
+            buffer_right_type[root] = zero(R)
         end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
-        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
+            if !is_star[k]
+                # the tree is not a star
+                val = B[i, color[j]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+            else
+                # the tree is a trivial or non-trivial star
+                val = B[i, color[j]]
+            end
             if in_triangle(i, j, uplo)
                 A[i, j] = val
             end
@@ -572,6 +582,7 @@ function decompress!(
         ag,
         color,
         reverse_bfs_orders,
+        is_star,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
@@ -626,8 +637,14 @@ function decompress!(
 
         for (i, j) in reverse_bfs_orders[k]
             counter += 1
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
+            if !is_star[k]
+                # the tree is not a star
+                val = B[i, color[j]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+            else
+                # the tree is a trivial or non-trivial star
+                val = B[i, color[j]]
+            end
 
             #! format: off
             # A[i,j] is in the lower triangular part of A
