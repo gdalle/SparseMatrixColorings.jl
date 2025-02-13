@@ -489,7 +489,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
-    for k = 1:ntrees
+    for k in 1:ntrees
         nb_vertices_tree = length(trees[k])
         nvmax = max(nvmax, nb_vertices_tree)
     end
