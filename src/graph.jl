@@ -119,10 +119,28 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 """
 struct AdjacencyGraph{T}
     S::SparsityPatternCSC{T}
+    has_loops::Bool
 end
 
-AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A))
-AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
+function check_loops(A::AbstractMatrix)
+    n = size(A, 1)
+    has_loops = false
+    i = 1
+    while !has_loops && i <= n
+        if !iszero(A[i, i])
+            has_loops = true
+        else
+            i += 1
+        end
+    end
+    return has_loops
+end
+
+AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A), check_loops(A))
+AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A), check_loops(A))
+function AdjacencyGraph(A::SparseMatrixCSC, has_loops::Bool)
+    return AdjacencyGraph(SparsityPatternCSC(A), has_loops)
+end
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
@@ -130,8 +148,12 @@ vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
 
 function neighbors(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
-    neighbors_with_loops = view(rowvals(S), nzrange(S, v))
-    return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
+    neighbors_v = view(rowvals(S), nzrange(S, v))
+    if g.has_loops
+        return Iterators.filter(!=(v), neighbors_v)  # TODO: optimize
+    else
+        return neighbors_v
+    end
 end
 
 function degree(g::AdjacencyGraph, v::Integer)
