@@ -2,44 +2,29 @@ using BenchmarkTools
 using LinearAlgebra
 using SparseMatrixColorings
 using SparseArrays
-using StableRNGs
 
 SUITE = BenchmarkGroup()
 
 for structure in [:nonsymmetric, :symmetric],
-    partition in (structure == :nonsymmetric ? [:column, :row, :bidirectional] : [:column]),
-    decompression in (
-        if (structure == :nonsymmetric && partition in [:column, :row])
-            [:direct]
-        else
-            [:direct, :substitution]
-        end
-    ),
+    partition in (structure == :nonsymmetric ? [:column, :row] : [:column]),
+    decompression in (structure == :nonsymmetric ? [:direct] : [:direct, :substitution]),
     n in [10^3, 10^5],
-    p in [2 / n, 5 / n, 10 / n, 50 / n]
+    p in [2 / n, 5 / n, 10 / n]
 
     problem = ColoringProblem(; structure, partition)
-    algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
+    algo = GreedyColoringAlgorithm(; decompression)
 
-    # use several random matrices to reduce variance
-    nb_samples = 10
-    As = [sparse(Symmetric(sprand(StableRNG(i), n, n, p))) for i in 1:nb_samples]
-    results = [coloring(A, problem, algo) for A in As]
-    Bs = [compress(A, result) for (A, result) in zip(As, results)]
+    SUITE[:coloring][structure][partition][decompression]["n=$n"]["p=$p"] = @benchmarkable coloring(
+        A, $problem, $algo
+    ) setup = ( #
+        A = sparse(Symmetric(sprand($n, $n, $p)))
+    )
 
-    SUITE[:coloring][structure][partition][decompression]["n=$n"]["p=$p"] = @benchmarkable begin
-        for A in $As
-            coloring(A, $problem, $algo)
-        end
-    end
-
-    SUITE[:decompress][structure][partition][decompression]["n=$n"]["p=$p"] = @benchmarkable begin
-        for (B, result) in zip($Bs, $results)
-            if B isa AbstractMatrix
-                decompress(B, result)
-            elseif B isa Tuple
-                decompress(B[1], B[2], result)
-            end
-        end
-    end
+    SUITE[:decompress][structure][partition][decompression]["n=$n"]["p=$p"] = @benchmarkable decompress(
+        B, result
+    ) setup = ( #
+        A = sparse(Symmetric(sprand($n, $n, $p)));
+        result = coloring(A, $problem, $algo);
+        B = compress(A, result)
+    )
 end
