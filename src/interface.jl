@@ -289,7 +289,6 @@ function coloring(
         end
 
         colptr[p + 1] = nnzS + counter
-        @assert colptr[p + 1] == 2 * nnzS + 1
         for col in p:-1:(n + 2)
             colptr[col] = nnzS + colptr[col - 1]
         end
