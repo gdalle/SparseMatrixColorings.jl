@@ -12,7 +12,7 @@ function Forest{T}(n::Integer) where {T<:Integer}
     sizehint!(intmap, n)
     parents = collect(Base.OneTo(T(n)))
     ranks = zeros(T, T(n))
-    ntrees = T(n)
+    ntrees = zero(T)
     return Forest{T}(counter, intmap, parents, ranks, ntrees)
 end
 
