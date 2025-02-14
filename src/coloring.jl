@@ -301,11 +301,7 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
     forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
-    forest = DisjointSets{Tuple{Int,Int}}()
-    sizehint!(forest.intmap, ne)
-    sizehint!(forest.revmap, ne)
-    sizehint!(forest.internal.parents, ne)
-    sizehint!(forest.internal.ranks, ne)
+    forest = Forest{Int}(ne)
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -346,7 +342,7 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
     end
 
     # compress forest
-    for edge in forest.revmap
+    for edge in keys(forest.intmap)
         find_root!(forest, edge)
     end
     tree_set = TreeSet(forest, nb_vertices(g))
@@ -365,11 +361,10 @@ function _prevent_cycle!(
     # modified
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
-    forest::DisjointSets{<:Tuple{Int,Int}},
+    forest::Forest{<:Integer},
 )
     wx = _sort(w, x)
-    root = find_root!(forest, wx)  # edge wx belongs to the 2-colored tree T represented by edge "root"
-    id = forest.intmap[root] # ID of the representative edge "root" of a two-colored tree T.
+    id = find_root!(forest, wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
     (p, q) = first_visit_to_tree[id]
     if p != v  # T is being visited from vertex v for the first time
         vw = _sort(v, w)
@@ -387,7 +382,7 @@ function _grow_star!(
     color::AbstractVector{<:Integer},
     # modified
     first_neighbor::AbstractVector{<:Tuple},
-    forest::DisjointSets{Tuple{Int,Int}},
+    forest::Forest{<:Integer},
 )
     vw = _sort(v, w)
     push!(forest, vw)  # Create a new tree T_{vw} consisting only of edge vw
@@ -410,7 +405,7 @@ function _merge_trees!(
     w::Integer,
     x::Integer,
     # modified
-    forest::DisjointSets{Tuple{Int,Int}},
+    forest::Forest{<:Integer},
 )
     vw = _sort(v, w)
     wx = _sort(w, x)
@@ -435,12 +430,11 @@ struct TreeSet
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
 end
 
-function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
-    # forest is a structure DisjointSets from DataStructures.jl
+function TreeSet(forest::Forest{Int}, nvertices::Int)
+    # Forest is a structure defined in forest.jl
     # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
-    # - forest.revmap: a dictionary that does the reverse of intmap, mapping an integer k to an edge (i, j)
-    # - forest.internal.ngroups: the number of trees in the forest
-    ntrees = forest.internal.ngroups
+    # - forest.ntrees: the number of trees in the forest
+    ntrees = forest.ntrees
 
     # dictionary that maps a tree's root to the index of the tree
     roots = Dict{Int,Int}()
@@ -451,11 +445,9 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
 
     # counter of the number of roots found
     k = 0
-    for edge in forest.revmap
+    for edge in keys(forest.intmap)
         i, j = edge
-        # forest has already been compressed so this doesn't change its state
-        root_edge = find_root!(forest, edge)
-        root = forest.intmap[root_edge]
+        root = find_root!(forest, edge)
 
         # Update roots
         if !haskey(roots, root)
