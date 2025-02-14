@@ -14,7 +14,7 @@ Copied from `SparseMatrixCSC`:
 - `colptr::Vector{Ti}`: column `j` is in `colptr[j]:(colptr[j+1]-1)`
 - `rowval::Vector{Ti}`: row indices of stored values
 """
-struct SparsityPatternCSC{Ti<:Integer}
+struct SparsityPatternCSC{Ti<:Integer} <: AbstractMatrix{Bool}
     m::Int
     n::Int
     colptr::Vector{Ti}

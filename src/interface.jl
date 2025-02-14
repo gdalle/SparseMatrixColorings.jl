@@ -234,18 +234,72 @@ function coloring(
     decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
 ) where {decompression,R}
+
+    # Build an AdjacencyGraph for the following matrix:
+    # [ 0  Aᵀ ]
+    # [ A  0  ]
     m, n = size(A)
-    T = eltype(A)
-    Aᵀ = if symmetric_pattern || A isa Union{Symmetric,Hermitian}
-        A
+    p = m + n
+    S = A isa SparseMatrixCSC ? A : SparseMatrixCSC(A)
+    nnzS = nnz(S)
+    rowval = Vector{Int}(undef, 2 * nnzS)
+    colptr = zeros(Int, p + 1)
+
+    # Update rowval and colptr for the block A
+    for i in 1:nnzS
+        rowval[i] = S.rowval[i] + n
+    end
+    for j in 1:n
+        colptr[j] = S.colptr[j]
+    end
+
+    # Update rowval and colptr for the block Aᵀ
+    if symmetric_pattern
+        # We use the sparsity pattern of A for Aᵀ
+        for i in 1:nnzS
+            rowval[nnzS + i] = S.rowval[i]
+        end
+        # m and n are identical because symmetric_pattern is true
+        for j in 1:m
+            colptr[n + j] = nnzS + S.colptr[j]
+        end
+        colptr[p + 1] = 2 * nnzS + 1
     else
-        transpose(A)
-    end  # TODO: fuse with next step?
-    A_and_Aᵀ = [
-        spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
-        SparseMatrixCSC(A) spzeros(T, m, m)
-    ]  # TODO: slow
-    ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
+        # We need to determine the sparsity pattern of Aᵀ
+        # We adapt the code of transpose(SparsityPatternCSC) in graph.jl
+        for k in 1:nnzS
+            i = S.rowval[k]
+            colptr[n + i] += 1
+        end
+
+        counter = 1
+        for col in (n + 1):p
+            nnz_col = colptr[col]
+            colptr[col] = counter
+            counter += nnz_col
+        end
+
+        for j in 1:n
+            for index in S.colptr[j]:(S.colptr[j + 1] - 1)
+                i = S.rowval[index]
+                pos = colptr[n + i]
+                rowval[nnzS + pos] = j
+                colptr[n + i] += 1
+            end
+        end
+
+        colptr[p + 1] = nnzS + counter
+        @assert colptr[p + 1] == 2 * nnzS + 1
+        for col in p:-1:(n + 2)
+            colptr[col] = nnzS + colptr[col - 1]
+        end
+        colptr[n + 1] = nnzS + 1
+    end
+
+    # Create the SparsityPatternCSC of the augmented adjacency matrix
+    A_and_Aᵀ = SparsityPatternCSC{Int}(p, p, colptr, rowval)
+    ag = AdjacencyGraph(A_and_Aᵀ)
+
     if decompression == :direct
         color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
