@@ -16,14 +16,14 @@ for structure in [:nonsymmetric, :symmetric],
         end
     ),
     n in [10^3, 10^5],
-    p in [2 / n, 5 / n, 10 / n, 50 / n]
+    p in [2 / n, 5 / n, 10 / n]
 
     problem = ColoringProblem(; structure, partition)
     algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
 
     # use several random matrices to reduce variance
-    nb_samples = 10
-    As = [sparse(Symmetric(sprand(StableRNG(i), n, n, p))) for i in 1:nb_samples]
+    nb_samples = 5
+    As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i in 1:nb_samples]
     results = [coloring(A, problem, algo) for A in As]
     Bs = [compress(A, result) for (A, result) in zip(As, results)]
 
