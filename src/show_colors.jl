@@ -18,6 +18,6 @@ Create a visualization for an [`AbstractColoringResult`](@ref), with the help of
 - `scale::Int`: scale the size of matrix entries to `scale × scale` pixels. Defaults to `1`. 
 - `pad::Int`: set padding between matrix entries, in pixels. Defaults to `0`. 
 
-For a matrix of size `(n, m)`, the resulting output will be of size `(n * (scale + pad) + pad, m * (scale + pad) + pad)`.
+For a matrix of size `(m, n)`, the resulting output will be of size `(m * (scale + pad) + pad, n * (scale + pad) + pad)`.
 """
 function show_colors end
