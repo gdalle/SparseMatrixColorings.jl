@@ -20,4 +20,6 @@ makedocs(;
     plugins=[links],
 )
 
-deploydocs(; repo="github.com/gdalle/SparseMatrixColorings.jl", push_preview=true, devbranch="main")
+deploydocs(;
+    repo="github.com/gdalle/SparseMatrixColorings.jl", push_preview=true, devbranch="main"
+)
