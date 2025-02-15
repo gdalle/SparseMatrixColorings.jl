@@ -12,7 +12,10 @@ makedocs(;
     sitename="SparseMatrixColorings.jl",
     format=Documenter.HTML(),
     pages=[
-        "Home" => "index.md", "api.md", "Developer Documentation" => ["dev.md", "vis.md"]
+        "Home" => "index.md",
+        "api.md",
+        "Tutorials" => "tutorials.md",
+        "Developer Documentation" => ["dev.md", "vis.md"],
     ],
     plugins=[links],
 )
