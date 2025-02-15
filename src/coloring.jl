@@ -342,10 +342,6 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
         end
     end
 
-    # compress forest
-    for edge in keys(forest.intmap)
-        find_root!(forest, edge)
-    end
     tree_set = TreeSet(forest, nb_vertices(g))
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
