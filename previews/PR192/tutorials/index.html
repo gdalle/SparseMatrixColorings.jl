@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorials · SparseMatrixColorings.jl</title><meta name="title" content="Tutorials · SparseMatrixColorings.jl"/><meta property="og:title" content="Tutorials · SparseMatrixColorings.jl"/><meta property="twitter:title" content="Tutorials · SparseMatrixColorings.jl"/><meta name="description" content="Documentation for SparseMatrixColorings.jl."/><meta property="og:description" content="Documentation for SparseMatrixColorings.jl."/><meta property="twitter:description" content="Documentation for SparseMatrixColorings.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">SparseMatrixColorings.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../api/">API reference</a></li><li class="is-active"><a class="tocitem" href>Tutorials</a><ul class="internal"><li><a class="tocitem" href="#Introduction-to-SparseMatrixColorings.jl"><span>Introduction to SparseMatrixColorings.jl</span></a></li><li><a class="tocitem" href="#Column-coloring-of-Jacobians"><span>Column coloring of Jacobians</span></a></li><li><a class="tocitem" href="#Row-coloring-of-Jacobians"><span>Row coloring of Jacobians</span></a></li><li><a class="tocitem" href="#Star-bicoloring-of-Jacobians"><span>Star bicoloring of Jacobians</span></a></li><li><a class="tocitem" href="#Acyclic-bicoloring-of-Jacobians"><span>Acyclic bicoloring of Jacobians</span></a></li><li><a class="tocitem" href="#Star-coloring-of-Hessians"><span>Star coloring of Hessians</span></a></li><li><a class="tocitem" href="#Acyclic-coloring-of-Hessians"><span>Acyclic coloring of Hessians</span></a></li></ul></li><li><span class="tocitem">Developer Documentation</span><ul><li><a class="tocitem" href="../dev/">Internals</a></li><li><a class="tocitem" href="../vis/">Visualization</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorials</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorials</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gdalle/SparseMatrixColorings.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gdalle/SparseMatrixColorings.jl/blob/main/docs/src/tutorials.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorials"><a class="docs-heading-anchor" href="#Tutorials">Tutorials</a><a id="Tutorials-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorials" title="Permalink"></a></h1><h2 id="Introduction-to-SparseMatrixColorings.jl"><a class="docs-heading-anchor" href="#Introduction-to-SparseMatrixColorings.jl">Introduction to SparseMatrixColorings.jl</a><a id="Introduction-to-SparseMatrixColorings.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction-to-SparseMatrixColorings.jl" title="Permalink"></a></h2><p>The three main functions to perform a coloring with <code>SparseMatrixColorings.jl</code> are <a href="../api/#SparseMatrixColorings.coloring"><code>coloring</code></a>, <a href="../api/#SparseMatrixColorings.ColoringProblem"><code>ColoringProblem</code></a> and <a href="../api/#SparseMatrixColorings.GreedyColoringAlgorithm"><code>GreedyColoringAlgorithm</code></a>.</p><pre><code class="language-julia hljs">using SparseMatrixColorings, SparseArrays
+
+S = sparse([
+  0 0 1 1 0 1
+  1 0 0 0 1 0
+  0 1 0 0 1 0
+  0 1 1 0 0 0
+])
+
+problem = ColoringProblem()
+algo = GreedyColoringAlgorithm()
+result = coloring(S, problem, algo)</code></pre><p>Based on the result of <code>coloring</code>, you can easily recover a vector of integer colors with <a href="../api/#SparseMatrixColorings.row_colors"><code>row_colors</code></a>, <a href="../api/#SparseMatrixColorings.column_colors"><code>column_colors</code></a>, as well as the groups of colors with <a href="../api/#SparseMatrixColorings.row_groups"><code>row_groups</code></a> and <a href="../api/#SparseMatrixColorings.column_groups"><code>column_groups</code></a>.</p><pre><code class="language-julia hljs">column_colors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-element Vector{Int64}:
+ 1
+ 1
+ 2
+ 1
+ 2
+ 3</code></pre><pre><code class="language-julia hljs">column_groups(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{SubArray{Int64, 1, Vector{Int64}, Tuple{UnitRange{Int64}}, true}}:
+ [1, 2, 4]
+ [3, 5]
+ [6]</code></pre><p>The number of colors can be determined with <a href="../api/#SparseMatrixColorings.ncolors"><code>ncolors</code></a>.</p><pre><code class="language-julia hljs">ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3</code></pre><p>The functions <a href="../api/#SparseMatrixColorings.compress"><code>compress</code></a> and <a href="../api/#SparseMatrixColorings.decompress"><code>decompress</code></a> efficiently store and retrieve compressed representations of colorings for sparse matrices.</p><pre><code class="language-julia hljs">M = sparse([
+  0 0 4 6 0 9
+  1 0 0 0 7 0
+  0 2 0 0 8 0
+  0 3 5 0 0 0
+])
+
+B = compress(M, result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4×3 Matrix{Int64}:
+ 6  4  9
+ 1  7  0
+ 2  8  0
+ 3  5  0</code></pre><pre><code class="language-julia hljs">C = decompress(B, result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4×6 SparseArrays.SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+ ⋅  ⋅  4  6  ⋅  9
+ 1  ⋅  ⋅  ⋅  7  ⋅
+ ⋅  2  ⋅  ⋅  8  ⋅
+ ⋅  3  5  ⋅  ⋅  ⋅</code></pre><p>The functions <a href="../api/#SparseMatrixColorings.decompress!"><code>decompress!</code></a> and <a href="../api/#SparseMatrixColorings.decompress_single_color!"><code>decompress_single_color!</code></a> are in-place variants of <a href="../api/#SparseMatrixColorings.decompress"><code>decompress</code></a>.</p><pre><code class="language-julia hljs">D = [10  14  18
+     11  15  0
+     12  16  0
+     13  17  0]
+
+decompress!(C, D, result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4×6 SparseArrays.SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+  ⋅   ⋅  14  10   ⋅  18
+ 11   ⋅   ⋅   ⋅  15   ⋅
+  ⋅  12   ⋅   ⋅  16   ⋅
+  ⋅  13  17   ⋅   ⋅   ⋅</code></pre><pre><code class="language-julia hljs">C .= 0
+decompress_single_color!(C, D[:, 2], 2, result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4×6 SparseArrays.SparseMatrixCSC{Int64, Int64} with 9 stored entries:
+ ⋅  ⋅  14  0   ⋅  0
+ 0  ⋅   ⋅  ⋅  15  ⋅
+ ⋅  0   ⋅  ⋅  16  ⋅
+ ⋅  0  17  ⋅   ⋅  ⋅</code></pre><p>We now illustrate the six variants of colorings available in <code>SparseMatrixColorings.jl</code> on the following matrix with a symmetric sparsity pattern.</p><pre><code class="language-julia hljs">using MatrixMarket
+S = MatrixMarket.mmread(&quot;smc.mtx&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">100×100 SparseArrays.SparseMatrixCSC{Int64, Int64} with 1530 stored entries:
+⎡⠿⣧⣄⠀⠻⣧⣄⠀⠙⢧⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+⎢⠀⠙⠿⣧⠀⠘⠿⣦⠀⠀⠷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠿⣦⣀⠀⠿⣧⣄⠀⠻⣧⣄⠀⠙⢧⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠙⠻⣧⠀⠙⠿⣧⠀⠘⠿⣦⠀⠀⠷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠷⣄⠀⠀⠿⣦⣀⠀⠿⣧⣄⠀⠻⣧⣄⠀⠙⢧⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠉⠙⢧⠀⠙⠻⣧⠀⠙⠿⣧⠀⠘⠿⣦⠀⠀⠷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠷⣄⠀⠀⠿⣦⣀⠀⠿⣧⣄⠀⠻⣧⣄⠀⠻⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠉⠙⢧⠀⠙⠻⣧⠀⠙⠿⣧⠀⠘⠿⣦⠀⠘⠻⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠷⣄⠀⠀⠿⣦⣀⠀⠿⣧⣄⠀⢿⣤⣀⠀⢷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⢧⠀⠙⠻⣧⠀⠙⠿⣧⠀⠙⠻⣦⠀⠉⠹⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⣦⣀⠀⠛⣷⣄⠀⢻⣶⣄⠀⢻⣦⣀⠀⢳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⣦⠀⠘⠻⣦⠀⠙⢻⣶⠀⠙⠻⣶⠀⠉⠙⢶⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢷⡄⠀⠻⣶⣄⠀⢻⣶⣄⠀⢻⣦⣀⠀⢳⣄⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠳⣆⠀⠘⢻⣦⠀⠙⢻⣶⠀⠙⠻⣶⠀⠉⠙⢶⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢶⡄⠀⠻⣶⣄⠀⢻⣶⣄⠀⢻⣦⣀⠀⢳⣄⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⣄⠀⠘⢻⣦⠀⠙⢻⣶⠀⠙⠻⣶⠀⠉⠙⢶⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢶⡄⠀⠻⣶⣄⠀⢻⣶⣄⠀⢻⣦⣀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⣄⠀⠘⢻⣦⠀⠙⢻⣶⠀⠙⠻⣶⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢶⡄⠀⠻⣶⣄⠀⢻⣶⣄⠀⎥
+⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⣄⠀⠘⢻⣦⠀⠙⢻⣶⎦</code></pre><h2 id="Column-coloring-of-Jacobians"><a class="docs-heading-anchor" href="#Column-coloring-of-Jacobians">Column coloring of Jacobians</a><a id="Column-coloring-of-Jacobians-1"></a><a class="docs-heading-anchor-permalink" href="#Column-coloring-of-Jacobians" title="Permalink"></a></h2><pre><code class="language-julia hljs">problem = ColoringProblem(; structure=:nonsymmetric,
+                            partition=:column)
+
+order = NaturalOrder()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:direct)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">ccolors = column_colors(result)
+cgroups = column_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">28</code></pre><img src="13c18dca.png" alt="Example block output"/><h2 id="Row-coloring-of-Jacobians"><a class="docs-heading-anchor" href="#Row-coloring-of-Jacobians">Row coloring of Jacobians</a><a id="Row-coloring-of-Jacobians-1"></a><a class="docs-heading-anchor-permalink" href="#Row-coloring-of-Jacobians" title="Permalink"></a></h2><pre><code class="language-julia hljs">problem = ColoringProblem(; structure=:nonsymmetric,
+                            partition=:row)
+
+order = LargestFirst()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:direct)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">rcolors = row_colors(result)
+rgroups = row_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">25</code></pre><img src="a9db5410.png" alt="Example block output"/><h2 id="Star-bicoloring-of-Jacobians"><a class="docs-heading-anchor" href="#Star-bicoloring-of-Jacobians">Star bicoloring of Jacobians</a><a id="Star-bicoloring-of-Jacobians-1"></a><a class="docs-heading-anchor-permalink" href="#Star-bicoloring-of-Jacobians" title="Permalink"></a></h2><pre><code class="language-julia hljs">using SparseMatrixColorings, MatrixMarket
+
+S = MatrixMarket.mmread(&quot;smc.mtx&quot;)
+
+problem = ColoringProblem(; structure=:nonsymmetric,
+                            partition=:bidirectional)
+
+order = RandomOrder()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:direct,
+                               postprocessing=true)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">rcolors = row_colors(result)
+rgroups = row_groups(result)
+ccolors = column_colors(result)
+cgroups = column_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">51</code></pre><img src="4ec4c08a.png" alt="Example block output"/><h2 id="Acyclic-bicoloring-of-Jacobians"><a class="docs-heading-anchor" href="#Acyclic-bicoloring-of-Jacobians">Acyclic bicoloring of Jacobians</a><a id="Acyclic-bicoloring-of-Jacobians-1"></a><a class="docs-heading-anchor-permalink" href="#Acyclic-bicoloring-of-Jacobians" title="Permalink"></a></h2><pre><code class="language-julia hljs">problem = ColoringProblem(; structure=:nonsymmetric,
+                            partition=:bidirectional)
+
+order = RandomOrder()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:substitution,
+                               postprocessing=true)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">rcolors = row_colors(result)
+rgroups = row_groups(result)
+ccolors = column_colors(result)
+cgroups = column_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">41</code></pre><img src="a03105b6.png" alt="Example block output"/><h2 id="Star-coloring-of-Hessians"><a class="docs-heading-anchor" href="#Star-coloring-of-Hessians">Star coloring of Hessians</a><a id="Star-coloring-of-Hessians-1"></a><a class="docs-heading-anchor-permalink" href="#Star-coloring-of-Hessians" title="Permalink"></a></h2><pre><code class="language-julia hljs">problem = ColoringProblem(; structure=:symmetric,
+                            partition=:column)
+
+order = NaturalOrder()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:direct,
+                               postprocessing=false)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">ccolors = column_colors(result)
+cgroups = column_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">21</code></pre><img src="885bd26f.png" alt="Example block output"/><h2 id="Acyclic-coloring-of-Hessians"><a class="docs-heading-anchor" href="#Acyclic-coloring-of-Hessians">Acyclic coloring of Hessians</a><a id="Acyclic-coloring-of-Hessians-1"></a><a class="docs-heading-anchor-permalink" href="#Acyclic-coloring-of-Hessians" title="Permalink"></a></h2><pre><code class="language-julia hljs">problem = ColoringProblem(; structure=:symmetric,
+                            partition=:column)
+
+order = NaturalOrder()
+
+algo = GreedyColoringAlgorithm(order;
+                               decompression=:substitution,
+                               postprocessing=false)
+
+result = coloring(S, problem, algo)</code></pre><pre><code class="language-julia hljs">ccolors = column_colors(result)
+cgroups = column_groups(result)
+num_colors = ncolors(result)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10</code></pre><img src="4de41a8c.png" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../api/">« API reference</a><a class="docs-footer-nextpage" href="../dev/">Internals »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Saturday 15 February 2025 22:48">Saturday 15 February 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
