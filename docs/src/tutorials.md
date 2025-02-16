@@ -75,7 +75,7 @@ using MatrixMarket
 S = MatrixMarket.mmread("smc.mtx")
 ```
 
-## Column coloring of Jacobians
+## Column coloring
 
 ```@example tutorial; continued = true
 problem = ColoringProblem(; structure=:nonsymmetric,
@@ -99,7 +99,7 @@ A_img, B_img = show_colors(result, scale=5, pad=2) # hide
 A_img # hide
 ```
 
-## Row coloring of Jacobians
+## Row coloring
 
 ```@example tutorial; continued = true
 problem = ColoringProblem(; structure=:nonsymmetric,
@@ -124,7 +124,7 @@ A_img, B_img = show_colors(result, scale=5, pad=2) # hide
 A_img # hide
 ```
 
-## Star bicoloring of Jacobians
+## Star bicoloring
 
 ```@example tutorial; continued = true
 using SparseMatrixColorings, MatrixMarket
@@ -156,7 +156,7 @@ A_img, Br_img, Bc_img = show_colors(result, scale=5, pad=2) # hide
 A_img # hide
 ```
 
-## Acyclic bicoloring of Jacobians
+## Acyclic bicoloring
 
 ```@example tutorial; continued = true
 problem = ColoringProblem(; structure=:nonsymmetric,
@@ -184,7 +184,7 @@ A_img, Br_img, Bc_img = show_colors(result, scale=5, pad=2) # hide
 A_img # hide
 ```
 
-## Star coloring of Hessians
+## Symmetric star coloring
 
 ```@example tutorial; continued = true
 problem = ColoringProblem(; structure=:symmetric,
@@ -210,7 +210,7 @@ A_img, B_img = show_colors(result, scale=5, pad=2) # hide
 A_img # hide
 ```
 
-## Acyclic coloring of Hessians
+## Symmetric acyclic coloring
 
 ```@example tutorial; continued = true
 problem = ColoringProblem(; structure=:symmetric,
