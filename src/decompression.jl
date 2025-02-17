@@ -422,7 +422,7 @@ function decompress!(
     fill!(A, zero(eltype(A)))
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(S)
+    if has_diagonal(ag)
         for i in axes(A, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
@@ -459,7 +459,7 @@ function decompress_single_color!(
     uplo == :F && check_same_pattern(A, S)
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(S)
+    if has_diagonal(ag)
         for i in axes(A, 1)
             if !iszero(S[i, i]) && color[i] == c
                 A[i, i] = b[i]
@@ -530,7 +530,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(S)
+    if has_diagonal(ag)
         for i in axes(A, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
@@ -587,7 +587,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(S)
+    if has_diagonal(ag)
         if uplo == :L
             for i in diagonal_indices
                 # A[i, i] is the first element in column i

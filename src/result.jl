@@ -305,7 +305,7 @@ function TreeSetColoringResult(
     diagonal_nzind = Int[]
     ndiag = 0
 
-    if has_diagonal(S)
+    if has_diagonal(ag)
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rv[k]

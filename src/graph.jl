@@ -121,10 +121,17 @@ struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
 end
 
-AdjacencyGraph(S::SparsityPatternCSC) = AdjacencyGraph{typeof(S),true}(S)
+function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
+    return AdjacencyGraph{T,has_diagonal}(S)
+end
 
-AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A))
-AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
+function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
+    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal)
+end
+
+function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
+    return AdjacencyGraph(SparseMatrixCSC(A); has_diagonal)
+end
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n

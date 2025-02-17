@@ -557,7 +557,7 @@ function postprocess!(
     color_used = zeros(Bool, maximum(color))
 
     # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
-    if has_diagonal(S)
+    if has_diagonal(g)
         for i in axes(S, 1)
             if !iszero(S[i, i])
                 color_used[color[i]] = true
