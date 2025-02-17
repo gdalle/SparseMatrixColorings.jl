@@ -96,7 +96,7 @@ end
 ## Adjacency graph
 
 """
-    AdjacencyGraph{T}
+    AdjacencyGraph{T,has_diagonal}
 
 Undirected graph without self-loops representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
 
@@ -111,27 +111,44 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 # Fields
 
-- `S::SparsityPatternCSC{T}`
+- `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, whose diagonal is empty whenever `has_diagonal` is `false`
 
 # References
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct AdjacencyGraph{T}
+struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
 end
 
-AdjacencyGraph(A::AbstractMatrix) = AdjacencyGraph(SparseMatrixCSC(A))
-AdjacencyGraph(A::SparseMatrixCSC) = AdjacencyGraph(SparsityPatternCSC(A))
+function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
+    return AdjacencyGraph{T,has_diagonal}(S)
+end
+
+function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
+    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal)
+end
+
+function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
+    return AdjacencyGraph(SparseMatrixCSC(A); has_diagonal)
+end
 
 pattern(g::AdjacencyGraph) = g.S
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
 vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
 
-function neighbors(g::AdjacencyGraph, v::Integer)
+has_diagonal(::AdjacencyGraph{T,hl}) where {T,hl} = hl
+
+function neighbors(g::AdjacencyGraph{T,true}, v::Integer) where {T}
     S = pattern(g)
-    neighbors_with_loops = view(rowvals(S), nzrange(S, v))
-    return Iterators.filter(!=(v), neighbors_with_loops)  # TODO: optimize
+    neighbors_v = view(rowvals(S), nzrange(S, v))
+    return Iterators.filter(!=(v), neighbors_v)  # TODO: optimize
+end
+
+function neighbors(g::AdjacencyGraph{T,false}, v::Integer) where {T}
+    S = pattern(g)
+    neighbors_v = view(rowvals(S), nzrange(S, v))
+    return neighbors_v
 end
 
 function degree(g::AdjacencyGraph, v::Integer)

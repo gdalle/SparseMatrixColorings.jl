@@ -415,16 +415,22 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; color, star_set) = result
+    (; ag, color, star_set) = result
     (; star, hub, spokes) = star_set
-    S = result.ag.S
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
+
+    # Recover the diagonal coefficients of A
+    if has_diagonal(ag)
+        for i in axes(A, 1)
+            if !iszero(S[i, i])
+                A[i, i] = B[i, color[i]]
+            end
         end
     end
+
+    # Recover the off-diagonal coefficients of A
     for s in eachindex(hub, spokes)
         j = abs(hub[s])
         cj = color[j]
@@ -447,15 +453,21 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
-    (; color, group, star_set) = result
+    (; ag, color, group, star_set) = result
     (; hub, spokes) = star_set
-    S = result.ag.S
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
-    for i in axes(A, 1)
-        if !iszero(S[i, i]) && color[i] == c
-            A[i, i] = b[i]
+
+    # Recover the diagonal coefficients of A
+    if has_diagonal(ag)
+        for i in axes(A, 1)
+            if !iszero(S[i, i]) && color[i] == c
+                A[i, i] = b[i]
+            end
         end
     end
+
+    # Recover the off-diagonal coefficients of A
     for s in eachindex(hub, spokes)
         j = abs(hub[s])
         if color[j] == c
@@ -475,8 +487,8 @@ end
 function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; compressed_indices) = result
-    S = result.ag.S
+    (; ag, compressed_indices) = result
+    (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -505,8 +517,8 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    S = result.ag.S
+    (; ag, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -518,9 +530,11 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
+    if has_diagonal(ag)
+        for i in axes(A, 1)
+            if !iszero(S[i, i])
+                A[i, i] = B[i, color[i]]
+            end
         end
     end
 
@@ -551,6 +565,7 @@ function decompress!(
     uplo::Symbol=:F,
 ) where {R<:Real}
     (;
+        ag,
         color,
         vertices_by_tree,
         reverse_bfs_orders,
@@ -560,7 +575,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    S = result.ag.S
+    (; S) = ag
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
@@ -572,22 +587,24 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if uplo == :L
-        for i in diagonal_indices
-            # A[i, i] is the first element in column i
-            nzind = A_colptr[i]
-            nzA[nzind] = B[i, color[i]]
-        end
-    elseif uplo == :U
-        for i in diagonal_indices
-            # A[i, i] is the last element in column i
-            nzind = A_colptr[i + 1] - 1
-            nzA[nzind] = B[i, color[i]]
-        end
-    else  # uplo == :F
-        for (k, i) in enumerate(diagonal_indices)
-            nzind = diagonal_nzind[k]
-            nzA[nzind] = B[i, color[i]]
+    if has_diagonal(ag)
+        if uplo == :L
+            for i in diagonal_indices
+                # A[i, i] is the first element in column i
+                nzind = A_colptr[i]
+                nzA[nzind] = B[i, color[i]]
+            end
+        elseif uplo == :U
+            for i in diagonal_indices
+                # A[i, i] is the last element in column i
+                nzind = A_colptr[i + 1] - 1
+                nzA[nzind] = B[i, color[i]]
+            end
+        else  # uplo == :F
+            for (k, i) in enumerate(diagonal_indices)
+                nzind = diagonal_nzind[k]
+                nzA[nzind] = B[i, color[i]]
+            end
         end
     end
 
