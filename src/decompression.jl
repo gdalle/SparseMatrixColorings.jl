@@ -523,7 +523,7 @@ function decompress!(
     R = eltype(A)
     fill!(A, zero(R))
 
-    if eltype(buffer) == R
+    if eltype(buffer) == R || isempty(buffer)
         buffer_right_type = buffer
     else
         buffer_right_type = similar(buffer, R)
@@ -599,7 +599,7 @@ function decompress!(
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
 
-    if eltype(buffer) == R
+    if eltype(buffer) == R || isempty(buffer)
         buffer_right_type = buffer
     else
         buffer_right_type = similar(buffer, R)
