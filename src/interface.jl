@@ -245,7 +245,7 @@ function coloring(
         spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
         SparseMatrixCSC(A) spzeros(T, m, m)
     ]  # TODO: slow
-    ag = AdjacencyGraph(A_and_Aᵀ)
+    ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
     if decompression == :direct
         color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)

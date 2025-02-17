@@ -294,23 +294,25 @@ function TreeSetColoringResult(
     decompression_eltype::Type{R},
 ) where {R}
     (; reverse_bfs_orders) = tree_set
-    S = ag.S
+    (; S) = ag
     nvertices = length(color)
     group = group_by_color(color)
+    rv = rowvals(S)
 
     # Vector for the decompression of the diagonal coefficients
     diagonal_indices = Int[]
     diagonal_nzind = Int[]
     ndiag = 0
 
-    rv = rowvals(S)
-    for j in axes(S, 2)
-        for k in nzrange(S, j)
-            i = rv[k]
-            if i == j
-                push!(diagonal_indices, i)
-                push!(diagonal_nzind, k)
-                ndiag += 1
+    if has_diagonal(ag)
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rv[k]
+                if i == j
+                    push!(diagonal_indices, i)
+                    push!(diagonal_nzind, k)
+                    ndiag += 1
+                end
             end
         end
     end
@@ -495,7 +497,7 @@ struct BicoloringResult{
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
     A::M
-    "adjacency graph that was used for coloring (constructed from the bipartite graph)"
+    "augmented adjacency graph that was used for bicoloring"
     abg::G
     "one integer color for each column"
     column_color::Vector{Int}
@@ -505,7 +507,7 @@ struct BicoloringResult{
     column_group::V
     "color groups for rows"
     row_group::V
-    "result for the coloring of the symmetric 2x2 block matrix"
+    "result for the coloring of the symmetric 2 x 2 block matrix"
     symmetric_result::SR
     "column color to index"
     col_color_ind::Dict{Int,Int}
