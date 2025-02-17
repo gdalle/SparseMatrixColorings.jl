@@ -432,7 +432,6 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 $TYPEDFIELDS
 """
 struct TreeSet
-    vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
 end
 
@@ -445,6 +444,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
 
     # dictionary that maps a tree's root to the index of the tree
     roots = Dict{Int,Int}()
+    sizehint!(roots, ntrees)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
     trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
@@ -454,7 +454,6 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     for edge in forest.revmap
         i, j = edge
         # forest has already been compressed so this doesn't change its state
-        # I wanted to use find_root but it is deprecated
         root_edge = find_root!(forest, edge)
         root = forest.intmap[root_edge]
 
@@ -485,14 +484,15 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     # degrees is a vector of integers that stores the degree of each vertex in a tree
     degrees = Vector{Int}(undef, nvertices)
 
-    # list of vertices for each tree in the forest
-    vertices_by_tree = [collect(keys(trees[i])) for i in 1:ntrees]
-
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
 
     # nvmax is the number of vertices of the biggest tree in the forest
-    nvmax = mapreduce(length, max, vertices_by_tree; init=0)
+    nvmax = 0
+    for k in 1:ntrees
+        nb_vertices_tree = length(trees[k])
+        nvmax = max(nvmax, nb_vertices_tree)
+    end
 
     # Create a queue with a fixed size nvmax
     queue = Vector{Int}(undef, nvmax)
@@ -542,7 +542,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
         end
     end
 
-    return TreeSet(vertices_by_tree, reverse_bfs_orders)
+    return TreeSet(reverse_bfs_orders)
 end
 
 ## Postprocessing, mirrors decompression code
@@ -554,7 +554,8 @@ function postprocess!(
 )
     (; S) = g
     # flag which colors are actually used during decompression
-    color_used = zeros(Bool, maximum(color))
+    nb_colors = maximum(color)
+    color_used = zeros(Bool, nb_colors)
 
     # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
     if has_diagonal(g)

@@ -517,7 +517,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
+    (; ag, color, reverse_bfs_orders, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -539,10 +539,14 @@ function decompress!(
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
-        for vertex in vertices_by_tree[k]
+    for k in eachindex(reverse_bfs_orders)
+        # Reset the buffer to zero for all vertices in a tree (except the root)
+        for (vertex, _) in reverse_bfs_orders[k]
             buffer_right_type[vertex] = zero(R)
         end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[k][end]
+        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
             val = B[i, color[j]] - buffer_right_type[i]
@@ -567,7 +571,6 @@ function decompress!(
     (;
         ag,
         color,
-        vertices_by_tree,
         reverse_bfs_orders,
         diagonal_indices,
         diagonal_nzind,
@@ -612,10 +615,14 @@ function decompress!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
-        for vertex in vertices_by_tree[k]
+    for k in eachindex(reverse_bfs_orders)
+        # Reset the buffer to zero for all vertices in a tree (except the root)
+        for (vertex, _) in reverse_bfs_orders[k]
             buffer_right_type[vertex] = zero(R)
         end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[k][end]
+        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
             counter += 1

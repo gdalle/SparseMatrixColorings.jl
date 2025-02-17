@@ -278,7 +278,6 @@ struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R} <:
     ag::G
     color::Vector{Int}
     group::V
-    vertices_by_tree::Vector{Vector{Int}}
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
     diagonal_indices::Vector{Int}
     diagonal_nzind::Vector{Int}
@@ -294,7 +293,7 @@ function TreeSetColoringResult(
     tree_set::TreeSet,
     decompression_eltype::Type{R},
 ) where {R}
-    (; vertices_by_tree, reverse_bfs_orders) = tree_set
+    (; reverse_bfs_orders) = tree_set
     (; S) = ag
     nvertices = length(color)
     group = group_by_color(color)
@@ -369,7 +368,6 @@ function TreeSetColoringResult(
         ag,
         color,
         group,
-        vertices_by_tree,
         reverse_bfs_orders,
         diagonal_indices,
         diagonal_nzind,
