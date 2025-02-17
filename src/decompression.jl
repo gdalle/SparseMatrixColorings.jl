@@ -546,7 +546,6 @@ function decompress!(
             for (vertex, _) in reverse_bfs_orders[k]
                 buffer_right_type[vertex] = zero(R)
             end
-
             # Reset the buffer to zero for the root vertex
             (_, root) = reverse_bfs_orders[k][end]
             buffer_right_type[root] = zero(R)
@@ -627,13 +626,16 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
-        # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
-            buffer_right_type[vertex] = zero(R)
+        # We need the buffer only when the tree is not a star (trivial or non-trivial)
+        if !is_star[k]
+            # Reset the buffer to zero for all vertices in a tree (except the root)
+            for (vertex, _) in reverse_bfs_orders[k]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[k][end]
+            buffer_right_type[root] = zero(R)
         end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
-        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
             counter += 1
