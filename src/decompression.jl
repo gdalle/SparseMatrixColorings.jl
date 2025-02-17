@@ -417,12 +417,12 @@ function decompress!(
 )
     (; ag, color, star_set) = result
     (; star, hub, spokes) = star_set
-    (; S, has_loops) = ag
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
 
     # Recover the diagonal coefficients of A
-    if has_loops
+    if has_diagonal(S)
         for i in axes(A, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
@@ -455,11 +455,11 @@ function decompress_single_color!(
 )
     (; ag, color, group, star_set) = result
     (; hub, spokes) = star_set
-    (; S, has_loops) = ag
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
 
     # Recover the diagonal coefficients of A
-    if has_loops
+    if has_diagonal(S)
         for i in axes(A, 1)
             if !iszero(S[i, i]) && color[i] == c
                 A[i, i] = b[i]
@@ -488,7 +488,7 @@ function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
     (; ag, compressed_indices) = result
-    S = ag.S
+    (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -518,7 +518,7 @@ function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
     (; ag, color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    (; S, has_loops) = ag
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -530,7 +530,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_loops
+    if has_diagonal(S)
         for i in axes(A, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
@@ -575,7 +575,7 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    (; S, has_loops) = ag
+    (; S) = ag
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
@@ -587,7 +587,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_loops
+    if has_diagonal(S)
         if uplo == :L
             for i in diagonal_indices
                 # A[i, i] is the first element in column i

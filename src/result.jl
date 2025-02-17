@@ -295,7 +295,7 @@ function TreeSetColoringResult(
     decompression_eltype::Type{R},
 ) where {R}
     (; vertices_by_tree, reverse_bfs_orders) = tree_set
-    (; S, has_loops) = ag
+    (; S) = ag
     nvertices = length(color)
     group = group_by_color(color)
     rv = rowvals(S)
@@ -305,7 +305,7 @@ function TreeSetColoringResult(
     diagonal_nzind = Int[]
     ndiag = 0
 
-    if has_loops
+    if has_diagonal(S)
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rv[k]

@@ -552,12 +552,12 @@ function postprocess!(
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
 )
-    (; S, has_loops) = g
+    (; S) = g
     # flag which colors are actually used during decompression
     color_used = zeros(Bool, maximum(color))
 
     # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
-    if has_loops
+    if has_diagonal(S)
         for i in axes(S, 1)
             if !iszero(S[i, i])
                 color_used[color[i]] = true
