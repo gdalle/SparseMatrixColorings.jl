@@ -148,7 +148,7 @@ end
 
 function StarSet(star::Dict{Tuple{Int,Int},Int}, hub::Vector{Int}, nb_spokes::Vector{Int})
     # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
-    spokes = Vector{Int}[Vector{Int}(undef, ns) for ns in nb_spokes]
+    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
 
     # Reuse nb_spokes as counters to track the current index while filling the spokes
     fill!(nb_spokes, 0)
@@ -447,7 +447,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     sizehint!(roots, ntrees)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
-    trees = Dict{Int,Vector{Int}}[Dict{Int,Vector{Int}}() for i in 1:ntrees]
+    trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
 
     # counter of the number of roots found
     k = 0
@@ -485,7 +485,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     degrees = Vector{Int}(undef, nvertices)
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = Vector{Tuple{Int,Int}}[Tuple{Int,Int}[] for i in 1:ntrees]
+    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
