@@ -362,7 +362,8 @@ function TreeSetColoringResult(
 
     # buffer holds the sum of edge values for subtrees in a tree.
     # For each vertex i, buffer[i] is the sum of edge values in the subtree rooted at i.
-    buffer = Vector{R}(undef, nvertices)
+    # Note that we don't need a buffer is all trees are stars.
+    buffer = all(is_star) ? R[] : Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
         A,
