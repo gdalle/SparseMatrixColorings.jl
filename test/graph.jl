@@ -4,6 +4,7 @@ using SparseMatrixColorings:
     SparsityPatternCSC,
     AdjacencyGraph,
     BipartiteGraph,
+    bidirectional_pattern,
     degree,
     degree_dist2,
     nb_vertices,
@@ -16,11 +17,31 @@ using Test
 @testset "SparsityPatternCSC" begin
     @testset "Transpose" begin
         @test all(1:1000) do _
-            A = sprand(rand(100:1000), rand(100:1000), 0.1)
+            m, n = rand(100:1000), rand(100:1000)
+            p = 0.05 * rand()
+            A = sprand(m, n, p)
             S = SparsityPatternCSC(A)
             Sᵀ = transpose(S)
             Sᵀ_true = SparsityPatternCSC(sparse(transpose(A)))
             Sᵀ.colptr == Sᵀ_true.colptr && Sᵀ.rowval == Sᵀ_true.rowval
+        end
+    end
+    @testset "Bidirectional" begin
+        @test all(1:1000) do _
+            m, n = rand(100:1000), rand(100:1000)
+            p = 0.05 * rand()
+            A = sprand(Bool, m, n, p)
+            A_and_Aᵀ = [spzeros(Bool, n, n) transpose(A); A spzeros(Bool, m, m)]
+            S_and_Sᵀ = bidirectional_pattern(A; symmetric_pattern=false)
+            S_and_Sᵀ.colptr == A_and_Aᵀ.colptr && S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+        end
+        @test all(1:1000) do _
+            m = rand(100:1000)
+            p = 0.05 * rand()
+            A = sparse(Symmetric(sprand(Bool, m, m, p)))
+            A_and_Aᵀ = [spzeros(Bool, m, m) transpose(A); A spzeros(Bool, m, m)]
+            S_and_Sᵀ = bidirectional_pattern(A; symmetric_pattern=true)
+            S_and_Sᵀ.colptr == A_and_Aᵀ.colptr && S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
         end
     end
     @testset "size" begin

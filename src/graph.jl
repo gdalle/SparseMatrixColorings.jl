@@ -14,7 +14,7 @@ Copied from `SparseMatrixCSC`:
 - `colptr::Vector{Ti}`: column `j` is in `colptr[j]:(colptr[j+1]-1)`
 - `rowval::Vector{Ti}`: row indices of stored values
 """
-struct SparsityPatternCSC{Ti<:Integer}
+struct SparsityPatternCSC{Ti<:Integer} <: AbstractMatrix{Bool}
     m::Int
     n::Int
     colptr::Vector{Ti}
@@ -91,6 +91,76 @@ function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
     (r1 > r2) && return false
     r1 = searchsortedfirst(rowvals(S), i0, r1, r2, Base.Order.Forward)
     return ((r1 > r2) || (rowvals(S)[r1] != i0)) ? false : true
+end
+
+"""
+    bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
+
+Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
+"""
+bidirectional_pattern(A::AbstractMatrix; symmetric_pattern) =
+    bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
+
+function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern)
+    m, n = size(S)
+    p = m + n
+    nnzS = nnz(S)
+    rowval = Vector{Int}(undef, 2 * nnzS)
+    colptr = zeros(Int, p + 1)
+
+    # Update rowval and colptr for the block A
+    for i in 1:nnzS
+        rowval[i] = S.rowval[i] + n
+    end
+    for j in 1:n
+        colptr[j] = S.colptr[j]
+    end
+
+    # Update rowval and colptr for the block Aᵀ
+    if symmetric_pattern
+        # We use the sparsity pattern of A for Aᵀ
+        for i in 1:nnzS
+            rowval[nnzS + i] = S.rowval[i]
+        end
+        # m and n are identical because symmetric_pattern is true
+        for j in 1:m
+            colptr[n + j] = nnzS + S.colptr[j]
+        end
+        colptr[p + 1] = 2 * nnzS + 1
+    else
+        # We need to determine the sparsity pattern of Aᵀ
+        # We adapt the code of transpose(SparsityPatternCSC) in graph.jl
+        for k in 1:nnzS
+            i = S.rowval[k]
+            colptr[n + i] += 1
+        end
+
+        counter = 1
+        for col in (n + 1):p
+            nnz_col = colptr[col]
+            colptr[col] = counter
+            counter += nnz_col
+        end
+
+        for j in 1:n
+            for index in S.colptr[j]:(S.colptr[j + 1] - 1)
+                i = S.rowval[index]
+                pos = colptr[n + i]
+                rowval[nnzS + pos] = j
+                colptr[n + i] += 1
+            end
+        end
+
+        colptr[p + 1] = nnzS + counter
+        for col in p:-1:(n + 2)
+            colptr[col] = nnzS + colptr[col - 1]
+        end
+        colptr[n + 1] = nnzS + 1
+    end
+
+    # Create the SparsityPatternCSC of the augmented adjacency matrix
+    S_and_Sᵀ = SparsityPatternCSC{Int}(p, p, colptr, rowval)
+    return S_and_Sᵀ
 end
 
 ## Adjacency graph

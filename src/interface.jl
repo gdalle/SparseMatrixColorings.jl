@@ -234,18 +234,9 @@ function coloring(
     decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
 ) where {decompression,R}
-    m, n = size(A)
-    T = eltype(A)
-    Aᵀ = if symmetric_pattern || A isa Union{Symmetric,Hermitian}
-        A
-    else
-        transpose(A)
-    end  # TODO: fuse with next step?
-    A_and_Aᵀ = [
-        spzeros(T, n, n) SparseMatrixCSC(Aᵀ)
-        SparseMatrixCSC(A) spzeros(T, m, m)
-    ]  # TODO: slow
+    A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
+
     if decompression == :direct
         color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)

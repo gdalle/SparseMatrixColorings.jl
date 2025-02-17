@@ -16,6 +16,7 @@ SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 transpose
+SparseMatrixColorings.bidirectional_pattern
 ```
 
 ## Low-level coloring
