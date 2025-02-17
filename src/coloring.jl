@@ -639,7 +639,7 @@ function postprocess!(
                 # Determine if the tree is a star
                 if is_star[k]
                     # It is a non-trivial star and only the color of the hub is needed
-                    (_, hub) = reverse_bfs_order[end]
+                    (_, hub) = reverse_bfs_order[1]
                     color_used[color[hub]] = true
                 else
                     # It is not a star and both colors are needed during the decompression
