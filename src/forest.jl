@@ -6,6 +6,8 @@ $TYPEDEF
 Structure that provides fast union-find operations for constructing a forest during acyclic coloring and bicoloring.
 
 # Fields
+
+$TYPEDFIELDS
 """
 $TYPEDFIELDS
 mutable struct Forest{T<:Integer}
