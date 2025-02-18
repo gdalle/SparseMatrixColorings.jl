@@ -1,8 +1,23 @@
+## Forest
+
+"""
+$TYPEDEF
+
+Structure that provides fast union-find operations for constructing a forest during acyclic coloring and bicoloring.
+
+# Fields
+"""
+$TYPEDFIELDS
 mutable struct Forest{T<:Integer}
+    "current number of edges added to the forest"
     counter::T
+    "dictionary mapping each edge represented as a tuple of vertices to its unique integer index"
     intmap::Dict{Tuple{T,T},T}
+    "vector storing the index of a parent in the tree for each edge, used in union-find operations"
     parents::Vector{T}
+    "vector approximating the depth of each tree to optimize path compression"
     ranks::Vector{T}
+    "current number of distinct trees in the forest"
     ntrees::T
 end
 
