@@ -514,6 +514,19 @@ end
 
 ## TreeSetColoringResult
 
+function compute_tree_value(is_star::Val{false}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer_right_type::AbstractVector{<:Real})
+    # The tree is not a star
+    val = B[i, color[j]] - buffer_right_type[i]
+    buffer_right_type[j] = buffer_right_type[j] + val
+    return val
+end
+
+function compute_tree_value(is_star::Val{true}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer_right_type::AbstractVector{<:Real})
+    # The tree is a star (trivial or non-trivial)
+    val = B[i, color[j]]
+    return val
+end
+
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
@@ -540,8 +553,11 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
+        is_star_k = is_star[k]
+        val_is_star_k = Val(is_star_k)
+
         # We need the buffer only when the tree is not a star (trivial or non-trivial)
-        if !is_star[k]
+        if !is_star_k
             # Reset the buffer to zero for all vertices in a tree (except the root)
             for (vertex, _) in reverse_bfs_orders[k]
                 buffer_right_type[vertex] = zero(R)
@@ -549,28 +565,16 @@ function decompress!(
             # Reset the buffer to zero for the root vertex
             (_, root) = reverse_bfs_orders[k][end]
             buffer_right_type[root] = zero(R)
+        end
 
-            # The tree is not a star
-            for (i, j) in reverse_bfs_orders[k]
-                val = B[i, color[j]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
-                if in_triangle(i, j, uplo)
-                    A[i, j] = val
-                end
-                if in_triangle(j, i, uplo)
-                    A[j, i] = val
-                end
+        for (i, j) in reverse_bfs_orders[k]
+            val = compute_tree_value(val_is_star_k, B, i, j, color, buffer_right_type)
+
+            if in_triangle(i, j, uplo)
+                A[i, j] = val
             end
-        else
-            # The tree is a star (trivial or non-trivial)
-            for (i, j) in reverse_bfs_orders[k]
-                val = B[i, color[j]]
-                if in_triangle(i, j, uplo)
-                    A[i, j] = val
-                end
-                if in_triangle(j, i, uplo)
-                    A[j, i] = val
-                end
+            if in_triangle(j, i, uplo)
+                A[j, i] = val
             end
         end
     end
@@ -632,8 +636,11 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
+        is_star_k = is_star[k]
+        val_is_star_k = Val(is_star_k)
+
         # We need the buffer only when the tree is not a star (trivial or non-trivial)
-        if !is_star[k]
+        if !is_star_k
             # Reset the buffer to zero for all vertices in a tree (except the root)
             for (vertex, _) in reverse_bfs_orders[k]
                 buffer_right_type[vertex] = zero(R)
@@ -641,89 +648,46 @@ function decompress!(
             # Reset the buffer to zero for the root vertex
             (_, root) = reverse_bfs_orders[k][end]
             buffer_right_type[root] = zero(R)
+        end
 
-            # The tree is not a star
-            for (i, j) in reverse_bfs_orders[k]
-                counter += 1
-                val = B[i, color[j]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
+        for (i, j) in reverse_bfs_orders[k]
+            counter += 1
+            compute_tree_value(val_is_star_k, B, i, j, color, buffer_right_type)
 
-                #! format: off
-                # A[i,j] is in the lower triangular part of A
-                if in_triangle(i, j, :L)
-                    # uplo = :L or uplo = :F
-                    # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
-                    if uplo != :U
-                        nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                    # uplo = :U or uplo = :F
-                    # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
-                    if uplo != :L
-                        nzind = A_colptr[i] + upper_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                # A[i,j] is in the upper triangular part of A
-                else
-                    # uplo = :U or uplo = :F
-                    # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
-                    if uplo != :L
-                        nzind = A_colptr[j] + upper_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                    # uplo = :L or uplo = :F
-                    # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
-                    if uplo != :U
-                        nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
+            #! format: off
+            # A[i,j] is in the lower triangular part of A
+            if in_triangle(i, j, :L)
+                # uplo = :L or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
+                if uplo != :U
+                    nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
+                    nzA[nzind] = val
                 end
-                #! format: on
-            end
-        else
-            # The tree is a star (trivial or non-trivial)
-            for (i, j) in reverse_bfs_orders[k]
-                counter += 1
-                val = B[i, color[j]]
 
-                #! format: off
-                # A[i,j] is in the lower triangular part of A
-                if in_triangle(i, j, :L)
-                    # uplo = :L or uplo = :F
-                    # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
-                    if uplo != :U
-                        nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                    # uplo = :U or uplo = :F
-                    # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
-                    if uplo != :L
-                        nzind = A_colptr[i] + upper_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                # A[i,j] is in the upper triangular part of A
-                else
-                    # uplo = :U or uplo = :F
-                    # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
-                    if uplo != :L
-                        nzind = A_colptr[j] + upper_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
-
-                    # uplo = :L or uplo = :F
-                    # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
-                    if uplo != :U
-                        nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
-                        nzA[nzind] = val
-                    end
+                # uplo = :U or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
+                if uplo != :L
+                    nzind = A_colptr[i] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
                 end
-                #! format: on
+
+            # A[i,j] is in the upper triangular part of A
+            else
+                # uplo = :U or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
+                if uplo != :L
+                    nzind = A_colptr[j] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+
+                # uplo = :L or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
+                if uplo != :U
+                    nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
             end
+            #! format: on
         end
     end
     return A
