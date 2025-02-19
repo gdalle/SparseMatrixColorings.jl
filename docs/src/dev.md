@@ -27,6 +27,7 @@ SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
+SparseMatrixColorings.Forest
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
 ```
