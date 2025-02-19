@@ -536,6 +536,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
             degrees[leaf] = 0
 
             for neighbor in tree[leaf]
+                # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
                     # (leaf, neighbor) represents the next edge to visit during decompression
                     push!(reverse_bfs_orders[k], (leaf, neighbor))
@@ -546,6 +547,7 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
                             virtual_hub = neighbor
                         else
                             # Verify if the tree still qualifies as a star
+                            # If we find leaves with different parents, then it can't be a star
                             if virtual_hub != neighbor
                                 bool_star = false
                             end
