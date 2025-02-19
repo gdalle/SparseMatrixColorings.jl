@@ -514,14 +514,14 @@ end
 
 ## TreeSetColoringResult
 
-function compute_tree_value(is_star::Val{false}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer_right_type::AbstractVector{<:Real})
+function compute_tree_value(is_star::Val{false}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer::AbstractVector{<:Real})
     # The tree is not a star
-    val = B[i, color[j]] - buffer_right_type[i]
-    buffer_right_type[j] = buffer_right_type[j] + val
+    val = B[i, color[j]] - buffer[i]
+    buffer[j] = buffer[j] + val
     return val
 end
 
-function compute_tree_value(is_star::Val{true}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer_right_type::AbstractVector{<:Real})
+function compute_tree_value(is_star::Val{true}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer::AbstractVector{<:Real})
     # The tree is a star (trivial or non-trivial)
     val = B[i, color[j]]
     return val
