@@ -9,7 +9,6 @@ Structure that provides fast union-find operations for constructing a forest dur
 
 $TYPEDFIELDS
 """
-$TYPEDFIELDS
 mutable struct Forest{T<:Integer}
     "current number of edges added to the forest"
     counter::T
