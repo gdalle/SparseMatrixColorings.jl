@@ -132,3 +132,21 @@ end;
         test_noallocs_structured_decompression(1000; structure, partition, decompression)
     end
 end;
+
+@testset "Multi-precision acyclic decompression" begin
+    @testset "$format" for format in ("dense", "sparse")
+        A = [0 0 1; 0 1 0; 1 0 0]
+        if format == "sparse"
+            A = sparse(A)
+        end
+        problem = ColoringProblem(; structure=:symmetric, partition=:column)
+        result = coloring(A, problem, GreedyColoringAlgorithm{:substitution}())
+        @test isempty(result.buffer)
+        for T in (Float32, Float64)
+            C = rand(T) * T.(A)
+            B = compress(C, result)
+            bench_multiprecision = @be decompress!(C, B, result)
+            @test minimum(bench_multiprecision).allocs == 0
+        end
+    end
+end
