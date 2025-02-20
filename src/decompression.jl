@@ -724,12 +724,13 @@ We use the dictionaries `col_color_ind` and `row_color_ind` to map colors obtain
 - `row_color_ind::Dict{Int,Int}` : dictionary mapping symmetric colors to row indices in `Br`
 - `col_color_ind::Dict{Int,Int}` : dictionary mapping symmetric colors to column indices in `Bc`
 """
-struct JoinCompressed{R<:Real,M<:AbstractMatrix{R}} <: AbstractMatrix{R}
+struct JoinCompressed{R<:Real,M1<:AbstractMatrix{R},M2<:AbstractMatrix{R}} <:
+       AbstractMatrix{R}
     m::Int
     n::Int
     c::Int
-    Br::M
-    Bc::M
+    Br::M1
+    Bc::M2
     row_color_ind::Dict{Int,Int}
     col_color_ind::Dict{Int,Int}
 end
