@@ -77,7 +77,7 @@ result_bi = coloring(S, problem_bi, algo_bi)
 A_img, Br_img, Bc_img = show_colors(
     result_bi;
     colorscheme=ColorSchemes.progress,
-    background=RGB(1, 1, 1),  # white
+    background_color=RGB(1, 1, 1),  # white
     scale=10,
     border=1,
     pad=2
