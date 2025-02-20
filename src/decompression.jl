@@ -728,14 +728,11 @@ struct JoinCompressed{R<:Real,M1<:AbstractMatrix{R},M2<:AbstractMatrix{R}} <:
        AbstractMatrix{R}
     m::Int
     n::Int
-    c::Int
     Br::M1
     Bc::M2
     row_color_ind::Dict{Int,Int}
     col_color_ind::Dict{Int,Int}
 end
-
-Base.size(B::JoinCompressed) = (B.m + B.n, B.c)
 
 function Base.getindex(B::JoinCompressed, i::Integer, j::Integer)
     (; n, Br, Bc, row_color_ind, col_color_ind) = B
@@ -758,8 +755,7 @@ function decompress!(
 )
     (; row_color_ind, col_color_ind, symmetric_result) = result
     m, n = size(A)
-    c = ncolors(result)
-    Br_and_Bc = JoinCompressed(m, n, c, Br, Bc, row_color_ind, col_color_ind)
+    Br_and_Bc = JoinCompressed(m, n, Br, Bc, row_color_ind, col_color_ind)
     A_and_Aᵀ = decompress(Br_and_Bc, symmetric_result)
     copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
     return A
@@ -770,8 +766,7 @@ function decompress!(
 )
     (; row_color_ind, col_color_ind, symmetric_result, large_colptr, large_rowval) = result
     m, n = size(A)
-    c = ncolors(result)
-    Br_and_Bc = JoinCompressed(m, n, c, Br, Bc, row_color_ind, col_color_ind)
+    Br_and_Bc = JoinCompressed(m, n, Br, Bc, row_color_ind, col_color_ind)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
