@@ -32,9 +32,10 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
         @test A_img isa Matrix{<:Colorant}
 
         pad = 2
-        A_img, B_img = show_colors(result; scale=scale, pad=pad)
-        @test size(A_img) == size(A) .* (scale + pad) .+ pad
-        @test size(B_img) == size(B) .* (scale + pad) .+ pad
+        border = 3
+        A_img, B_img = show_colors(result; scale=scale, border=border, pad=pad)
+        @test size(A_img) == size(A) .* (scale + 2border + pad) .+ pad
+        @test size(B_img) == size(B) .* (scale + 2border + pad) .+ pad
         @test A_img isa Matrix{<:Colorant}
 
         @testset "color cycling" begin
@@ -51,11 +52,13 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
         Br, Bc = compress(A, result)
 
         scale = 3
-        A_img, Br_img, Bc_img = show_colors(result; scale=scale)
-        @test size(A_img) == size(A) .* scale
+        Ar_img, Ac_img, Br_img, Bc_img = show_colors(result; scale=scale)
+        @test size(Ar_img) == size(A) .* scale
+        @test size(Ac_img) == size(A) .* scale
         @test size(Br_img) == size(Br) .* scale
         @test size(Bc_img) == size(Bc) .* scale
-        @test A_img isa Matrix{<:Colorant}
+        @test Ar_img isa Matrix{<:Colorant}
+        @test Ac_img isa Matrix{<:Colorant}
         @test Br_img isa Matrix{<:Colorant}
         @test Bc_img isa Matrix{<:Colorant}
     end
@@ -71,5 +74,9 @@ end
     @testset "pad too small" begin
         @test_throws ArgumentError show_colors(result; pad=-1)
         @test_nowarn show_colors(result; pad=0)
+    end
+    @testset "border too small" begin
+        @test_throws ArgumentError show_colors(result; border=-1)
+        @test_nowarn show_colors(result; border=0)
     end
 end
