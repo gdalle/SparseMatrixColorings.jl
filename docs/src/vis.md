@@ -79,6 +79,7 @@ A_img, Br_img, Bc_img = show_colors(
     colorscheme=ColorSchemes.progress,
     background=RGB(1, 1, 1),  # white
     scale=10,
+    border=1,
     pad=2
 )
 ```
