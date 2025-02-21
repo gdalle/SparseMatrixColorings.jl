@@ -279,6 +279,7 @@ struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R} <:
     color::Vector{Int}
     group::V
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    is_star::Vector{Bool}
     diagonal_indices::Vector{Int}
     diagonal_nzind::Vector{Int}
     lower_triangle_offsets::Vector{Int}
@@ -293,7 +294,7 @@ function TreeSetColoringResult(
     tree_set::TreeSet,
     decompression_eltype::Type{R},
 ) where {R}
-    (; reverse_bfs_orders) = tree_set
+    (; reverse_bfs_orders, is_star) = tree_set
     (; S) = ag
     nvertices = length(color)
     group = group_by_color(color)
@@ -361,7 +362,8 @@ function TreeSetColoringResult(
 
     # buffer holds the sum of edge values for subtrees in a tree.
     # For each vertex i, buffer[i] is the sum of edge values in the subtree rooted at i.
-    buffer = Vector{R}(undef, nvertices)
+    # Note that we don't need a buffer is all trees are stars.
+    buffer = all(is_star) ? R[] : Vector{R}(undef, nvertices)
 
     return TreeSetColoringResult(
         A,
@@ -369,6 +371,7 @@ function TreeSetColoringResult(
         color,
         group,
         reverse_bfs_orders,
+        is_star,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,

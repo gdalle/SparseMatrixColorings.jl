@@ -514,16 +514,29 @@ end
 
 ## TreeSetColoringResult
 
+function compute_tree_value(is_star::Val{false}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer::AbstractVector{<:Real})
+    # The tree is not a star
+    val = B[i, color[j]] - buffer[i]
+    buffer[j] = buffer[j] + val
+    return val
+end
+
+function compute_tree_value(is_star::Val{true}, B::AbstractMatrix, i::Integer, j::Integer, color::AbstractVector{<:Integer}, buffer::AbstractVector{<:Real})
+    # The tree is a star (trivial or non-trivial)
+    val = B[i, color[j]]
+    return val
+end
+
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, buffer) = result
+    (; ag, color, reverse_bfs_orders, is_star, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
 
-    if eltype(buffer) == R
+    if eltype(buffer) == R || isempty(buffer)
         buffer_right_type = buffer
     else
         buffer_right_type = similar(buffer, R)
@@ -540,17 +553,23 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
-        # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
-            buffer_right_type[vertex] = zero(R)
+        is_star_k = is_star[k]
+        val_is_star_k = Val(is_star_k)
+
+        # We need the buffer only when the tree is not a star (trivial or non-trivial)
+        if !is_star_k
+            # Reset the buffer to zero for all vertices in a tree (except the root)
+            for (vertex, _) in reverse_bfs_orders[k]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[k][end]
+            buffer_right_type[root] = zero(R)
         end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
-        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
+            val = compute_tree_value(val_is_star_k, B, i, j, color, buffer_right_type)
+
             if in_triangle(i, j, uplo)
                 A[i, j] = val
             end
@@ -572,6 +591,7 @@ function decompress!(
         ag,
         color,
         reverse_bfs_orders,
+        is_star,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
@@ -583,7 +603,7 @@ function decompress!(
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
 
-    if eltype(buffer) == R
+    if eltype(buffer) == R || isempty(buffer)
         buffer_right_type = buffer
     else
         buffer_right_type = similar(buffer, R)
@@ -616,18 +636,23 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in eachindex(reverse_bfs_orders)
-        # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
-            buffer_right_type[vertex] = zero(R)
+        is_star_k = is_star[k]
+        val_is_star_k = Val(is_star_k)
+
+        # We need the buffer only when the tree is not a star (trivial or non-trivial)
+        if !is_star_k
+            # Reset the buffer to zero for all vertices in a tree (except the root)
+            for (vertex, _) in reverse_bfs_orders[k]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[k][end]
+            buffer_right_type[root] = zero(R)
         end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
-        buffer_right_type[root] = zero(R)
 
         for (i, j) in reverse_bfs_orders[k]
             counter += 1
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
+            compute_tree_value(val_is_star_k, B, i, j, color, buffer_right_type)
 
             #! format: off
             # A[i,j] is in the lower triangular part of A
