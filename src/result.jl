@@ -493,7 +493,6 @@ struct BicoloringResult{
     decompression,
     V,
     SR<:AbstractColoringResult{:symmetric,:column,decompression},
-    R,
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
     A::M
@@ -513,8 +512,6 @@ struct BicoloringResult{
     col_color_ind::Dict{Int,Int}
     "row color to index"
     row_color_ind::Dict{Int,Int}
-    "combination of `Br` and `Bc` (almost a concatenation up to color remapping)"
-    Br_and_Bc::Matrix{R}
     "CSC storage of `A_and_noAᵀ - `colptr`"
     large_colptr::Vector{Int}
     "CSC storage of `A_and_noAᵀ - `rowval`"
@@ -531,15 +528,13 @@ function BicoloringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph,
     symmetric_result::AbstractColoringResult{:symmetric,:column},
-    decompression_eltype::Type{R},
-) where {R}
+)
     m, n = size(A)
     symmetric_color = column_colors(symmetric_result)
     column_color, col_color_ind = remap_colors(symmetric_color[1:n])
     row_color, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    Br_and_Bc = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
     large_colptr = copy(ag.S.colptr)
     large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
     large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
@@ -553,7 +548,6 @@ function BicoloringResult(
         symmetric_result,
         col_color_ind,
         row_color_ind,
-        Br_and_Bc,
         large_colptr,
         large_rowval,
     )

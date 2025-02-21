@@ -40,6 +40,12 @@ SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.BicoloringResult
+```
+
+## Decompression
+
+```@docs
+SparseMatrixColorings.JoinCompressed
 SparseMatrixColorings.remap_colors
 ```
 

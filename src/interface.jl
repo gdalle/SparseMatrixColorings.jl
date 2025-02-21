@@ -248,7 +248,7 @@ function coloring(
             A_and_Aᵀ, ag, color, tree_set, decompression_eltype
         )
     end
-    return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
+    return BicoloringResult(A, ag, symmetric_result)
 end
 
 ## ADTypes interface
