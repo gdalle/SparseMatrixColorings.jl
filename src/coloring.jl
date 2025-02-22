@@ -648,9 +648,9 @@ function postprocess!(
         num_colors_useless = 0
 
         # determine what are the useless colors and compute the offsets
-        for i in 1:nb_colors
-            if color_used[i]
-                offsets[i] = num_colors_useless
+        for ci in 1:nb_colors
+            if color_used[ci]
+                offsets[ci] = num_colors_useless
             else
                 num_colors_useless += 1
             end
