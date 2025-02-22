@@ -123,7 +123,8 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
     end
     star_set = StarSet(star, hub, nb_spokes)
     if postprocessing
-        postprocess!(color, star_set, g)
+        # Reuse the vector forbidden_colors to compute offsets during post-processing
+        postprocess!(color, star_set, g, forbidden_colors)
     end
     return color, star_set
 end
@@ -351,7 +352,8 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
     end
     tree_set = TreeSet(forest, nb_vertices(g))
     if postprocessing
-        postprocess!(color, tree_set, g)
+        # Reuse the vector forbidden_colors to compute offsets during post-processing
+        postprocess!(color, tree_set, g, forbidden_colors)
     end
     return color, tree_set
 end
@@ -551,6 +553,7 @@ function postprocess!(
     color::AbstractVector{<:Integer},
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
+    offsets::Vector{Int},
 )
     (; S) = g
     # flag which colors are actually used during decompression
@@ -642,15 +645,29 @@ function postprocess!(
 
     # if at least one of the colors is useless, modify the color assignments of vertices
     if any(!, color_used)
-        # assign the neutral color to every vertex with a useless color
-        for i in eachindex(color)
-            ci = color[i]
-            if !color_used[ci]
-                color[i] = 0
+        num_colors_useless = 0
+
+        # determine what are the useless colors and compute the offsets
+        for i in 1:nb_colors
+            if color_used[i]
+                offsets[i] = num_colors_useless
+            else
+                num_colors_useless += 1
+                offsets[i] = -num_colors_useless
             end
         end
-        # remap colors to decrease the highest one by filling gaps
-        color .= remap_colors(color)[1]
+
+        # assign the neutral color to every vertex with a useless color and remap the colors
+        for i in eachindex(color)
+            ci = color[i]
+            if offsets[ci] < 0
+                # assign the neutral color
+                color[i] = 0
+            else
+                # remap the color to not have any gap
+                color[i] -= offsets[ci]
+            end
+        end
     end
     return color
 end
