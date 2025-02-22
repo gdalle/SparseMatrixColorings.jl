@@ -659,7 +659,7 @@ function postprocess!(
         # assign the neutral color to every vertex with a useless color and remap the colors
         for i in eachindex(color)
             ci = color[i]
-            !color_used[ci]
+            if !color_used[ci]
                 # assign the neutral color
                 color[i] = 0
             else
