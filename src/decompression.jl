@@ -711,9 +711,9 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
     The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
     The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
-    We use the dictionaries `col_color_ind` and `row_color_ind` to map from symmetric colors to row/column colors.
+    We use the vectors `symmetric_to_row` and `symmetric_to_column` to map from symmetric colors to row and column colors.
     =#
-    (; A, col_color_ind, row_color_ind) = result
+    (; A, symmetric_to_column, symmetric_to_row) = result
     m, n = size(A)
     R = Base.promote_eltype(Br, Bc)
     if eltype(result.Br_and_Bc) == R
@@ -723,11 +723,13 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     end
     fill!(Br_and_Bc, zero(R))
     for c in axes(Br_and_Bc, 2)
-        if haskey(row_color_ind, c)  # some rows were colored with symmetric color c
-            copyto!(view(Br_and_Bc, 1:n, c), view(Br, row_color_ind[c], :))
+        if symmetric_to_row[c] > 0  # some rows were colored with the symmetric color c
+            copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
         end
-        if haskey(col_color_ind, c)  # some columns were colored with symmetric c
-            copyto!(view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, col_color_ind[c]))
+        if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
+            copyto!(
+                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
+            )
         end
     end
     return Br_and_Bc

@@ -456,22 +456,55 @@ end
 ## Bicoloring result
 
 """
-    remap_colors(color::Vector{Int})
+    remap_colors(color::Vector{Int}, num_sym_colors::Int, m::Int, n::Int)
 
-Renumber the colors in `color` using their index in the vector `sort(unique(color))`, so that the non-zero colors are forced to go from `1` to some `cmax` contiguously.
+Return a tuple `(row_color, column_color, symmetric_to_row, symmetric_to_column)` such that `row_color` and `column_color` are vectors containing the renumbered colors for rows and columns.
+`symmetric_to_row` and `symmetric_to_column` are vectors that map symmetric colors to row and column colors.
 
-Return a tuple `(remapped_colors, color_to_ind)` such that `remapped_colors` is a vector containing the renumbered colors and `color_to_ind` is a dictionary giving the translation between old and new color numberings.
+For all vertex indices `i` between `1` and `m` we have:
 
-For all vertex indices `i` we have:
+    row_color[i] = symmetric_to_row[color[n+i]]
 
-    remapped_color[i] = color_to_ind[color[i]]
+For all vertex indices `j` between `1` and `n` we have:
+
+    column_color[j] = symmetric_to_column[color[j]]
 """
-function remap_colors(color::Vector{Int})
-    sorted_colors = sort!(unique(color))
-    offset = sorted_colors[1] == 0 ? 1 : 0
-    color_to_ind = Dict(c => i - offset for (i, c) in enumerate(sorted_colors))
-    remapped_colors = [color_to_ind[c] for c in color]
-    return remapped_colors, color_to_ind
+function remap_colors(color::Vector{Int}, num_sym_colors::Int, m::Int, n::Int)
+    # Map symmetric colors to column colors
+    symmetric_to_column = zeros(Int, num_sym_colors)
+    column_color = zeros(Int, n)
+
+    counter = 0
+    for j in 1:n
+        cj = color[j]
+        if cj > 0
+            # First time that we encounter this column color
+            if symmetric_to_column[cj] == 0
+                counter += 1
+                symmetric_to_column[cj] = counter
+            end
+            column_color[j] = symmetric_to_column[cj]
+        end
+    end
+
+    # Map symmetric colors to row colors
+    symmetric_to_row = zeros(Int, num_sym_colors)
+    row_color = zeros(Int, m)
+
+    counter = 0
+    for i in (n + 1):(n + m)
+        ci = color[i]
+        if ci > 0
+            # First time that we encounter this row color
+            if symmetric_to_row[ci] == 0
+                counter += 1
+                symmetric_to_row[ci] = counter
+            end
+            row_color[i - n] = symmetric_to_row[ci]
+        end
+    end
+
+    return row_color, column_color, symmetric_to_row, symmetric_to_column
 end
 
 """
@@ -509,10 +542,10 @@ struct BicoloringResult{
     row_group::V
     "result for the coloring of the symmetric 2 x 2 block matrix"
     symmetric_result::SR
-    "column color to index"
-    col_color_ind::Dict{Int,Int}
-    "row color to index"
-    row_color_ind::Dict{Int,Int}
+    "maps symmetric colors to column colors"
+    symmetric_to_column::Vector{Int}
+    "maps symmetric colors to row colors"
+    symmetric_to_row::Vector{Int}
     "combination of `Br` and `Bc` (almost a concatenation up to color remapping)"
     Br_and_Bc::Matrix{R}
     "CSC storage of `A_and_noAᵀ - `colptr`"
@@ -535,11 +568,13 @@ function BicoloringResult(
 ) where {R}
     m, n = size(A)
     symmetric_color = column_colors(symmetric_result)
-    column_color, col_color_ind = remap_colors(symmetric_color[1:n])
-    row_color, row_color_ind = remap_colors(symmetric_color[(n + 1):(n + m)])
+    num_sym_colors = maximum(symmetric_color)
+    row_color, column_color, symmetric_to_row, symmetric_to_column = remap_colors(
+        symmetric_color, num_sym_colors, m, n
+    )
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    Br_and_Bc = Matrix{R}(undef, n + m, maximum(column_colors(symmetric_result)))
+    Br_and_Bc = Matrix{R}(undef, n + m, num_sym_colors)
     large_colptr = copy(ag.S.colptr)
     large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
     large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
@@ -551,8 +586,8 @@ function BicoloringResult(
         column_group,
         row_group,
         symmetric_result,
-        col_color_ind,
-        row_color_ind,
+        symmetric_to_column,
+        symmetric_to_row,
         Br_and_Bc,
         large_colptr,
         large_rowval,
