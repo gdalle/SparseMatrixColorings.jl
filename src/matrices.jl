@@ -16,8 +16,10 @@ function matrix_versions(A)
     versions = [
         A_dense,
         transpose(Matrix(transpose(A_dense))),
+        adjoint(Matrix(adjoint(A_dense))),
         A_sparse,
         transpose(sparse(transpose(A_sparse))),
+        adjoint(sparse(adjoint(A_sparse))),
     ]
     if issymmetric(A)
         lower_triangles = [
@@ -28,6 +30,7 @@ function matrix_versions(A)
         ]
         symmetric_versions = vcat(
             Symmetric.(versions),
+            Hermitian.(versions),
             Symmetric.(lower_triangles, :L),
             Symmetric.(upper_triangles, :U),
         )
