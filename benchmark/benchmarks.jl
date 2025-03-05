@@ -26,8 +26,8 @@ for structure in [:nonsymmetric, :symmetric],
     # use several random matrices to reduce variance
     nb_samples = 5
     As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i in 1:nb_samples]
-    results = [coloring(A, problem, algo) for A in As]
-    Bs = [compress(A, result) for (A, result) in zip(As, results)]
+    results = [coloring(A, problem, algo; decompression_eltype=Float64) for A in As]
+    Bs = [compress(Float64.(A), result) for (A, result) in zip(As, results)]
 
     SUITE[:coloring][structure][partition][decompression]["n=$n"]["p=$p"] = @benchmarkable begin
         for A in $As
