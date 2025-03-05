@@ -11,19 +11,17 @@ rng = StableRNG(63)
 
 @testset "Sparse coloring" begin
     n = 10
-    A = sprand(rng, n, n, 5 / n)
+    A = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
 
     # ADTypes
     @testset "ADTypes" begin
-        @test_opt target_modules = (SparseMatrixColorings,) column_coloring(
-            A, GreedyColoringAlgorithm()
-        )
-        @test_opt target_modules = (SparseMatrixColorings,) row_coloring(
-            A, GreedyColoringAlgorithm()
-        )
-        @test_opt target_modules = (SparseMatrixColorings,) symmetric_coloring(
-            Symmetric(A), GreedyColoringAlgorithm()
-        )
+        @test_opt column_coloring(A, GreedyColoringAlgorithm())
+        @test_opt row_coloring(A, GreedyColoringAlgorithm())
+        @test_opt symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
+
+        @inferred column_coloring(A, GreedyColoringAlgorithm())
+        @inferred row_coloring(A, GreedyColoringAlgorithm())
+        @inferred symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
     end
 
     @testset "$structure - $partition - $decompression" for (
@@ -36,7 +34,12 @@ rng = StableRNG(63)
         (:nonsymmetric, :bidirectional, :direct),
         (:nonsymmetric, :bidirectional, :substitution),
     ]
-        @test_opt target_modules = (SparseMatrixColorings,) coloring(
+        @test_opt coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression),
+        )
+        @inferred coloring(
             A,
             ColoringProblem(; structure, partition),
             GreedyColoringAlgorithm(; decompression),
@@ -55,7 +58,12 @@ end;
         (structure, partition, decompression) in
         [(:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)]
 
-        @test_opt target_modules = (SparseMatrixColorings,) coloring(
+        @test_opt coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression),
+        )
+        @inferred coloring(
             A,
             ColoringProblem(; structure, partition),
             GreedyColoringAlgorithm(; decompression),
@@ -88,15 +96,21 @@ end;
                 Br, Bc = compress(A, result)
                 @testset "Full decompression" begin
                     @test_opt compress(A, result)
-                    @test_opt decompress(Br, Bc, result) ≈ A0
+                    @test_opt decompress(Br, Bc, result)
                     @test_opt decompress!(respectful_similar(A), Br, Bc, result)
+
+                    @inferred compress(A, result)
+                    @inferred decompress(Br, Bc, result)
                 end
             else
                 B = compress(A, result)
                 @testset "Full decompression" begin
                     @test_opt compress(A, result)
-                    @test_opt decompress(B, result) ≈ A0
+                    @test_opt decompress(B, result)
                     @test_opt decompress!(respectful_similar(A), B, result)
+
+                    @inferred compress(A, result)
+                    @inferred decompress(B, result)
                 end
                 @testset "Single-color decompression" begin
                     if decompression == :direct
@@ -145,5 +159,6 @@ end;
         )
         B = compress(A, result)
         @test_opt decompress(B, result)
+        @inferred decompress(B, result)
     end
 end;
