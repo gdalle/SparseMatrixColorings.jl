@@ -19,7 +19,9 @@ for structure in [:nonsymmetric, :symmetric],
     p in [2 / n, 5 / n, 10 / n]
 
     problem = ColoringProblem(; structure, partition)
-    algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
+    algo = GreedyColoringAlgorithm(
+        RandomOrder(StableRNG(0), 0); decompression, postprocessing=true
+    )
 
     # use several random matrices to reduce variance
     nb_samples = 5
