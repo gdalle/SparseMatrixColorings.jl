@@ -48,9 +48,10 @@ function compress(A, result::AbstractColoringResult{structure,:column}) where {s
     group = column_groups(result)
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        B = stack([Int[]]; dims=2) do g
+        B_model = stack([Int[]]; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
         end
+        B = similar(B_model, size(A, 1), 0)
     else
         B = stack(group; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
@@ -63,9 +64,10 @@ function compress(A, result::AbstractColoringResult{structure,:row}) where {stru
     group = row_groups(result)
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        B = stack([Int[]]; dims=1) do g
+        B_model = stack([Int[]]; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
         end
+        B = similar(B_model, 0, size(A, 2))
     else
         B = stack(group; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
@@ -81,9 +83,10 @@ function compress(
     column_group = column_groups(result)
     if isempty(row_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        Br = stack([Int[]]; dims=1) do g
+        Br_model = stack([Int[]]; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
         end
+        Br = similar(Br_model, 0, size(A, 2))
     else
         Br = stack(row_group; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
@@ -91,9 +94,10 @@ function compress(
     end
     if isempty(column_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        Bc = stack([Int[]]; dims=2) do g
+        Bc_model = stack([Int[]]; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
         end
+        Bc = similar(Bc_model, size(A, 1), 0)
     else
         Bc = stack(column_group; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
