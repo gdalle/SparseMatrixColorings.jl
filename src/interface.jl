@@ -116,6 +116,12 @@ function GreedyColoringAlgorithm(
     return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
 end
 
+## Coloring
+
+abstract type WithOrWithoutResult end
+struct WithResult <: WithOrWithoutResult end
+struct WithoutResult <: WithOrWithoutResult end
+
 """
     coloring(
         S::AbstractMatrix,
@@ -175,99 +181,166 @@ julia> collect.(column_groups(result))
 - [`compress`](@ref)
 - [`decompress`](@ref)
 """
-function coloring end
-
 function coloring(
     A::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,:column},
+    problem::ColoringProblem,
     algo::GreedyColoringAlgorithm;
-    decompression_eltype::Type=Float64,
+    decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
+) where {R}
+    return _coloring(WithResult(), A, problem, algo, R, symmetric_pattern)
+end
+
+"""
+    fast_coloring(
+        S::AbstractMatrix,
+        problem::ColoringProblem,
+        algo::GreedyColoringAlgorithm;
+        [symmetric_pattern=false]
+    )
+
+Solve a [`ColoringProblem`](@ref) on the matrix `S` with a [`GreedyColoringAlgorithm`](@ref) and return
+
+- a single color vector for `:column` and `:row` problems
+- a tuple of color vectors for `:bidirectional` problems
+
+This function is very similar to [`coloring`](@ref), but it skips the computation of an [`AbstractColoringResult`](@ref) to speed things up.
+
+# See also
+
+- [`coloring`](@ref)
+"""
+function fast_coloring(
+    A::AbstractMatrix,
+    problem::ColoringProblem,
+    algo::GreedyColoringAlgorithm;
+    symmetric_pattern::Bool=false,
+)
+    return _coloring(WithoutResult(), A, problem, algo, Float64, symmetric_pattern)
+end
+
+function _coloring(
+    speed_setting::WithOrWithoutResult,
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:column},
+    algo::GreedyColoringAlgorithm,
+    decompression_eltype::Type,
+    symmetric_pattern::Bool,
 )
     bg = BipartiteGraph(
         A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
     color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return ColumnColoringResult(A, bg, color)
+    if speed_setting isa WithResult
+        return ColumnColoringResult(A, bg, color)
+    else
+        return color
+    end
 end
 
-function coloring(
+function _coloring(
+    speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
-    decompression_eltype::Type=Float64,
-    symmetric_pattern::Bool=false,
+    algo::GreedyColoringAlgorithm,
+    decompression_eltype::Type,
+    symmetric_pattern::Bool,
 )
     bg = BipartiteGraph(
         A; symmetric_pattern=symmetric_pattern || A isa Union{Symmetric,Hermitian}
     )
     color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return RowColoringResult(A, bg, color)
+    if speed_setting isa WithResult
+        return RowColoringResult(A, bg, color)
+    else
+        return color
+    end
 end
 
-function coloring(
+function _coloring(
+    speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
-    algo::GreedyColoringAlgorithm{:direct};
-    decompression_eltype::Type=Float64,
+    algo::GreedyColoringAlgorithm{:direct},
+    decompression_eltype::Type,
+    symmetric_pattern::Bool,
 )
     ag = AdjacencyGraph(A)
     color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
-    return StarSetColoringResult(A, ag, color, star_set)
+    if speed_setting isa WithResult
+        return StarSetColoringResult(A, ag, color, star_set)
+    else
+        return color
+    end
 end
 
-function coloring(
+function _coloring(
+    speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
-    algo::GreedyColoringAlgorithm{:substitution};
-    decompression_eltype::Type=Float64,
-)
+    algo::GreedyColoringAlgorithm{:substitution},
+    decompression_eltype::Type{R},
+    symmetric_pattern::Bool,
+) where {R}
     ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
-    return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
+    if speed_setting isa WithResult
+        return TreeSetColoringResult(A, ag, color, tree_set, R)
+    else
+        return color
+    end
 end
 
-function coloring(
+function _coloring(
+    speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{decompression};
-    decompression_eltype::Type{R}=Float64,
-    symmetric_pattern::Bool=false,
-) where {decompression,R}
+    algo::GreedyColoringAlgorithm{:direct},
+    decompression_eltype::Type{R},
+    symmetric_pattern::Bool,
+) where {R}
     A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
-
-    if decompression == :direct
-        color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
+    color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
+    if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
+        return BicoloringResult(A, ag, symmetric_result, R)
     else
-        color, tree_set = acyclic_coloring(
-            ag, algo.order; postprocessing=algo.postprocessing
-        )
-        symmetric_result = TreeSetColoringResult(
-            A_and_Aᵀ, ag, color, tree_set, decompression_eltype
-        )
+        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        return row_color, column_color
     end
-    return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
+end
+
+function _coloring(
+    speed_setting::WithOrWithoutResult,
+    A::AbstractMatrix,
+    ::ColoringProblem{:nonsymmetric,:bidirectional},
+    algo::GreedyColoringAlgorithm{:substitution},
+    decompression_eltype::Type{R},
+    symmetric_pattern::Bool,
+) where {R}
+    A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
+    color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
+    if speed_setting isa WithResult
+        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
+        return BicoloringResult(A, ag, symmetric_result, R)
+    else
+        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        return row_color, column_color
+    end
 end
 
 ## ADTypes interface
 
 function ADTypes.column_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    bg = BipartiteGraph(A; symmetric_pattern=A isa Union{Symmetric,Hermitian})
-    color = partial_distance2_coloring(bg, Val(2), algo.order)
-    return color
+    return fast_coloring(A, ColoringProblem{:nonsymmetric,:column}(), algo)
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    bg = BipartiteGraph(A; symmetric_pattern=A isa Union{Symmetric,Hermitian})
-    color = partial_distance2_coloring(bg, Val(1), algo.order)
-    return color
+    return fast_coloring(A, ColoringProblem{:nonsymmetric,:row}(), algo)
 end
 
 function ADTypes.symmetric_coloring(A::AbstractMatrix, algo::GreedyColoringAlgorithm)
-    ag = AdjacencyGraph(A)
-    # never postprocess because end users do not expect zeros
-    color, star_set = star_coloring(ag, algo.order; postprocessing=false)
-    return color
+    return fast_coloring(A, ColoringProblem{:symmetric,:column}(), algo)
 end
