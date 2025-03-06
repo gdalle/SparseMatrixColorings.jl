@@ -717,46 +717,60 @@ end
 
 ## BicoloringResult
 
-function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::AbstractMatrix)
-    #=
-    Say we have an original matrix `A` of size `(n, m)` and we build an augmented matrix `A_and_Aᵀ = [zeros(n, n) Aᵀ; A zeros(m, m)]`.
-    Its first `1:n` columns have the form `[zeros(n); A[:, j]]` and its following `n+1:n+m` columns have the form `[A[i, :]; zeros(m)]`.
-    The symmetric column coloring is performed on `A_and_Aᵀ` and the column-wise compression of `A_and_Aᵀ` should return a matrix `Br_and_Bc`.
-    But in reality, `Br_and_Bc` is computed as two partial compressions: the row-wise compression `Br` (corresponding to `Aᵀ`) and the columnwise compression `Bc` (corresponding to `A`).
-    Before symmetric decompression, we must reconstruct `Br_and_Bc` from `Br` and `Bc`, knowing that the symmetric colors (those making up `Br_and_Bc`) are present in either a row of `Br`, a column of `Bc`, or both.
-    Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
-    The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
-    The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
-    We use the vectors `symmetric_to_row` and `symmetric_to_column` to map from symmetric colors to row and column colors.
-    =#
-    (; A, symmetric_to_column, symmetric_to_row) = result
-    m, n = size(A)
-    R = Base.promote_eltype(Br, Bc)
-    if eltype(result.Br_and_Bc) == R
-        Br_and_Bc = result.Br_and_Bc
+"""
+    JoinCompressed{R<:Real}
+
+For a bicoloring of an original matrix `A` of size `(m, n)`, we build an augmented matrix `A_and_Aᵀ = [0 Aᵀ; A 0]`.
+Symmetric column coloring is then performed on `A_and_Aᵀ`, and the column-wise compression of `A_and_Aᵀ` produces a matrix `Br_and_Bc`.
+In the case of bicoloring, `Br_and_Bc` is computed as two partial compressions: the row-wise compression `Br` (corresponding to `Aᵀ`) and the column-wise compression `Bc` (corresponding to `A`).
+
+For the symmetric decompression, we lazily reconstruct `Br_and_Bc` from `Br` and `Bc`, knowing that the symmetric colors (those making up `Br_and_Bc`) may appear in either a row of `Br`, a column of `Bc`, or both.
+The columns of the top part of `Br_and_Bc` (rows between `1` and `n`) are taken from the rows of `Br`, interleaved with zero columns whenever the current color has not been used to color any row.
+The columns of the bottom part of `Br_and_Bc` (rows between `n+1` and `n+m`) are taken from the columns of `Bc`, interleaved with zero columns whenever the current color has not been used to color any column.
+
+We use the vectors `symmetric_to_row` and `symmetric_to_column` to map colors obtained during star or acyclic coloring to row colors in `Br` and column colors in `Bc`.
+
+# Fields
+
+- `m::Int`: number of rows in `A` and `Bc`
+- `n::Int`: number of columns in `A` and `Br`
+- `Br::AbstractMatrix{R}`: row-wise compressed matrix
+- `Bc::AbstractMatrix{R}`: column-wise compressed matrix
+- `symmetric_to_row::Vector{Int}`: vector mapping symmetric colors to row indices in `Br`
+- `symmetric_to_column::Vector{Int}`: vector mapping symmetric colors to column indices in `Bc`
+"""
+struct JoinCompressed{R<:Real,M1<:AbstractMatrix{R},M2<:AbstractMatrix{R}} <:
+       AbstractMatrix{R}
+    m::Int
+    n::Int
+    Br::M1
+    Bc::M2
+    symmetric_to_row::Vector{Int}
+    symmetric_to_column::Vector{Int}
+end
+
+function Base.getindex(B::JoinCompressed{R}, i::Int, j::Int) where R
+    (; n, Br, Bc, symmetric_to_row, symmetric_to_column) = B
+    if i ≤ n
+        return Br[symmetric_to_row[j], i]
     else
-        Br_and_Bc = similar(result.Br_and_Bc, R)
+        return Bc[i - n, symmetric_to_column[j]]
     end
-    fill!(Br_and_Bc, zero(R))
-    for c in axes(Br_and_Bc, 2)
-        if symmetric_to_row[c] > 0  # some rows were colored with the symmetric color c
-            copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
-        end
-        if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
-            copyto!(
-                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
-            )
-        end
-    end
-    return Br_and_Bc
+end
+
+function Base.getindex(B::JoinCompressed{R}, k::Int) where R
+    dim = B.m + B.n
+    j, i = divrem(k - 1, dim)
+    return getindex(B, i + 1, j + 1)
 end
 
 function decompress!(
     A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
+    (; symmetric_to_row, symmetric_to_column, symmetric_result) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
-    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
+    Br_and_Bc = JoinCompressed(m, n, Br, Bc, symmetric_to_row, symmetric_to_column)
+    A_and_Aᵀ = decompress(Br_and_Bc, symmetric_result)
     copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
     return A
 end
@@ -764,9 +778,11 @@ end
 function decompress!(
     A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
-    (; large_colptr, large_rowval, symmetric_result) = result
+    (;
+        symmetric_to_row, symmetric_to_column, symmetric_result, large_colptr, large_rowval
+    ) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
+    Br_and_Bc = JoinCompressed(m, n, Br, Bc, symmetric_to_row, symmetric_to_column)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
