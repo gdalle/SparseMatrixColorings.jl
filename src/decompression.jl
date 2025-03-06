@@ -749,7 +749,7 @@ struct JoinCompressed{R<:Real,M1<:AbstractMatrix{R},M2<:AbstractMatrix{R}} <:
     symmetric_to_column::Vector{Int}
 end
 
-function Base.getindex(B::JoinCompressed, i::Int, j::Int)
+function Base.getindex(B::JoinCompressed{R}, i::Int, j::Int) where R
     (; n, Br, Bc, symmetric_to_row, symmetric_to_column) = B
     if i ≤ n
         return Br[symmetric_to_row[j], i]
@@ -758,7 +758,7 @@ function Base.getindex(B::JoinCompressed, i::Int, j::Int)
     end
 end
 
-function Base.getindex(B::JoinCompressed, k::Int)
+function Base.getindex(B::JoinCompressed{R}, k::Int) where R
     dim = B.m + B.n
     j, i = divrem(k - 1, dim)
     return getindex(B, i + 1, j + 1)
