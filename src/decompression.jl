@@ -761,7 +761,7 @@ end
 function Base.getindex(B::JoinCompressed, k::Int)
     dim = B.m + B.n
     j, i = divrem(k - 1, dim)
-    return getindex(B, i+1, j+1)
+    return getindex(B, i + 1, j + 1)
 end
 
 function decompress!(
