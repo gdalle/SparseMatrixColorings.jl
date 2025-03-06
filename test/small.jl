@@ -185,14 +185,14 @@ end;
             A,
             problem,
             GreedyColoringAlgorithm{:direct}(order; postprocessing=true);
-            test_fast=false,
+            test_fast=true,
         )
 
         test_bicoloring_decompression(
             A,
             problem,
             GreedyColoringAlgorithm{:substitution}(order; postprocessing=true);
-            test_fast=false,
+            test_fast=true,
         )
     end
 end;
