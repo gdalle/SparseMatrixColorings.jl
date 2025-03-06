@@ -185,9 +185,9 @@ function coloring(
     A::AbstractMatrix,
     problem::ColoringProblem,
     algo::GreedyColoringAlgorithm;
-    decompression_eltype::Type=Float64,
+    decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
-)
+) where {R}
     return _coloring(
         WithResult(), A, problem, algo; decompression_eltype, symmetric_pattern
     )
