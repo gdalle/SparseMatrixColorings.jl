@@ -15,6 +15,7 @@ SparseMatrixColorings
 
 ```@docs
 coloring
+fast_coloring
 ColoringProblem
 GreedyColoringAlgorithm
 ConstantColoringAlgorithm

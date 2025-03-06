@@ -59,7 +59,7 @@ export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export ConstantColoringAlgorithm
-export coloring
+export coloring, fast_coloring
 export column_colors, row_colors, ncolors
 export column_groups, row_groups
 export sparsity_pattern
