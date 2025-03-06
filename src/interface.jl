@@ -219,7 +219,7 @@ function fast_coloring(
     symmetric_pattern::Bool=false,
 )
     return _coloring(
-        WithoutResult(), A, problem, algo; symmetric_pattern, decompression_eltype=Bool
+        WithoutResult(), A, problem, algo; decompression_eltype=Float64, symmetric_pattern
     )
 end
 
