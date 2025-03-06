@@ -188,9 +188,7 @@ function coloring(
     decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
 ) where {R}
-    return _coloring(
-        WithResult(), A, problem, algo; decompression_eltype, symmetric_pattern
-    )
+    return _coloring(WithResult(), A, problem, algo, R, symmetric_pattern)
 end
 
 """
@@ -218,16 +216,14 @@ function fast_coloring(
     algo::GreedyColoringAlgorithm;
     symmetric_pattern::Bool=false,
 )
-    return _coloring(
-        WithoutResult(), A, problem, algo; decompression_eltype=Float64, symmetric_pattern
-    )
+    return _coloring(WithoutResult(), A, problem, algo, Float64, symmetric_pattern)
 end
 
 function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
     symmetric_pattern::Bool,
 )
@@ -246,7 +242,7 @@ function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
     symmetric_pattern::Bool,
 )
@@ -265,7 +261,7 @@ function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
-    algo::GreedyColoringAlgorithm{:direct};
+    algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
     symmetric_pattern::Bool,
 )
@@ -282,14 +278,14 @@ function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
-    algo::GreedyColoringAlgorithm{:substitution};
+    algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A)
     color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, decompression_eltype)
+        return TreeSetColoringResult(A, ag, color, tree_set, R)
     else
         return color
     end
@@ -299,7 +295,7 @@ function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{:direct};
+    algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
@@ -308,7 +304,7 @@ function _coloring(
     color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
+        return BicoloringResult(A, ag, symmetric_result, R)
     else
         row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
         return row_color, column_color
@@ -319,7 +315,7 @@ function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
-    algo::GreedyColoringAlgorithm{:substitution};
+    algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
@@ -327,10 +323,8 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
     color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(
-            A_and_Aᵀ, ag, color, tree_set, decompression_eltype
-        )
-        return BicoloringResult(A, ag, symmetric_result, decompression_eltype)
+        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
+        return BicoloringResult(A, ag, symmetric_result, R)
     else
         row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
         return row_color, column_color
