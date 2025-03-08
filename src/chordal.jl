@@ -21,7 +21,7 @@ function coloring(
     end
 
     # if the graph is chordal, then find a minimal vertex coloring
-    color = CliqueTrees.color(A, invp).colors
+    color = CliqueTrees.color(A, perm, invp).colors
 
     # compute groups and return result
     group = group_by_color(color)
