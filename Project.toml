@@ -5,6 +5,7 @@ version = "0.4.14"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+CliqueTrees = "60701a23-6482-424a-84db-faee86b9b1f8"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -19,6 +20,7 @@ SparseMatrixColoringsColorsExt = "Colors"
 
 [compat]
 ADTypes = "1.2.1"
+CliqueTrees = "0.5.2"
 Colors = "0.12.11, 0.13"
 DataStructures = "0.18"
 DocStringExtensions = "0.8,0.9"

@@ -11,6 +11,7 @@ module SparseMatrixColorings
 
 using ADTypes: ADTypes
 using Base.Iterators: Iterators
+using CliqueTrees: CliqueTrees
 using DataStructures: DisjointSets, find_root!, root_union!, num_groups
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
@@ -49,6 +50,7 @@ include("result.jl")
 include("matrices.jl")
 include("interface.jl")
 include("constant.jl")
+include("chordal.jl")
 include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
@@ -58,7 +60,7 @@ include("show_colors.jl")
 export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
-export ConstantColoringAlgorithm
+export ConstantColoringAlgorithm, ChordalColoringAlgorithm
 export coloring, fast_coloring
 export column_colors, row_colors, ncolors
 export column_groups, row_groups
