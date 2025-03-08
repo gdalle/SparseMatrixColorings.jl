@@ -305,10 +305,10 @@ const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
 """
     PerfectEliminationOrder
 
-Instance of [`AbstractOrder`](@ref) which sorts the vertices of a chordal graph in a perfect elimination order.
+A linear-time ordering code for symmetric graphs. On [chordal graphs](https://en.wikipedia.org/wiki/Chordal_graph), the code computes a perfect elimination ordering. Otherwise, it computes a suboptimal ordering.
 
 !!! danger
-    This order is implemented as a package extension and requires loading CliqueTrees.jl.
+    This order is implemented as a package extension and requires loading [CliqueTrees.jl](https://github.com/AlgebraicJulia/CliqueTrees.jl).
 
 # References
 

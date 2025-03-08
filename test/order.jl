@@ -115,16 +115,24 @@ end;
 end;
 
 @testset "PerfectEliminationOrder" begin
-    problem1 = ColoringProblem(; structure=:symmetric, partition=:column)
-    problem2 = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algorithm = GreedyColoringAlgorithm(
         PerfectEliminationOrder(); decompression=:substitution
     )
 
+    # band graphs
     for (n, m) in ((800, 80), (400, 40), (200, 20), (100, 10))
-        perm = randperm(n)
+        perm = randperm(rng, n)
         matrix = permute!(sparse(Symmetric(brand(n, n, m, 0), :L)), perm, perm)
-        @test ncolors(coloring(matrix, problem1, algorithm)) == 1m + 1
-        @test ncolors(coloring(matrix, problem2, algorithm)) == 2m + 1
+        π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
+        @test isperm(π)
+        @test ncolors(coloring(matrix, problem, algorithm)) == m + 1
+    end
+
+    # random graphs
+    for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
+        matrix = sparse(Symmetric(sprand(rng, Bool, n, n, p)))
+        π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
+        @test isperm(π)
     end
 end
