@@ -1,3 +1,5 @@
+using CliqueTrees: CliqueTrees
+using BandedMatrices
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
@@ -7,6 +9,7 @@ using SparseMatrixColorings:
     LargestFirst,
     NaturalOrder,
     RandomOrder,
+    PerfectEliminationOrder,
     degree_dist2,
     nb_vertices,
     valid_dynamic_order,
@@ -110,3 +113,18 @@ end;
         end
     end
 end;
+
+@testset "PerfectEliminationOrder" begin
+    problem1 = ColoringProblem(; structure=:symmetric, partition=:column)
+    problem2 = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    algorithm = GreedyColoringAlgorithm(
+        PerfectEliminationOrder(); decompression=:substitution
+    )
+
+    for (n, m) in ((800, 80), (400, 40), (200, 20), (100, 10))
+        perm = randperm(n)
+        matrix = permute!(sparse(Symmetric(brand(n, n, m, 0), :L)), perm, perm)
+        @test ncolors(coloring(matrix, problem1, algorithm)) == 1m + 1
+        @test ncolors(coloring(matrix, problem2, algorithm)) == 2m + 1
+    end
+end
