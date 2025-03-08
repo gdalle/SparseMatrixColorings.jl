@@ -301,3 +301,17 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest 
 - [`DynamicDegreeBasedOrder`](@ref)
 """
 const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
+
+"""
+    PerfectEliminationOrder
+
+Instance of [`AbstractOrder`](@ref) which sorts the vertices of a chordal graph in a perfect elimination order.
+
+!!! danger
+    This order is implemented as a package extension and requires loading CliqueTrees.jl.
+
+# References
+
+- [Simple Linear-Time Algorithms to Test Chordality of Graphs, Test Acyclicity of Hypergraphs, and Selectively Reduce Acyclic Hypergraphs](https://epubs.siam.org/doi/10.1137/0213035), Tarjan and Yannakakis (1984)
+"""
+struct PerfectEliminationOrder <: AbstractOrder end

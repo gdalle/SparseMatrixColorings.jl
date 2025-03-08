@@ -5,7 +5,6 @@ version = "0.4.14"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
-CliqueTrees = "60701a23-6482-424a-84db-faee86b9b1f8"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -13,9 +12,11 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [weakdeps]
+CliqueTrees = "60701a23-6482-424a-84db-faee86b9b1f8"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 
 [extensions]
+SparseMatrixColoringsCliqueTreesExt = "CliqueTrees"
 SparseMatrixColoringsColorsExt = "Colors"
 
 [compat]
