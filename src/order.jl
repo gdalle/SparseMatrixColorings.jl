@@ -308,7 +308,7 @@ const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
 Instance of [`AbstractOrder`](@ref) which computes a perfect elimination ordering when the underlying graph is [chordal](https://en.wikipedia.org/wiki/Chordal_graph). For generic graphs, it computes a suboptimal ordering.
 
 !!! warning
-    This order can only be applied for symmetric or bidirectional coloring problems, not unidirectional ones.
+    This order can only be applied for symmetric or bidirectional coloring problems, not unidirectional ones. Furthermore, its theoretical guarantees only hold for decompression by substitution.
 
 !!! danger
     This order is implemented as a package extension and requires loading [CliqueTrees.jl](https://github.com/AlgebraicJulia/CliqueTrees.jl).
