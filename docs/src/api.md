@@ -53,4 +53,5 @@ SmallestLast
 IncidenceDegree
 DynamicLargestFirst
 DynamicDegreeBasedOrder
+PerfectEliminationOrder
 ```
