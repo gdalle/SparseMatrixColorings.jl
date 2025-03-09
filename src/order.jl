@@ -305,7 +305,10 @@ const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
 """
     PerfectEliminationOrder
 
-A linear-time ordering code for symmetric graphs. On [chordal graphs](https://en.wikipedia.org/wiki/Chordal_graph), the code computes a perfect elimination ordering. Otherwise, it computes a suboptimal ordering.
+Instance of [`AbstractOrder`](@ref) which computes a perfect elimination ordering when the underlying graph is [chordal](https://en.wikipedia.org/wiki/Chordal_graph). For generic graphs, it computes a suboptimal ordering.
+
+!!! warning
+    This order can only be applied for symmetric or bidirectional coloring problems, not unidirectional ones.
 
 !!! danger
     This order is implemented as a package extension and requires loading [CliqueTrees.jl](https://github.com/AlgebraicJulia/CliqueTrees.jl).
