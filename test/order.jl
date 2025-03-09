@@ -116,9 +116,8 @@ end;
 
 @testset "PerfectEliminationOrder" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    direct_algo = GreedyColoringAlgorithm(PerfectEliminationOrder(); decompression=:direct)
     substitution_algo = GreedyColoringAlgorithm(
-        PerfectEliminationOrder(CliqueTrees.LexBFS()); decompression=:substitution
+        PerfectEliminationOrder(); decompression=:substitution
     )
 
     # band graphs
@@ -127,7 +126,6 @@ end;
         matrix = permute!(sparse(Symmetric(brand(n, n, m, 0), :L)), perm, perm)
         π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
         @test isperm(π)
-        @test ncolors(coloring(matrix, problem, direct_algo)) == 2m + 1
         @test ncolors(coloring(matrix, problem, substitution_algo)) == m + 1
     end
 

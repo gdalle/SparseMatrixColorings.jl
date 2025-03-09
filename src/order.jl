@@ -311,7 +311,7 @@ Instance of [`AbstractOrder`](@ref) which computes a perfect elimination orderin
 The `elimination_algorithm` must be an instance of `CliqueTrees.EliminationAlgorithm`.
 
 !!! warning
-    This order can only be applied for symmetric or bidirectional coloring problems.
+    This order can only be applied for symmetric or bidirectional coloring problems. Furthermore, its theoretical guarantees only hold for decompression by substitution.
 
 !!! danger
     This order is implemented as a package extension and requires loading [CliqueTrees.jl](https://github.com/AlgebraicJulia/CliqueTrees.jl).
