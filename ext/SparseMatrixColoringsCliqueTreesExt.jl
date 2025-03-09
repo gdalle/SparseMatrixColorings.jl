@@ -1,9 +1,11 @@
 module SparseMatrixColoringsCliqueTreesExt
 
-import CliqueTrees: permutation, LexBFS, MCS
+import CliqueTrees: permutation, EliminationAlgorithm, MCS
 import SparseArrays: SparseMatrixCSC, rowvals, nnz
 import SparseMatrixColorings:
     AdjacencyGraph, BipartiteGraph, PerfectEliminationOrder, pattern, vertices
+
+PerfectEliminationOrder() = PerfectEliminationOrder(MCS())
 
 function vertices(g::AdjacencyGraph{T}, order::PerfectEliminationOrder) where {T}
     S = pattern(g)
@@ -13,10 +15,7 @@ function vertices(g::AdjacencyGraph{T}, order::PerfectEliminationOrder) where {T
 
     # construct a perfect elimination order
     # self-loops are ignored
-    # we can also use alg=LexBFS()
-    # - time complexity: O(|V| + |E|)
-    # - space complexity: O(|V| + |E|)
-    order, _ = permutation(M; alg=MCS())
+    order, _ = permutation(M; alg=order.elimination_algorithm)
 
     return reverse!(order)
 end
