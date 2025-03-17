@@ -301,12 +301,15 @@ function _coloring(
 )
     A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
-    color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
+    symmetric_color, star_set = star_coloring(
+        ag, algo.order; postprocessing=algo.postprocessing
+    )
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result)
+        return StarSetBicoloringResult(A, ag, symmetric_color, star_set)
     else
-        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        row_color, column_color, _ = remap_colors(
+            symmetric_color, maximum(symmetric_color), size(A)...
+        )
         return row_color, column_color
     end
 end
@@ -321,12 +324,16 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
-    color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
+    symmetric_color, tree_set = acyclic_coloring(
+        ag, algo.order; postprocessing=algo.postprocessing
+    )
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(A, ag, symmetric_result)
+        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, symmetric_color, tree_set, R)
+        return TreeSetBicoloringResult(A, ag, symmetric_result)
     else
-        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        row_color, column_color, _ = remap_colors(
+            symmetric_color, maximum(symmetric_color), size(A)...
+        )
         return row_color, column_color
     end
 end
