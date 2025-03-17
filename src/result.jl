@@ -283,6 +283,8 @@ struct TreeSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R} <:
     diagonal_nzind::Vector{Int}
     lower_triangle_offsets::Vector{Int}
     upper_triangle_offsets::Vector{Int}
+    compressed_diag::Vector{Int}
+    compressed_indices::Vector{Int}
     buffer::Vector{R}
 end
 
@@ -302,6 +304,7 @@ function TreeSetColoringResult(
     # Vector for the decompression of the diagonal coefficients
     diagonal_indices = Int[]
     diagonal_nzind = Int[]
+    compressed_diag = Int[]
     ndiag = 0
 
     if has_diagonal(ag)
@@ -311,6 +314,7 @@ function TreeSetColoringResult(
                 if i == j
                     push!(diagonal_indices, i)
                     push!(diagonal_nzind, k)
+                    push!(compressed_diag, (color[i] - 1) * nvertices + i)
                     ndiag += 1
                 end
             end
@@ -321,8 +325,9 @@ function TreeSetColoringResult(
     nedges = (nnz(S) - ndiag) ÷ 2
     lower_triangle_offsets = Vector{Int}(undef, nedges)
     upper_triangle_offsets = Vector{Int}(undef, nedges)
+    compressed_indices = Vector{Int}(undef, nedges)
 
-    # Index in lower_triangle_offsets and upper_triangle_offsets
+    # Index in compressed_indices, lower_triangle_offsets and upper_triangle_offsets
     index_offsets = 0
 
     for k in eachindex(reverse_bfs_orders)
@@ -333,6 +338,8 @@ function TreeSetColoringResult(
             col_i = view(rv, nzrange(S, i))
             col_j = view(rv, nzrange(S, j))
             index_offsets += 1
+
+            compressed_indices[index_offsets] = (color[j] - 1) * nvertices + i)
 
             #! format: off
             # S[i,j] is in the lower triangular part of S
@@ -373,6 +380,8 @@ function TreeSetColoringResult(
         diagonal_nzind,
         lower_triangle_offsets,
         upper_triangle_offsets,
+        compressed_diag,
+        compressed_indices,
         buffer,
     )
 end

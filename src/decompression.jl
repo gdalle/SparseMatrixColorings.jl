@@ -592,6 +592,8 @@ function decompress!(
         diagonal_nzind,
         lower_triangle_offsets,
         upper_triangle_offsets,
+        compressed_diag,
+        compressed_indices,
         buffer,
     ) = result
     (; S) = ag
@@ -608,21 +610,24 @@ function decompress!(
     # Recover the diagonal coefficients of A
     if has_diagonal(ag)
         if uplo == :L
-            for i in diagonal_indices
+            for (k, i) in enumerate(diagonal_indices)
                 # A[i, i] is the first element in column i
                 nzind = A_colptr[i]
-                nzA[nzind] = B[i, color[i]]
+                pos = compressed_diag[k]
+                nzA[nzind] = B[pos]
             end
         elseif uplo == :U
-            for i in diagonal_indices
+            for (k, i) in enumerate(diagonal_indices)
                 # A[i, i] is the last element in column i
                 nzind = A_colptr[i + 1] - 1
-                nzA[nzind] = B[i, color[i]]
+                pos = compressed_diag[k]
+                nzA[nzind] = B[pos]
             end
         else  # uplo == :F
             for (k, i) in enumerate(diagonal_indices)
                 nzind = diagonal_nzind[k]
-                nzA[nzind] = B[i, color[i]]
+                pos = compressed_diag[k]
+                nzA[nzind] = B[pos]
             end
         end
     end
@@ -642,7 +647,8 @@ function decompress!(
 
         for (i, j) in reverse_bfs_orders[k]
             counter += 1
-            val = B[i, color[j]] - buffer_right_type[i]
+            pos = compressed_indices[counter]
+            val = B[pos] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
 
             #! format: off
