@@ -35,7 +35,11 @@ function test_noallocs_sparse_decompression(
             bench1_full = @be similar(A) decompress!(_, Br, Bc, result) evals = 1
             bench2_full = @be similar(Matrix(A)) decompress!(_, Br, Bc, result) evals = 1
             @test minimum(bench1_full).allocs == 0
-            @test_broken minimum(bench2_full).allocs == 0
+            if decompression == :direct
+                @test minimum(bench2_full).allocs == 0
+            else
+                @test_broken minimum(bench2_full).allocs == 0
+            end
         end
     else
         B = compress(A, result)
