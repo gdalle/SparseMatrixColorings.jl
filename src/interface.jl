@@ -296,15 +296,15 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
-    decompression_eltype::Type{R},
+    decompression_eltype::Type,
     symmetric_pattern::Bool,
-) where {R}
+)
     A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
     color, star_set = star_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        return BicoloringResult(A, ag, symmetric_result)
     else
         row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
         return row_color, column_color
@@ -324,7 +324,7 @@ function _coloring(
     color, tree_set = acyclic_coloring(ag, algo.order; postprocessing=algo.postprocessing)
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        return BicoloringResult(A, ag, symmetric_result)
     else
         row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
         return row_color, column_color

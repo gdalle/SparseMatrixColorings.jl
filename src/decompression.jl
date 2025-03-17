@@ -528,6 +528,41 @@ function decompress!(
     return A
 end
 
+function decompress!(
+    A::SparseMatrixCSC,
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    symmetric_to_row::Vector{Int},
+    symmetric_to_column::Vector{Int},
+    result::StarSetColoringResult,
+)
+    (; ag, color, compressed_indices) = result
+    (; S) = ag
+    n = size(Br, 2)
+    m = size(Bc, 1)
+    dim = m + n
+    nzA = nonzeros(A)
+    rvS = rowvals(S)
+    l = 0  # assume A has the same pattern as the triangle
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if in_triangle(i, j, :L)
+                l += 1
+                j2, i2 = divrem(compressed_indices[k] - 1, dim)
+                j2 += 1
+                i2 += 1
+                if i2 ≤ n
+                    nzA[l] = Br[symmetric_to_row[j2], i2]
+                else
+                    nzA[l] = Bc[i2 - n, symmetric_to_column[j2]]
+                end
+            end
+        end
+    end
+    return A
+end
+
 ## TreeSetColoringResult
 
 function decompress!(
@@ -684,6 +719,74 @@ function decompress!(
     return A
 end
 
+function decompress!(
+    A::SparseMatrixCSC{R},
+    Br::AbstractMatrix{R},
+    Bc::AbstractMatrix{R},
+    symmetric_to_row::Vector{Int},
+    symmetric_to_column::Vector{Int},
+    result::TreeSetColoringResult,
+) where {R<:Real}
+    (;
+        ag,
+        color,
+        reverse_bfs_orders,
+        diagonal_indices,
+        diagonal_nzind,
+        lower_triangle_offsets,
+        upper_triangle_offsets,
+        buffer,
+    ) = result
+    (; S) = ag
+    A_colptr = A.colptr
+    nzA = nonzeros(A)
+    m = size(Bc, 1)
+    n = size(Br, 2)
+
+    if eltype(buffer) == R
+        buffer_right_type = buffer
+    else
+        buffer_right_type = similar(buffer, R)
+    end
+
+    # Index of offsets in lower_triangle_offsets and upper_triangle_offsets
+    counter = 0
+
+    # Recover the off-diagonal coefficients of A
+    for k in eachindex(reverse_bfs_orders)
+        # Reset the buffer to zero for all vertices in a tree (except the root)
+        for (vertex, _) in reverse_bfs_orders[k]
+            buffer_right_type[vertex] = zero(R)
+        end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[k][end]
+        buffer_right_type[root] = zero(R)
+
+        for (i, j) in reverse_bfs_orders[k]
+            counter += 1
+            if i ≤ n
+                val = Br[symmetric_to_row[color[j]], i] - buffer_right_type[i]
+            else
+                val = Bc[i - n, symmetric_to_column[color[j]]] - buffer_right_type[i]
+            end
+            buffer_right_type[j] = buffer_right_type[j] + val
+
+            #! format: off
+            # A[i,j] is in the lower triangular part of A
+            if in_triangle(i, j, :L)
+                nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
+                nzA[nzind] = val
+            # A[i,j] is in the upper triangular part of A
+            else
+                nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
+                nzA[nzind] = val
+            end
+            #! format: on
+        end
+    end
+    return A
+end
+
 ## MatrixInverseColoringResult
 
 function decompress!(
@@ -782,10 +885,9 @@ function decompress!(
         symmetric_to_row, symmetric_to_column, symmetric_result, large_colptr, large_rowval
     ) = result
     m, n = size(A)
-    Br_and_Bc = JoinCompressed(m, n, Br, Bc, symmetric_to_row, symmetric_to_column)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
-    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    decompress!(A_and_noAᵀ, Br, Bc, symmetric_to_row, symmetric_to_column, symmetric_result)
     return A
 end
