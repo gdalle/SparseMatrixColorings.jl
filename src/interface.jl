@@ -328,8 +328,7 @@ function _coloring(
         ag, algo.order; postprocessing=algo.postprocessing
     )
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, symmetric_color, tree_set, R)
-        return TreeSetBicoloringResult(A, ag, symmetric_result)
+        return TreeSetBicoloringResult(A, ag, symmetric_color, tree_set, R)
     else
         row_color, column_color, _ = remap_colors(
             symmetric_color, maximum(symmetric_color), size(A)...

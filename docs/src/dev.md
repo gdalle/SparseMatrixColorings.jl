@@ -27,6 +27,7 @@ SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
+SparseMatrixColorings.remap_colors
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
 ```
@@ -41,13 +42,6 @@ SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.StarSetBicoloringResult
 SparseMatrixColorings.TreeSetBicoloringResult
-```
-
-## Decompression
-
-```@docs
-SparseMatrixColorings.JoinCompressed
-SparseMatrixColorings.remap_colors
 ```
 
 ## Testing

@@ -292,7 +292,7 @@ function TreeSetColoringResult(
     color::Vector{Int},
     tree_set::TreeSet,
     decompression_eltype::Type{R},
-) where {R}
+) where {R<:Real}
     (; reverse_bfs_orders) = tree_set
     (; S) = ag
     nvertices = length(color)
@@ -596,7 +596,6 @@ function StarSetBicoloringResult(
             end
         end
     end
-    @assert pos_Bc - pos_Br == 1
 
     return StarSetBicoloringResult(
         A,
@@ -628,16 +627,14 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct TreeSetBicoloringResult{
-    M<:AbstractMatrix,
-    G<:AdjacencyGraph,
-    V,
-    SR<:AbstractColoringResult{:symmetric,:column,:substitution},
-} <: AbstractColoringResult{:nonsymmetric,:bidirectional,:substitution}
+struct TreeSetBicoloringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V,R} <:
+       AbstractColoringResult{:nonsymmetric,:bidirectional,:substitution}
     "matrix that was colored"
     A::M
     "augmented adjacency graph that was used for bicoloring"
     ag::G
+    "one integer color for each axis of the augmented matrix"
+    symmetric_color::Vector{Int}
     "one integer color for each column"
     column_color::Vector{Int}
     "one integer color for each row"
@@ -646,45 +643,80 @@ struct TreeSetBicoloringResult{
     column_group::V
     "color groups for rows"
     row_group::V
-    "result for the coloring of the symmetric 2 x 2 block matrix"
-    symmetric_result::SR
     "maps symmetric colors to column colors"
     symmetric_to_column::Vector{Int}
     "maps symmetric colors to row colors"
     symmetric_to_row::Vector{Int}
-    "CSC storage of `A_and_noAᵀ - `colptr`"
-    large_colptr::Vector{Int}
-    "CSC storage of `A_and_noAᵀ - `rowval`"
-    large_rowval::Vector{Int}
+    "indices of the nonzeros in A that can recovered with Br and Bc"
+    A_indices::Vector{Int}
+    "reverse BFS orders of the trees"
+    reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    "buffer needed during acyclic decompression"
+    buffer::Vector{R}
 end
 
 function TreeSetBicoloringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph,
-    symmetric_result::AbstractColoringResult{:symmetric,:column,:substitution},
-)
+    symmetric_color::Vector{Int},
+    tree_set::TreeSet,
+    decompression_eltype::Type{R},
+) where {R<:Real}
+    (; reverse_bfs_orders) = tree_set
+
     m, n = size(A)
-    symmetric_color = column_colors(symmetric_result)
     num_sym_colors = maximum(symmetric_color)
     row_color, column_color, symmetric_to_row, symmetric_to_column = remap_colors(
         symmetric_color, num_sym_colors, m, n
     )
     column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
-    large_colptr = copy(ag.S.colptr)
-    large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
-    large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
+
+    S = ag.S
+    rv = rowvals(S)
+    nnzA = nnz(S) ÷ 2
+    A_indices = Vector{Int}(undef, nnzA)
+
+    index = 0
+    for k in eachindex(reverse_bfs_orders)
+        for (i, j) in reverse_bfs_orders[k]
+            index += 1
+
+            #! format: off
+            # S[i,j] is in the lower triangular part of S
+            if in_triangle(i, j, :L)
+                # S[i,j] is stored at index_ij = (S.colptr[j] + offset) in S.nzval
+                col_j = view(rv, nzrange(S, j))
+                offset = searchsortedfirst(col_j, i)::Int - 1
+                A_indices[index] = S.colptr[j] + offset
+
+            # S[i,j] is in the upper triangular part of S
+            else
+                # S[j,i] is stored at index_ji = (S.colptr[i] + offset) in S.nzval
+                col_i = view(rv, nzrange(S, i))
+                offset = searchsortedfirst(col_i, j)::Int - 1
+                A_indices[index] = S.colptr[i] + offset
+            end
+            #! format: on
+        end
+    end
+
+    # buffer holds the sum of edge values for subtrees in a tree.
+    # For each vertex i, buffer[i] is the sum of edge values in the subtree rooted at i.
+    buffer = Vector{R}(undef, n + m)
+
     return TreeSetBicoloringResult(
         A,
         ag,
+        symmetric_color,
         column_color,
         row_color,
         column_group,
         row_group,
-        symmetric_result,
         symmetric_to_column,
         symmetric_to_row,
-        large_colptr,
-        large_rowval,
+        A_indices,
+        reverse_bfs_orders,
+        buffer,
     )
 end
