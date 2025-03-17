@@ -339,7 +339,7 @@ function TreeSetColoringResult(
             col_j = view(rv, nzrange(S, j))
             index_offsets += 1
 
-            compressed_indices[index_offsets] = (color[j] - 1) * nvertices + i)
+            compressed_indices[index_offsets] = (color[j] - 1) * nvertices + i
 
             #! format: off
             # S[i,j] is in the lower triangular part of S
