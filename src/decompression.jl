@@ -476,8 +476,8 @@ function decompress_single_color!(
 
     # Recover the diagonal coefficients of A
     if has_diagonal(ag)
-        for i in axes(A, 1)
-            if !iszero(S[i, i]) && color[i] == c
+        for i in group[c]
+            if !iszero(S[i, i])
                 A[i, i] = b[i]
             end
         end
