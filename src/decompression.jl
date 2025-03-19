@@ -567,6 +567,7 @@ function decompress!(
         for (i, j) in reverse_bfs_orders[k]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
+
             if in_triangle(i, j, uplo)
                 A[i, j] = val
             end

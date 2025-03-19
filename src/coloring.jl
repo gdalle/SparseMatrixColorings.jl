@@ -435,6 +435,7 @@ $TYPEDFIELDS
 """
 struct TreeSet
     reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+    is_star::Vector{Bool}
 end
 
 function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
@@ -499,8 +500,18 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
     # Create a queue with a fixed size nvmax
     queue = Vector{Int}(undef, nvmax)
 
+    # Specify if each tree in the forest is a star,
+    # meaning that one vertex is directly connected to all other vertices in the tree
+    is_star = Vector{Bool}(undef, ntrees)
+
     for k in 1:ntrees
         tree = trees[k]
+
+        # Boolean indicating whether the current tree is a star (a single central vertex connected to all others)
+        bool_star = true
+
+        # Candidate hub vertex if the current tree is a star
+        virtual_hub = 0
 
         # Initialize the queue to store the leaves
         queue_start = 1
@@ -527,9 +538,23 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
             degrees[leaf] = 0
 
             for neighbor in tree[leaf]
+                # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
                     # (leaf, neighbor) represents the next edge to visit during decompression
                     push!(reverse_bfs_orders[k], (leaf, neighbor))
+
+                    if bool_star
+                        # Initialize the potential hub of the star with the first parent of a leaf
+                        if virtual_hub == 0
+                            virtual_hub = neighbor
+                        else
+                            # Verify if the tree still qualifies as a star
+                            # If we find leaves with different parents, then it can't be a star
+                            if virtual_hub != neighbor
+                                bool_star = false
+                            end
+                        end
+                    end
 
                     # reduce the degree of the neighbor
                     degrees[neighbor] -= 1
@@ -542,9 +567,12 @@ function TreeSet(forest::DisjointSets{Tuple{Int,Int}}, nvertices::Int)
                 end
             end
         end
+
+        # Specify if the tree is a star or not
+        is_star[k] = bool_star
     end
 
-    return TreeSet(reverse_bfs_orders)
+    return TreeSet(reverse_bfs_orders, is_star)
 end
 
 ## Postprocessing, mirrors decompression code
@@ -605,17 +633,23 @@ function postprocess!(
         end
     else
         # only the colors of non-leaf vertices are used
-        (; reverse_bfs_orders) = star_or_tree_set
+        (; reverse_bfs_orders, is_star) = star_or_tree_set
         nb_trivial_trees = 0
 
         # Iterate through all non-trivial trees
         for k in eachindex(reverse_bfs_orders)
             reverse_bfs_order = reverse_bfs_orders[k]
-            # Check if we have more than one edge in the tree
+            # Check if we have more than one edge in the tree (non-trivial tree)
             if length(reverse_bfs_order) > 1
-                # TODO: Optimize by avoiding iteration over all edges
-                # Only one edge is needed if we know if it is a normal tree or a star
-                for (i, j) in reverse_bfs_order
+                # Determine if the tree is a star
+                if is_star[k]
+                    # It is a non-trivial star and only the color of the hub is needed
+                    (_, hub) = reverse_bfs_order[1]
+                    color_used[color[hub]] = true
+                else
+                    # It is not a star and both colors are needed during the decompression
+                    (i, j) = reverse_bfs_order[1]
+                    color_used[color[i]] = true
                     color_used[color[j]] = true
                 end
             else

@@ -19,7 +19,7 @@ end
 
 @testset "Distance-2 coloring" begin
     test_noallocs_distance2_coloring(1000)
-end;
+end
 
 function test_noallocs_sparse_decompression(
     n::Integer; structure::Symbol, partition::Symbol, decompression::Symbol
@@ -121,7 +121,7 @@ end
     ]
         test_noallocs_sparse_decompression(1000; structure, partition, decompression)
     end
-end;
+end
 
 @testset "Structured decompression" begin
     @testset "$structure - $partition - $decompression" for (
@@ -131,4 +131,4 @@ end;
     ]
         test_noallocs_structured_decompression(1000; structure, partition, decompression)
     end
-end;
+end
