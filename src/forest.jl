@@ -10,32 +10,32 @@ Structure that provides fast union-find operations for constructing a forest dur
 $TYPEDFIELDS
 """
 mutable struct Forest{T<:Integer}
-    "current number of edges added to the forest"
-    counter::T
+    "current number of edges in the forest"
+    num_edges::T
+    "current number of distinct trees in the forest"
+    num_trees::T
     "dictionary mapping each edge represented as a tuple of vertices to its unique integer index"
     intmap::Dict{Tuple{T,T},T}
     "vector storing the index of a parent in the tree for each edge, used in union-find operations"
     parents::Vector{T}
     "vector approximating the depth of each tree to optimize path compression"
     ranks::Vector{T}
-    "current number of distinct trees in the forest"
-    ntrees::T
 end
 
 function Forest{T}(n::Integer) where {T<:Integer}
-    counter = zero(T)
+    num_edges = zero(T)
+    num_trees = zero(T)
     intmap = Dict{Tuple{T,T},T}()
     sizehint!(intmap, n)
     parents = collect(Base.OneTo(T(n)))
     ranks = zeros(T, T(n))
-    ntrees = zero(T)
-    return Forest{T}(counter, intmap, parents, ranks, ntrees)
+    return Forest{T}(num_edges, num_trees, intmap, parents, ranks)
 end
 
 function Base.push!(forest::Forest{T}, edge::Tuple{T,T}) where {T<:Integer}
-    forest.counter += 1
-    forest.intmap[edge] = forest.counter
-    forest.ntrees += one(T)
+    forest.num_edges += 1
+    forest.intmap[edge] = forest.num_edges
+    forest.num_trees += one(T)
     return forest
 end
 
@@ -63,6 +63,6 @@ function root_union!(forest::Forest{T}, index_edge1::T, index_edge2::T) where {T
         rks[index_edge1] += one(T)
     end
     parents[index_edge2] = index_edge1
-    forest.ntrees -= one(T)
+    forest.num_trees -= one(T)
     return nothing
 end

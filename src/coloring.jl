@@ -432,15 +432,15 @@ end
 function TreeSet(forest::Forest{Int}, nvertices::Int)
     # Forest is a structure defined in forest.jl
     # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
-    # - forest.ntrees: the number of trees in the forest
-    ntrees = forest.ntrees
+    # - forest.num_trees: the number of trees in the forest
+    nt = forest.num_trees
 
     # dictionary that maps a tree's root to the index of the tree
     roots = Dict{Int,Int}()
-    sizehint!(roots, ntrees)
+    sizehint!(roots, nt)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
-    trees = [Dict{Int,Vector{Int}}() for i in 1:ntrees]
+    trees = [Dict{Int,Vector{Int}}() for i in 1:nt]
 
     # counter of the number of roots found
     k = 0
@@ -476,11 +476,11 @@ function TreeSet(forest::Forest{Int}, nvertices::Int)
     degrees = Vector{Int}(undef, nvertices)
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:ntrees]
+    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:nt]
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
-    for k in 1:ntrees
+    for k in 1:nt
         nb_vertices_tree = length(trees[k])
         nvmax = max(nvmax, nb_vertices_tree)
     end
@@ -490,9 +490,9 @@ function TreeSet(forest::Forest{Int}, nvertices::Int)
 
     # Specify if each tree in the forest is a star,
     # meaning that one vertex is directly connected to all other vertices in the tree
-    is_star = Vector{Bool}(undef, ntrees)
+    is_star = Vector{Bool}(undef, nt)
 
-    for k in 1:ntrees
+    for k in 1:nt
         tree = trees[k]
 
         # Boolean indicating whether the current tree is a star (a single central vertex connected to all others)
