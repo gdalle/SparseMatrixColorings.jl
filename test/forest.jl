@@ -1,3 +1,6 @@
+using SparseMatrixColorings: Forest, find_root!, root_union!
+using Test
+
 @testset "Constructor Forest" begin
     forest = Forest{Int}(5)
 
@@ -41,7 +44,7 @@ end
     push!(forest, (1, 2))
     push!(forest, (4, 5))
     push!(forest, (2, 4))
-    @test forest.num_trees = 3
+    @test forest.num_trees == 3
 
     root1 = find_root!(forest, (1, 2))
     root3 = find_root!(forest, (2, 4))
@@ -53,7 +56,7 @@ end
     @test forest.parents[3] == 1
     @test forest.ranks[1] == 1
     @test forest.ranks[3] == 0
-    @test forest.num_trees = 2
+    @test forest.num_trees == 2
 
     root1 = find_root!(forest, (1, 2))
     root2 = find_root!(forest, (4, 5))
