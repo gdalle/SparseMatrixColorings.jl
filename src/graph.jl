@@ -192,20 +192,44 @@ struct AdjacencyGraph{T,has_diagonal}
     M::SparseMatrixCSC{T,T}
 end
 
-function AdjacencyGraph(
-    S::SparsityPatternCSC{T}, M::SparseMatrixCSC{T,T}; has_diagonal::Bool=true
-) where {T}
+function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
+    nv = size(S, 2)
+    rows = rowvals(S)
+    if has_diagonal
+        ne = 0
+        for j in 1:nv
+            for pos in nzrange(S, j)
+                i = rows[pos]
+                if i < j
+                    ne += 1
+                end
+            end
+        end
+    else
+        ne = nnz(S) ÷ 2
+    end
+    colptr = Vector{Int}(undef, nv + 1)
+    rowval = Vector{Int}(undef, ne)
+    colptr[1] = 1
+    k = 1
+    for j in 1:nv
+        for pos in nzrange(S, j)
+            i = rows[pos]
+            if i < j
+                rowval[k] = i
+                k += 1
+            end
+        end
+        colptr[j + 1] = k
+    end
+    nzval = collect(Base.OneTo(ne))
+    M = SparseMatrixCSC(nv, nv, colptr, rowval, nzval)
     return AdjacencyGraph{T,has_diagonal}(S, M)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
     S = SparsityPatternCSC(A)
-    M = triu(A, 1)
-    nnzM = Int(nnz(M))
-    nzval = collect(Base.OneTo(nnzM))
-    m, n = size(A)
-    M = SparseMatrixCSC(m, n, M.colptr, M.rowval, nzval)
-    return AdjacencyGraph(S, M; has_diagonal)
+    return AdjacencyGraph(S; has_diagonal)
 end
 
 function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
@@ -240,15 +264,7 @@ function degree(g::AdjacencyGraph, v::Integer)
     return d
 end
 
-function nb_edges(g::AdjacencyGraph)
-    ne = 0
-    for v in vertices(g)
-        for u in neighbors(g, v)
-            ne += 1
-        end
-    end
-    return ne ÷ 2
-end
+nb_edges(g::AdjacencyGraph) = nnz(g.M)
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
