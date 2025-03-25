@@ -224,7 +224,7 @@ end
 function degree(g::AdjacencyGraph{T,true}, v::Integer) where {T}
     S = pattern(g)
     rvS = rowvals(S)
-    d = S.colptr[v+1] - S.colptr[v]
+    d = S.colptr[v + 1] - S.colptr[v]
     for index in nzrange(S, v)
         row = rvS[index]
         if row >= v
@@ -237,7 +237,7 @@ end
 
 function degree(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     S = pattern(g)
-    d = S.colptr[v+1] - S.colptr[v]
+    d = S.colptr[v + 1] - S.colptr[v]
     return d
 end
 
