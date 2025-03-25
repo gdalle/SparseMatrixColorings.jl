@@ -12,18 +12,16 @@ include("utils.jl")
 
 @testset verbose = true "SparseMatrixColorings" begin
     @testset verbose = true "Code quality" begin
-        if VERSION >= v"1.10"
-            @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
-            end
-            @testset "JET" begin
-                JET.test_package(SparseMatrixColorings; target_defined_modules=true)
-            end
-            @testset "JuliaFormatter" begin
-                @test JuliaFormatter.format(
-                    SparseMatrixColorings; verbose=false, overwrite=false
-                )
-            end
+        @testset "Aqua" begin
+            Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
+        end
+        @testset "JET" begin
+            JET.test_package(SparseMatrixColorings; target_defined_modules=true)
+        end
+        @testset "JuliaFormatter" begin
+            @test JuliaFormatter.format(
+                SparseMatrixColorings; verbose=false, overwrite=false
+            )
         end
         @testset "Doctests" begin
             Documenter.doctest(SparseMatrixColorings)
@@ -76,10 +74,8 @@ include("utils.jl")
         end
     end
     @testset verbose = true "Performance" begin
-        if VERSION >= v"1.10"
-            @testset "Type stability" begin
-                include("type_stability.jl")
-            end
+        @testset "Type stability" begin
+            include("type_stability.jl")
         end
         @testset "Allocations" begin
             include("allocations.jl")
