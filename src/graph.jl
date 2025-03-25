@@ -189,14 +189,23 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 """
 struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
+    M::SparseMatrixCSC{T,T}
 end
 
-function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S)
+function AdjacencyGraph(
+    S::SparsityPatternCSC{T}, M::SparseMatrixCSC{T,T}; has_diagonal::Bool=true
+) where {T}
+    return AdjacencyGraph{T,has_diagonal}(S, M)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
-    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal)
+    S = SparsityPatternCSC(A)
+    M = triu(A, 1)
+    nnzM = Int(nnz(M))
+    nzval = collect(Base.OneTo(nnzM))
+    m, n = size(A)
+    M = SparseMatrixCSC(m, n, M.colptr, M.rowval, nzval)
+    return AdjacencyGraph(S, M; has_diagonal)
 end
 
 function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)

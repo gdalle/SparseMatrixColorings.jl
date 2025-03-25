@@ -39,7 +39,8 @@ using SparseArrays:
     nzrange,
     rowvals,
     sparse,
-    spzeros
+    spzeros,
+    triu
 
 include("graph.jl")
 include("forest.jl")
