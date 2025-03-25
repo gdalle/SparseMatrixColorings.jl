@@ -31,6 +31,9 @@ include("utils.jl")
         @testset "Graph" begin
             include("graph.jl")
         end
+        @testset "Forest" begin
+            include("forest.jl")
+        end
         @testset "Order" begin
             include("order.jl")
         end
