@@ -437,15 +437,11 @@ function decompress!(
     fill!(A, zero(eltype(A)))
 
     rvS = rowvals(S)
-    l = 0  # assume A has the same pattern as the triangle
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
             if in_triangle(i, j, uplo)
                 A[i, j] = B[compressed_indices[k]]
-            end
-            if in_triangle(j, i, uplo)
-                A[j, i] = B[compressed_indices[k]]
             end
         end
     end
