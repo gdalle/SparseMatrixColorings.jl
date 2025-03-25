@@ -221,17 +221,27 @@ function neighbors(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     return neighbors_v
 end
 
-function degree(g::AdjacencyGraph, v::Integer)
-    d = 0
-    for u in neighbors(g, v)
-        if u != v
-            d += 1
+function degree(g::AdjacencyGraph{T,true}, v::Integer) where {T}
+    S = pattern(g)
+    rvS = rowvals(S)
+    d = S.colptr[v+1] - S.colptr[v]
+    for index in nzrange(S, v)
+        row = rvS[index]
+        if row >= v
+            (row == v) && (d -= 1)
+            break
         end
     end
     return d
 end
 
-function nb_edges(g::AdjacencyGraph)
+function degree(g::AdjacencyGraph{T,false}, v::Integer) where {T}
+    S = pattern(g)
+    d = S.colptr[v+1] - S.colptr[v]
+    return d
+end
+
+function nb_edges(g::AdjacencyGraph{T,false}) where {T}
     ne = 0
     for v in vertices(g)
         for u in neighbors(g, v)
@@ -240,6 +250,8 @@ function nb_edges(g::AdjacencyGraph)
     end
     return ne ÷ 2
 end
+
+nb_edges(g::AdjacencyGraph{T,true}) where {T} = nnz(g.S) ÷ 2
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
