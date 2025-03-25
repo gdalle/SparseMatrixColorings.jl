@@ -431,31 +431,17 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, star_set) = result
-    (; star, hub, spokes) = star_set
+    (; ag, compressed_indices) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
 
-    # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
-        for i in axes(A, 1)
-            if !iszero(S[i, i])
-                A[i, i] = B[i, color[i]]
-            end
-        end
-    end
-
-    # Recover the off-diagonal coefficients of A
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        cj = color[j]
-        for i in spokes[s]
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
             if in_triangle(i, j, uplo)
-                A[i, j] = B[i, cj]
-            end
-            if in_triangle(j, i, uplo)
-                A[j, i] = B[i, cj]
+                A[i, j] = B[compressed_indices[k]]
             end
         end
     end
@@ -523,7 +509,6 @@ function decompress!(
                 end
             end
         end
-        @assert l == length(nonzeros(A))
     end
     return A
 end
