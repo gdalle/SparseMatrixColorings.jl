@@ -332,7 +332,7 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
                 iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
                     _prevent_cycle!(
-                        v, w, x, color, first_visit_to_tree, forbidden_colors, forest
+                        v, w, x, color, g, first_visit_to_tree, forbidden_colors, forest
                     )
                 end
             end
@@ -345,20 +345,20 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
         end
         for w in neighbors(g, v)  # grow two-colored stars around the vertex v
             iszero(color[w]) && continue
-            _grow_star!(v, w, color, first_neighbor, forest)
+            _grow_star!(v, w, color, g, first_neighbor, forest)
         end
         for w in neighbors(g, v)
             iszero(color[w]) && continue
             for x in neighbors(g, w)
                 (x == v || iszero(color[x])) && continue
                 if color[x] == color[v]
-                    _merge_trees!(v, w, x, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                    _merge_trees!(v, w, x, g, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
     end
 
-    tree_set = TreeSet(forest, nb_vertices(g))
+    tree_set = TreeSet(g, forest, nb_vertices(g))
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         postprocess!(color, tree_set, g, forbidden_colors)
@@ -373,12 +373,14 @@ function _prevent_cycle!(
     x::Integer,
     color::AbstractVector{<:Integer},
     # modified
+    g::AdjacencyGraph,
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
     forest::Forest{<:Integer},
 )
     wx = _sort(w, x)
-    id = find_root!(forest, wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
+    index_wx = g.M[wx...]
+    id = find_root!(forest, index_wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
     (p, q) = first_visit_to_tree[id]
     if p != v  # T is being visited from vertex v for the first time
         vw = _sort(v, w)
@@ -395,19 +397,22 @@ function _grow_star!(
     w::Integer,
     color::AbstractVector{<:Integer},
     # modified
+    g::AdjacencyGraph,
     first_neighbor::AbstractVector{<:Tuple},
     forest::Forest{<:Integer},
 )
     vw = _sort(v, w)
-    push!(forest, vw)  # Create a new tree T_{vw} consisting only of edge vw
+    # Create a new tree T_{vw} consisting only of edge vw
     (p, q) = first_neighbor[color[w]]
     if p != v  # a neighbor of v with color[w] encountered for the first time
         first_neighbor[color[w]] = (v, w)
     else  # merge T_{vw} with a two-colored star being grown around v
         vw = _sort(v, w)
         pq = _sort(p, q)
-        root1 = find_root!(forest, vw)
-        root2 = find_root!(forest, pq)
+        index_vw = g.M[vw...]
+        index_pq = g.M[pq...]
+        root1 = find_root!(forest, index_vw)
+        root2 = find_root!(forest, index_pq)
         root_union!(forest, root1, root2)
     end
     return nothing
@@ -419,12 +424,15 @@ function _merge_trees!(
     w::Integer,
     x::Integer,
     # modified
+    g::AdjacencyGraph,
     forest::Forest{<:Integer},
 )
     vw = _sort(v, w)
     wx = _sort(w, x)
-    root1 = find_root!(forest, vw)
-    root2 = find_root!(forest, wx)
+    index_vw = g.M[vw...]
+    index_wx = g.M[wx...]
+    root1 = find_root!(forest, index_vw)
+    root2 = find_root!(forest, index_wx)
     if root1 != root2
         root_union!(forest, root1, root2)
     end
@@ -445,10 +453,8 @@ struct TreeSet
     is_star::Vector{Bool}
 end
 
-function TreeSet(forest::Forest{Int}, nvertices::Int)
-    # Forest is a structure defined in forest.jl
-    # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
-    # - forest.num_trees: the number of trees in the forest
+function TreeSet(g::AdjacencyGraph{Int}, forest::Forest{Int}, nvertices::Int)
+    # he number of trees in the forest
     nt = forest.num_trees
 
     # dictionary that maps a tree's root to the index of the tree
@@ -460,31 +466,33 @@ function TreeSet(forest::Forest{Int}, nvertices::Int)
 
     # counter of the number of roots found
     k = 0
-    for edge in keys(forest.intmap)
-        i, j = edge
-        root = find_root!(forest, edge)
+    for j in axes(g.M, 2)
+        for edge_index in nzrange(g.M, j)
+            i = g.M.rowval[edge_index]
+            root = find_root!(forest, edge_index)
 
-        # Update roots
-        if !haskey(roots, root)
-            k += 1
-            roots[root] = k
-        end
+            # Update roots
+            if !haskey(roots, root)
+                k += 1
+                roots[root] = k
+            end
 
-        # index of the tree T that contains this edge
-        index_tree = roots[root]
+            # index of the tree T that contains this edge
+            index_tree = roots[root]
 
-        # Update the neighbors of i in the tree T
-        if !haskey(trees[index_tree], i)
-            trees[index_tree][i] = [j]
-        else
-            push!(trees[index_tree][i], j)
-        end
+            # Update the neighbors of i in the tree T
+            if !haskey(trees[index_tree], i)
+                trees[index_tree][i] = [j]
+            else
+                push!(trees[index_tree][i], j)
+            end
 
-        # Update the neighbors of j in the tree T
-        if !haskey(trees[index_tree], j)
-            trees[index_tree][j] = [i]
-        else
-            push!(trees[index_tree][j], i)
+            # Update the neighbors of j in the tree T
+            if !haskey(trees[index_tree], j)
+                trees[index_tree][j] = [i]
+            else
+                push!(trees[index_tree][j], i)
+            end
         end
     end
 
