@@ -88,7 +88,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
     edge_to_index = Vector{Int}(undef, nnz(S))
     star = Vector{Int}(undef, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
+    sizehint!(hub, ne)
     nb_spokes = Int[]  # number of spokes for each star
+    sizehint!(nb_spokes, ne)
     vertices_in_order = vertices(g, order)
 
     # edge_to_index gives an index for each edge
