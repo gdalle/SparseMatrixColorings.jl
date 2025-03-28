@@ -78,23 +78,48 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 """
 function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
     # Initialize data structures
+    S = pattern(g)
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
-    star = Dict{Tuple{Int,Int},Int}()
-    sizehint!(star, ne)
+    edge_to_index = Vector{Int}(undef, nnz(S))
+    star = Vector{Int}(undef, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
+    sizehint!(hub, ne)
     nb_spokes = Int[]  # number of spokes for each star
+    sizehint!(nb_spokes, ne)
     vertices_in_order = vertices(g, order)
 
+    # edge_to_index gives an index for each edge
+    # use forbidden_colors (or color) for the offsets of each column
+    offsets = forbidden_colors
+    counter = 0
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if i > j
+                counter += 1
+                edge_to_index[k] = counter
+                k2 = S.colptr[i] + offsets[i]
+                edge_to_index[k2] = counter
+                offsets[i] += 1
+            end
+        end
+    end
+    fill!(offsets, 0)
+    # Note that we don't need to do that for bicoloring,
+    # we can build that in the same time than the transposed sparsity pattern of A
+
     for v in vertices_in_order
-        for w in neighbors(g, v)
-            iszero(color[w]) && continue
+        for (iw, w) in enumerate(neighbors2(g, v))
+            (v == w || iszero(color[w])) && continue
+            index_vw = edge_to_index[S.colptr[v] + iw - 1]
             forbidden_colors[color[w]] = v
-            (p, q) = first_neighbor[color[w]]
+            (p, q, _) = first_neighbor[color[w]]
             if p == v  # Case 1
                 if treated[q] != v
                     # forbid colors of neighbors of q
@@ -103,11 +128,11 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
                 # forbid colors of neighbors of w
                 _treat!(treated, forbidden_colors, g, v, w, color)
             else
-                first_neighbor[color[w]] = (v, w)
-                for x in neighbors(g, w)
-                    (x == v || iszero(color[x])) && continue
-                    wx = _sort(w, x)
-                    if x == hub[star[wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
+                first_neighbor[color[w]] = (v, w, index_vw)
+                for (ix, x) in enumerate(neighbors2(g, w))
+                    (x == w || x == v || iszero(color[x])) && continue
+                    index_wx = edge_to_index[S.colptr[w] + ix - 1]
+                    if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -119,57 +144,15 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
                 break
             end
         end
-        _update_stars!(star, hub, nb_spokes, g, v, color, first_neighbor)
+        _update_stars!(star, hub, nb_spokes, g, v, color, first_neighbor, edge_to_index)
     end
-    star_set = StarSet(star, hub, nb_spokes)
+    star_set = StarSet(g, star, hub, nb_spokes, color, edge_to_index)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         postprocess!(color, star_set, g, forbidden_colors)
     end
-    return color, star_set
+    return color, star_set, edge_to_index
 end
-
-"""
-    StarSet
-
-Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algorithm.
-
-# Fields
-
-$TYPEDFIELDS
-"""
-struct StarSet
-    "a mapping from edges (pair of vertices) to their star index"
-    star::Dict{Tuple{Int,Int},Int}
-    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
-    hub::Vector{Int}
-    "a mapping from star indices to the vector of their spokes"
-    spokes::Vector{Vector{Int}}
-end
-
-function StarSet(star::Dict{Tuple{Int,Int},Int}, hub::Vector{Int}, nb_spokes::Vector{Int})
-    # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
-    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
-
-    # Reuse nb_spokes as counters to track the current index while filling the spokes
-    fill!(nb_spokes, 0)
-
-    for ((i, j), s) in pairs(star)
-        h = abs(hub[s])
-        nb_spokes[s] += 1
-        index = nb_spokes[s]
-
-        # Assign the non-hub vertex (spoke) to the correct position in spokes
-        if i == h
-            spokes[s][index] = j
-        elseif j == h
-            spokes[s][index] = i
-        end
-    end
-    return StarSet(star, hub, spokes)
-end
-
-_sort(u, v) = (min(u, v), max(u, v))
 
 function _treat!(
     # modified
@@ -191,7 +174,7 @@ end
 
 function _update_stars!(
     # modified
-    star::Dict{<:Tuple,<:Integer},
+    star::AbstractVector{<:Integer},
     hub::AbstractVector{<:Integer},
     nb_spokes::AbstractVector{<:Integer},
     # not modified
@@ -199,34 +182,36 @@ function _update_stars!(
     v::Integer,
     color::AbstractVector{<:Integer},
     first_neighbor::AbstractVector{<:Tuple},
+    edge_to_index::AbstractVector{<:Integer},
 )
-    for w in neighbors(g, v)
-        iszero(color[w]) && continue
-        vw = _sort(v, w)
+    S = pattern(g)
+    for (iw, w) in enumerate(neighbors2(g, v))
+        (v == w || iszero(color[w])) && continue
+        index_vw = edge_to_index[S.colptr[v] + iw - 1]
         x_exists = false
-        for x in neighbors(g, w)
+        for (ix, x) in enumerate(neighbors2(g, w))
+            (x == w) && continue
             if x != v && color[x] == color[v]  # vw, wx ∈ E
-                wx = _sort(w, x)
-                star_wx = star[wx]
+                index_wx = edge_to_index[S.colptr[w] + ix - 1]
+                star_wx = star[index_wx]
                 hub[star_wx] = w  # this may already be true
                 nb_spokes[star_wx] += 1
-                star[vw] = star_wx
+                star[index_vw] = star_wx
                 x_exists = true
                 break
             end
         end
         if !x_exists
-            (p, q) = first_neighbor[color[w]]
+            (p, q, index_pq) = first_neighbor[color[w]]
             if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
-                vq = _sort(v, q)
-                star_vq = star[vq]
+                star_vq = star[index_pq]
                 hub[star_vq] = v  # this may already be true
                 nb_spokes[star_vq] += 1
-                star[vw] = star_vq
+                star[index_vw] = star_vq
             else  # vw forms a new star
                 push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
                 push!(nb_spokes, 1)
-                star[vw] = length(hub)
+                star[index_vw] = length(hub)
             end
         end
     end
@@ -234,42 +219,66 @@ function _update_stars!(
 end
 
 """
-    symmetric_coefficient(
-        i::Integer, j::Integer,
-        color::AbstractVector{<:Integer},
-        star_set::StarSet
-    )
+    StarSet
 
-Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
+Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algorithm.
 
-This function corresponds to algorithm `DirectRecover2` in the paper.
+# Fields
 
-# References
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
+$TYPEDFIELDS
 """
-function symmetric_coefficient(
-    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
-)
-    (; star, hub) = star_set
-    if i == j
-        # diagonal
-        return i, color[j]
-    end
-    if i > j  # keys of star are sorted tuples
-        # star only contains one triangle
-        i, j = j, i
-    end
-    star_id = star[i, j]
-    h = abs(hub[star_id])
-    if h == j
-        # i is the spoke
-        return i, color[h]
-    else
-        # j is the spoke
-        return j, color[h]
-    end
+struct StarSet
+    "a mapping from edges (pair of vertices) to their star index"
+    star::Vector{Int}
+    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
+    hub::Vector{Int}
+    "a mapping from star indices to the vector of their spokes"
+    spokes::Vector{Vector{Int}}
 end
+
+function StarSet(
+    g::AdjacencyGraph,
+    star::Vector{Int},
+    hub::Vector{Int},
+    nb_spokes::Vector{Int},
+    color::Vector{Int},
+    edge_to_index::Vector{Int},
+)
+    S = pattern(g)
+    n = S.n
+
+    # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
+    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
+
+    # Reuse nb_spokes as counters to track the current index while filling the spokes
+    fill!(nb_spokes, 0)
+
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if i > j
+                index_ij = edge_to_index[k]
+                s = star[index_ij]
+                h = abs(hub[s])
+                nb_spokes[s] += 1
+                index = nb_spokes[s]
+
+                # Assign the non-hub vertex (spoke) to the correct position in spokes
+                if i == h
+                    # i is the hub and j is the spoke
+                    spokes[s][index] = j
+                else  # j == h
+                    # j is the hub and i is the spoke
+                    spokes[s][index] = i
+                end
+            end
+        end
+    end
+    return StarSet(star, hub, spokes)
+end
+
+_sort(u, v) = (min(u, v), max(u, v))
 
 """
     acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
