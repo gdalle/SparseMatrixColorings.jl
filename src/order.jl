@@ -129,22 +129,37 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically com
 """
 struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder end
 
-struct DegreeBuckets{B}
+struct DegreeBuckets
     degrees::Vector{Int}
-    buckets::B
+    bucket_storage::Vector{Int}
+    bucket_low::Vector{Int}
+    bucket_high::Vector{Int}
     positions::Vector{Int}
 end
 
 function DegreeBuckets(degrees::Vector{Int}, dmax)
-    buckets = Dict(d => Int[] for d in 0:dmax)
-    positions = similar(degrees, Int)
-    for v in eachindex(degrees, positions)
-        d = degrees[v]
-        push!(buckets[d], v)  # TODO: optimize
-        positions[v] = length(buckets[d])
+    # number of vertices per degree class
+    deg_count = zeros(Int, dmax + 1)
+    for d in degrees
+        deg_count[d + 1] += 1
     end
-    return DegreeBuckets(degrees, buckets, positions)
+    # bucket limits
+    bucket_high = cumsum(deg_count)
+    bucket_low = vcat(0, @view(bucket_high[1:(end - 1)]))
+    bucket_low .+= 1
+    # assign each vertex to the correct position inside its degree class
+    bucket_storage = similar(degrees, Int)
+    positions = similar(degrees, Int)
+    for v in eachindex(positions, degrees)
+        d = degrees[v]
+        positions[v] = bucket_high[d + 1] - deg_count[d + 1] + 1
+        bucket_storage[positions[v]] = v
+        deg_count[d + 1] -= 1
+    end
+    return DegreeBuckets(degrees, bucket_storage, bucket_low, bucket_high, positions)
 end
+
+maxdeg(db::DegreeBuckets) = length(db.bucket_low) - 1
 
 function degree_increasing(; degtype, direction)
     increasing =
@@ -155,43 +170,80 @@ end
 
 function mark_ordered!(db::DegreeBuckets, v::Integer)
     db.degrees[v] = -1
-    db.positions[v] = -1
+    db.positions[v] = typemin(Int)
     return nothing
 end
 
 already_ordered(db::DegreeBuckets, v::Integer) = db.degrees[v] == -1
 
 function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
-    (; buckets) = db
+    (; bucket_storage, bucket_low, bucket_high) = db
+    dmax = maxdeg(db)
     if direction == :low2high
-        candidate_degree = maximum(d for (d, bucket) in pairs(buckets) if !isempty(bucket))
+        candidate_degree = dmax + 1
+        for d in dmax:-1:0
+            if bucket_high[d + 1] >= bucket_low[d + 1]  # not empty
+                candidate_degree = d
+                break
+            end
+        end
     else
-        candidate_degree = minimum(d for (d, bucket) in pairs(buckets) if !isempty(bucket))
+        candidate_degree = -1
+        for d in 0:dmax
+            if bucket_high[d + 1] >= bucket_low[d + 1]  # not empty
+                candidate_degree = d
+                break
+            end
+        end
     end
-    candidate_bucket = buckets[candidate_degree]
-    candidate = pop!(candidate_bucket)
+    high = bucket_high[candidate_degree + 1]
+    candidate = bucket_storage[high]
+    bucket_storage[high] = -1
+    bucket_high[candidate_degree + 1] -= 1
     mark_ordered!(db, candidate)
     return candidate
 end
 
 function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
-    (; degrees, buckets, positions) = db
+    (; degrees, bucket_storage, bucket_low, bucket_high, positions) = db
     d, p = degrees[v], positions[v]
-    bucket = buckets[d]
+    low, high = bucket_low[d + 1], bucket_high[d + 1]
     # select previous or next bucket for the move
-    d_new = degree_increasing(; degtype, direction) ? d + 1 : d - 1
-    bucket_new = buckets[d_new]
-    # put v at the end of its bucket by swapping
-    w = bucket[end]
-    bucket[p] = w
-    positions[w] = p
-    bucket[end] = v
-    positions[v] = length(bucket)
-    # move v from the old bucket to the new one
-    @assert pop!(bucket) == v
-    push!(bucket_new, v)
-    degrees[v] = d_new
-    positions[v] = length(bucket_new)
+    if degree_increasing(; degtype, direction)
+        # put v at the end of its bucket by swapping
+        w = bucket_storage[high]
+        bucket_storage[p] = w
+        bucket_storage[high] = v
+        positions[w] = p
+        positions[v] = high
+        # move v to the beginning of the next bucket (mind the gap)
+        d_new = d + 1
+        low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
+        bucket_storage[low_new - 1] = v
+        # update v stats
+        degrees[v] = d_new
+        positions[v] = low_new - 1
+        # grow next bucket to the left, shrink current one from the right
+        bucket_low[d_new + 1] -= 1
+        bucket_high[d + 1] -= 1
+    else
+        # put v at the beginning of its bucket by swapping
+        w = bucket_storage[low]
+        bucket_storage[p] = w
+        bucket_storage[low] = v
+        positions[w] = p
+        positions[v] = low
+        # move v to the end of the previous bucket (mind the gap)
+        d_new = d - 1
+        low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
+        bucket_storage[high_new + 1] = v
+        # update v stats
+        degrees[v] = d_new
+        positions[v] = high_new + 1
+        # grow previous bucket to the right, shrink current one from the left
+        bucket_high[d_new + 1] += 1
+        bucket_low[d + 1] += 1
+    end
     return nothing
 end
 
@@ -205,6 +257,7 @@ function vertices(
     end
     db = DegreeBuckets(degrees, maximum_degree(g))
     π = Int[]
+    sizehint!(π, nb_vertices(g))
     for _ in 1:nb_vertices(g)
         u = pop_next_candidate!(db; direction)
         direction == :low2high ? push!(π, u) : pushfirst!(π, u)
@@ -241,6 +294,7 @@ function vertices(
     maxd2 = maximum(degrees_dist2)
     db = DegreeBuckets(degrees, maxd2)
     π = Int[]
+    sizehint!(π, n)
     visited = falses(n)
     for _ in 1:nb_vertices(g, Val(side))
         u = pop_next_candidate!(db; direction)
