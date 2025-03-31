@@ -294,7 +294,9 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool=false)
+function acyclic_coloring(
+    g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool=false
+)
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
