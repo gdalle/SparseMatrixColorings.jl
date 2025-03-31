@@ -163,6 +163,34 @@ function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern)
     return S_and_Sᵀ
 end
 
+# Note that we don't need to do that for bicoloring,
+# we can build that in the same time than the transposed sparsity pattern of A
+function build_edge_to_index(S::SparsityPatternCSC, forbidden_colors::Vector{Int})
+    # edge_to_index gives an index for each edge
+    edge_to_index = Vector{Int}(undef, nnz(S))
+    # use forbidden_colors (or color) for the offsets of each column
+    offsets = forbidden_colors
+    counter = 0
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if i > j
+                counter += 1
+                edge_to_index[k] = counter
+                k2 = S.colptr[i] + offsets[i]
+                edge_to_index[k2] = counter
+                offsets[i] += 1
+            elseif i == j
+                # this should never be used, make sure it errors
+                edge_to_index[k] = 0
+            end
+        end
+    end
+    fill!(offsets, 0)
+    return edge_to_index
+end
+
 ## Adjacency graph
 
 """

@@ -83,33 +83,12 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    edge_to_index = Vector{Int}(undef, nnz(S))
+    edge_to_index = build_edge_to_index(S, forbidden_colors)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
     star = Vector{Int}(undef, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
     vertices_in_order = vertices(g, order)
-
-    # edge_to_index gives an index for each edge
-    # use forbidden_colors (or color) for the offsets of each column
-    offsets = forbidden_colors
-    counter = 0
-    rvS = rowvals(S)
-    for j in axes(S, 2)
-        for k in nzrange(S, j)
-            i = rvS[k]
-            if i > j
-                counter += 1
-                edge_to_index[k] = counter
-                k2 = S.colptr[i] + offsets[i]
-                edge_to_index[k2] = counter
-                offsets[i] += 1
-            end
-        end
-    end
-    fill!(offsets, 0)
-    # Note that we don't need to do that for bicoloring,
-    # we can build that in the same time than the transposed sparsity pattern of A
 
     for v in vertices_in_order
         for (iw, w) in enumerate(neighbors2(g, v))
@@ -257,32 +236,11 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    edge_to_index = Vector{Int}(undef, nnz(S))
+    edge_to_index = build_edge_to_index(S, forbidden_colors)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
     forest = Forest{Int}(ne)
     vertices_in_order = vertices(g, order)
-
-    # edge_to_index gives an index for each edge
-    # use forbidden_colors (or color) for the offsets of each column
-    offsets = forbidden_colors
-    counter = 0
-    rvS = rowvals(S)
-    for j in axes(S, 2)
-        for k in nzrange(S, j)
-            i = rvS[k]
-            if i > j
-                counter += 1
-                edge_to_index[k] = counter
-                k2 = S.colptr[i] + offsets[i]
-                edge_to_index[k2] = counter
-                offsets[i] += 1
-            end
-        end
-    end
-    fill!(offsets, 0)
-    # Note that we don't need to do that for bicoloring,
-    # we can build that in the same time than the transposed sparsity pattern of A
 
     for v in vertices_in_order
         for w in neighbors(g, v)
