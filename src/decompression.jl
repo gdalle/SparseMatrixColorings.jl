@@ -459,25 +459,24 @@ function decompress_single_color!(
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
 
-    offset = (c - 1) * S.n
-    lower_index = offset + 1
+    lower_index = (c - 1) * S.n + 1
     upper_index = c * S.n
     rvS = rowvals(S)
     for j in group[c]
         for k in nzrange(S, j)
+            # Check if the color c is used to recover A[i,j] / A[j,i]
             if lower_index <= compressed_indices[k] <= upper_index
-                l = compressed_indices[k] - offset
                 i = rvS[k]
                 if i == j
                     # Recover the diagonal coefficients of A
-                    A[i, i] = b[l]
+                    A[i, i] = b[i]
                 else
                     # Recover the off-diagonal coefficients of A
                     if in_triangle(i, j, uplo)
-                        A[i, j] = b[l]
+                        A[i, j] = b[i]
                     end
                     if in_triangle(j, i, uplo)
-                        A[j, i] = b[l]
+                        A[j, i] = b[i]
                     end
                 end
             end
