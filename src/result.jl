@@ -228,13 +228,13 @@ $TYPEDFIELDS
 
 - [`AbstractColoringResult`](@ref)
 """
-struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V} <:
+struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V1,V2} <:
        AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
     color::Vector{Int}
-    group::V
-    star_set::StarSet
+    group::V1
+    star_set::StarSet{V2}
     compressed_indices::Vector{Int}
 end
 
