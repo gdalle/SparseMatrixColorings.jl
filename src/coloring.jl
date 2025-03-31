@@ -54,7 +54,7 @@ function partial_distance2_coloring!(
 end
 
 """
-    star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
+    star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
 
 Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
 
@@ -76,7 +76,7 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
-function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
+function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
@@ -272,7 +272,7 @@ function symmetric_coefficient(
 end
 
 """
-    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
+    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -294,7 +294,7 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::Bool)
+function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
