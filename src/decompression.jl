@@ -465,7 +465,7 @@ function decompress_single_color!(
     rvS = rowvals(S)
     for j in group[c]
         for k in nzrange(S, j)
-            if lower_index ≤ compressed_indices[k] ≤ upper_index
+            if lower_index <= compressed_indices[k] <= upper_index
                 l = compressed_indices[k] - offset
                 i = rvS[k]
                 if i == j
