@@ -221,6 +221,12 @@ function neighbors(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     return neighbors_v
 end
 
+function neighbors2(g::AdjacencyGraph, v::Integer)
+    S = pattern(g)
+    neighbors_v = view(rowvals(S), nzrange(S, v))
+    return neighbors_v
+end
+
 function degree(g::AdjacencyGraph, v::Integer)
     d = 0
     for u in neighbors(g, v)

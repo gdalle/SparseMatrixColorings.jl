@@ -239,21 +239,47 @@ struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V} <:
 end
 
 function StarSetColoringResult(
-    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
+    A::AbstractMatrix,
+    ag::AdjacencyGraph,
+    color::Vector{Int},
+    edge_to_index::Vector{Int},
+    star_set::StarSet,
 )
-    S = ag.S
+    # Reuse edge_to_index to store the compressed indices for decompression
+    compressed_indices = edge_to_index
+
+    (; star, hub) = star_set
+    S = pattern(ag)
+    n = S.n
     group = group_by_color(color)
-    n = size(S, 1)
-    rv = rowvals(S)
-    compressed_indices = zeros(Int, nnz(S))
+    rvS = rowvals(S)
     for j in axes(S, 2)
         for k in nzrange(S, j)
-            i = rv[k]
-            l, c = symmetric_coefficient(i, j, color, star_set)
-            # A[i, j] = B[l, c]
-            compressed_indices[k] = (c - 1) * n + l
+            i = rvS[k]
+            if i == j
+                # diagonal coefficients
+                c = color[i]
+                compressed_indices[k] = (c - 1) * n + i
+            else
+                # off-diagonal coefficients
+                index_ij = edge_to_index[k]
+                s = star[index_ij]
+                h = abs(hub[s])
+
+                # Assign the non-hub vertex (spoke) to the correct position in spokes
+                if i == h
+                    # i is the hub and j is the spoke
+                    c = color[i]
+                    compressed_indices[k] = (c - 1) * n + j
+                else  # j == h
+                    # j is the hub and i is the spoke
+                    c = color[j]
+                    compressed_indices[k] = (c - 1) * n + i
+                end
+            end
         end
     end
+
     return StarSetColoringResult(A, ag, color, group, star_set, compressed_indices)
 end
 
