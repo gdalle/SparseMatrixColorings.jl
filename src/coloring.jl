@@ -138,13 +138,13 @@ Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algor
 
 $TYPEDFIELDS
 """
-struct StarSet
+struct StarSet{V<:AbstractVector{Int}}
     "a mapping from edges (pair of vertices) to their star index"
     star::Vector{Int}
     "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
     "a mapping from star indices to the vector of their spokes"
-    spokes::Vector{Vector{Int}}
+    spokes::Vector{V}
 end
 
 function StarSet(
@@ -152,7 +152,13 @@ function StarSet(
 )
     (; S, edgeindex) = g
     # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
-    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
+    spokes_storage = Vector{Int}(undef, nb_edges(g))
+    spokes = Vector{typeof(view(spokes_storage, 1:0))}(undef, length(nb_spokes))
+    cum_nb_spokes = 0
+    for (s, ns) in enumerate(nb_spokes)
+        spokes[s] = view(spokes_storage, (cum_nb_spokes + 1):(cum_nb_spokes + ns))
+        cum_nb_spokes += ns
+    end
 
     # Reuse nb_spokes as counters to track the current index while filling the spokes
     fill!(nb_spokes, 0)

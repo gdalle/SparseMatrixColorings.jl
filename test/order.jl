@@ -35,7 +35,7 @@ rng = StableRNG(63)
 end;
 
 @testset "RandomOrder" begin
-    A = sprand(rng, Bool, 10, 10, 0.5)
+    A = sparse(Symmetric(sprand(rng, Bool, 10, 10, 0.5)))
     ag = AdjacencyGraph(A)
     @test sort(vertices(ag, RandomOrder(rng))) == 1:10
     @test sort(vertices(ag, RandomOrder())) == 1:10
@@ -63,7 +63,7 @@ end;
 @testset "LargestFirst" begin
     A = sparse([
         0 1 0
-        1 0 0
+        1 0 1
         0 1 0
     ])
     ag = AdjacencyGraph(A)
