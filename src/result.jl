@@ -241,7 +241,7 @@ end
 function StarSetColoringResult(
     A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
 )
-    S = ag.S
+    (; S, edgeindex) = ag
     group = group_by_color(color)
     n = size(S, 1)
     rv = rowvals(S)
@@ -249,7 +249,8 @@ function StarSetColoringResult(
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
-            l, c = symmetric_coefficient(i, j, color, star_set)
+            e = edgeindex[k]
+            l, c = symmetric_coefficient(i, j, e, color, star_set)
             # A[i, j] = B[l, c]
             compressed_indices[k] = (c - 1) * n + l
         end

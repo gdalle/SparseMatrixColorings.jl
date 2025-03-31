@@ -182,6 +182,7 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 # Fields
 
 - `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, whose diagonal is empty whenever `has_diagonal` is `false`
+- `edgeindex::Vector{T}`: a vector mapping each nonzero of `S` to a unique edge index (ignoring diagonal and accounting for symmetry, so that `(i, j)` and `(j, i)` get the same index)
 
 # References
 
@@ -189,10 +190,36 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 """
 struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
+    edgeindex::Vector{T}
+end
+
+function build_edgeindex(S::SparsityPatternCSC{T}) where {T}
+    offsets = zeros(T, size(S, 1))
+    edgeindex = Vector{T}(undef, nnz(S))
+    counter = zero(T)
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if i > j
+                counter += 1
+                # index lower triangle
+                edgeindex[k] = counter
+                # index upper triangle
+                k2 = S.colptr[i] + offsets[i]
+                edgeindex[k2] = counter
+                offsets[i] += 1
+            elseif i == j
+                # this should never be used, make sure it errors
+                edgeindex[k] = -1
+            end
+        end
+    end
+    return edgeindex
 end
 
 function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S)
+    return AdjacencyGraph{T,has_diagonal}(S, build_edgeindex(S))
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
@@ -204,21 +231,23 @@ function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
 end
 
 pattern(g::AdjacencyGraph) = g.S
+edgeindex(g::AdjacencyGraph) = g.edgeindex
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
 vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
 
 has_diagonal(::AdjacencyGraph{T,hl}) where {T,hl} = hl
 
-function neighbors(g::AdjacencyGraph{T,true}, v::Integer) where {T}
+function neighbors(g::AdjacencyGraph{T}, v::Integer) where {T}
     S = pattern(g)
     neighbors_v = view(rowvals(S), nzrange(S, v))
-    return Iterators.filter(!=(v), neighbors_v)  # TODO: optimize
+    return neighbors_v  # includes diagonal
 end
 
-function neighbors(g::AdjacencyGraph{T,false}, v::Integer) where {T}
+function neighbors_and_edgeinds(g::AdjacencyGraph{T}, v::Integer) where {T}
     S = pattern(g)
     neighbors_v = view(rowvals(S), nzrange(S, v))
-    return neighbors_v
+    einds = view(edgeindex(g), nzrange(S, v))
+    return zip(neighbors_v, einds)  # includes diagonal
 end
 
 function degree(g::AdjacencyGraph, v::Integer)
@@ -235,6 +264,7 @@ function nb_edges(g::AdjacencyGraph)
     ne = 0
     for v in vertices(g)
         for u in neighbors(g, v)
+            u == v && continue
             ne += 1
         end
     end
@@ -246,6 +276,7 @@ minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
     for w in neighbors(g, v)
+        w == v && continue
         if w == u
             return true
         end

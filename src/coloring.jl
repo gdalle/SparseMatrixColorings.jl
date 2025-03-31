@@ -82,19 +82,19 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_neighbor = fill((0, 0, -1), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
-    star = Dict{Tuple{Int,Int},Int}()
-    sizehint!(star, ne)
+    star = Vector{Int}(undef, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
     nb_spokes = Int[]  # number of spokes for each star
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
-        for w in neighbors(g, v)
+        for (w, e_vw) in neighbors_and_edgeinds(g, v)
+            w == v && continue
             iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
-            (p, q) = first_neighbor[color[w]]
+            (p, q, _) = first_neighbor[color[w]]
             if p == v  # Case 1
                 if treated[q] != v
                     # forbid colors of neighbors of q
@@ -103,11 +103,11 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
                 # forbid colors of neighbors of w
                 _treat!(treated, forbidden_colors, g, v, w, color)
             else
-                first_neighbor[color[w]] = (v, w)
-                for x in neighbors(g, w)
+                first_neighbor[color[w]] = (v, w, e_vw)
+                for (x, e_wx) in neighbors_and_edgeinds(g, w)
+                    x == w && continue
                     (x == v || iszero(color[x])) && continue
-                    wx = _sort(w, x)
-                    if x == hub[star[wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
+                    if x == hub[star[e_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -121,7 +121,7 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessing::
         end
         _update_stars!(star, hub, nb_spokes, g, v, color, first_neighbor)
     end
-    star_set = StarSet(star, hub, nb_spokes)
+    star_set = StarSet(g, star, hub, nb_spokes)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         postprocess!(color, star_set, g, forbidden_colors)
@@ -140,30 +140,40 @@ $TYPEDFIELDS
 """
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
-    star::Dict{Tuple{Int,Int},Int}
+    star::Vector{Int}
     "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
     "a mapping from star indices to the vector of their spokes"
     spokes::Vector{Vector{Int}}
 end
 
-function StarSet(star::Dict{Tuple{Int,Int},Int}, hub::Vector{Int}, nb_spokes::Vector{Int})
+function StarSet(
+    g::AdjacencyGraph, star::Vector{Int}, hub::Vector{Int}, nb_spokes::Vector{Int}
+)
+    (; S, edgeindex) = g
     # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
     spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
 
     # Reuse nb_spokes as counters to track the current index while filling the spokes
     fill!(nb_spokes, 0)
 
-    for ((i, j), s) in pairs(star)
-        h = abs(hub[s])
-        nb_spokes[s] += 1
-        index = nb_spokes[s]
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            i >= j && continue
+            e = edgeindex[k]
+            s = star[e]
+            h = abs(hub[s])
+            nb_spokes[s] += 1
+            index = nb_spokes[s]
 
-        # Assign the non-hub vertex (spoke) to the correct position in spokes
-        if i == h
-            spokes[s][index] = j
-        elseif j == h
-            spokes[s][index] = i
+            # Assign the non-hub vertex (spoke) to the correct position in spokes
+            if i == h
+                spokes[s][index] = j
+            elseif j == h
+                spokes[s][index] = i
+            end
         end
     end
     return StarSet(star, hub, spokes)
@@ -182,6 +192,7 @@ function _treat!(
     color::AbstractVector{<:Integer},
 )
     for x in neighbors(g, w)
+        x == w && continue
         iszero(color[x]) && continue
         forbidden_colors[color[x]] = v
     end
@@ -191,7 +202,7 @@ end
 
 function _update_stars!(
     # modified
-    star::Dict{<:Tuple,<:Integer},
+    star::Vector{Int},
     hub::AbstractVector{<:Integer},
     nb_spokes::AbstractVector{<:Integer},
     # not modified
@@ -200,33 +211,32 @@ function _update_stars!(
     color::AbstractVector{<:Integer},
     first_neighbor::AbstractVector{<:Tuple},
 )
-    for w in neighbors(g, v)
+    for (w, e_vw) in neighbors_and_edgeinds(g, v)
+        w == v && continue
         iszero(color[w]) && continue
-        vw = _sort(v, w)
         x_exists = false
-        for x in neighbors(g, w)
+        for (x, e_wx) in neighbors_and_edgeinds(g, w)
+            x == w && continue
             if x != v && color[x] == color[v]  # vw, wx ∈ E
-                wx = _sort(w, x)
-                star_wx = star[wx]
+                star_wx = star[e_wx]
                 hub[star_wx] = w  # this may already be true
                 nb_spokes[star_wx] += 1
-                star[vw] = star_wx
+                star[e_vw] = star_wx
                 x_exists = true
                 break
             end
         end
         if !x_exists
-            (p, q) = first_neighbor[color[w]]
+            (p, q, e_pq) = first_neighbor[color[w]]
             if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
-                vq = _sort(v, q)
-                star_vq = star[vq]
+                star_vq = star[e_pq]
                 hub[star_vq] = v  # this may already be true
                 nb_spokes[star_vq] += 1
-                star[vw] = star_vq
+                star[e_vw] = star_vq
             else  # vw forms a new star
                 push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
                 push!(nb_spokes, 1)
-                star[vw] = length(hub)
+                star[e_vw] = length(hub)
             end
         end
     end
@@ -249,7 +259,7 @@ This function corresponds to algorithm `DirectRecover2` in the paper.
 > [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
 """
 function symmetric_coefficient(
-    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
+    i::Integer, j::Integer, e::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
 )
     (; star, hub) = star_set
     if i == j
@@ -260,7 +270,7 @@ function symmetric_coefficient(
         # star only contains one triangle
         i, j = j, i
     end
-    star_id = star[i, j]
+    star_id = star[e]
     h = abs(hub[star_id])
     if h == j
         # i is the spoke
@@ -307,12 +317,15 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
 
     for v in vertices_in_order
         for w in neighbors(g, v)
+            w == v && continue
             iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
         end
         for w in neighbors(g, v)
+            w == v && continue
             iszero(color[w]) && continue
             for x in neighbors(g, w)
+                x == w && continue
                 iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
                     _prevent_cycle!(
@@ -328,12 +341,15 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder; postprocessin
             end
         end
         for w in neighbors(g, v)  # grow two-colored stars around the vertex v
+            w == v && continue
             iszero(color[w]) && continue
             _grow_star!(v, w, color, first_neighbor, forest)
         end
         for w in neighbors(g, v)
+            w == v && continue
             iszero(color[w]) && continue
             for x in neighbors(g, w)
+                x == w && continue
                 (x == v || iszero(color[x])) && continue
                 if color[x] == color[v]
                     _merge_trees!(v, w, x, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
