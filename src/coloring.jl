@@ -87,7 +87,6 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     star = Dict{Tuple{Int,Int},Int}()
     sizehint!(star, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
-    nb_spokes = Int[]  # number of spokes for each star
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -119,9 +118,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
                 break
             end
         end
-        _update_stars!(star, hub, nb_spokes, g, v, color, first_neighbor)
+        _update_stars!(star, hub, g, v, color, first_neighbor)
     end
-    star_set = StarSet(star, hub, nb_spokes)
+    star_set = StarSet(star, hub)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         postprocess!(color, star_set, g, forbidden_colors)
@@ -143,30 +142,6 @@ struct StarSet
     star::Dict{Tuple{Int,Int},Int}
     "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
-    "a mapping from star indices to the vector of their spokes"
-    spokes::Vector{Vector{Int}}
-end
-
-function StarSet(star::Dict{Tuple{Int,Int},Int}, hub::Vector{Int}, nb_spokes::Vector{Int})
-    # Create a list of spokes for each star, preallocating their sizes based on nb_spokes
-    spokes = [Vector{Int}(undef, ns) for ns in nb_spokes]
-
-    # Reuse nb_spokes as counters to track the current index while filling the spokes
-    fill!(nb_spokes, 0)
-
-    for ((i, j), s) in pairs(star)
-        h = abs(hub[s])
-        nb_spokes[s] += 1
-        index = nb_spokes[s]
-
-        # Assign the non-hub vertex (spoke) to the correct position in spokes
-        if i == h
-            spokes[s][index] = j
-        elseif j == h
-            spokes[s][index] = i
-        end
-    end
-    return StarSet(star, hub, spokes)
 end
 
 _sort(u, v) = (min(u, v), max(u, v))
@@ -193,7 +168,6 @@ function _update_stars!(
     # modified
     star::Dict{<:Tuple,<:Integer},
     hub::AbstractVector{<:Integer},
-    nb_spokes::AbstractVector{<:Integer},
     # not modified
     g::AdjacencyGraph,
     v::Integer,
@@ -209,7 +183,6 @@ function _update_stars!(
                 wx = _sort(w, x)
                 star_wx = star[wx]
                 hub[star_wx] = w  # this may already be true
-                nb_spokes[star_wx] += 1
                 star[vw] = star_wx
                 x_exists = true
                 break
@@ -221,11 +194,9 @@ function _update_stars!(
                 vq = _sort(v, q)
                 star_vq = star[vq]
                 hub[star_vq] = v  # this may already be true
-                nb_spokes[star_vq] += 1
                 star[vw] = star_vq
             else  # vw forms a new star
                 push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
-                push!(nb_spokes, 1)
                 star[vw] = length(hub)
             end
         end
@@ -586,7 +557,7 @@ function postprocess!(
 
     if star_or_tree_set isa StarSet
         # only the colors of the hubs are used
-        (; hub, spokes) = star_or_tree_set
+        (; star, hub) = star_or_tree_set
         nb_trivial_stars = 0
 
         # Iterate through all non-trivial stars
@@ -601,19 +572,17 @@ function postprocess!(
 
         # Process the trivial stars (if any)
         if nb_trivial_stars > 0
-            for s in eachindex(hub)
-                j = hub[s]
-                if j < 0
-                    i = spokes[s][1]
-                    j = abs(j)
-                    if color_used[color[i]]
-                        # Make i the hub to avoid possibly adding one more used color
-                        # Switch it with the (only) spoke
-                        hub[s] = i
-                        spokes[s][1] = j
+            for ((i, j), s) in pairs(star)
+                h = hub[s]
+                if h < 0
+                    h = abs(h)
+                    spoke = i == h ? j : i
+                    if color_used[color[spoke]]
+                        # Switch the hub and the spoke to possibly avoid adding one more used color
+                        hub[s] = spoke
                     else
-                        # Keep j as the hub
-                        color_used[color[j]] = true
+                        # Keep the current hub
+                        color_used[color[h]] = true
                     end
                 end
             end

@@ -455,30 +455,30 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
-    (; ag, color, group, star_set) = result
-    (; hub, spokes) = star_set
+    (; ag, compressed_indices, group) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
 
-    # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
-        for i in group[c]
-            if !iszero(S[i, i])
-                A[i, i] = b[i]
-            end
-        end
-    end
-
-    # Recover the off-diagonal coefficients of A
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        if color[j] == c
-            for i in spokes[s]
-                if in_triangle(i, j, uplo)
-                    A[i, j] = b[i]
-                end
-                if in_triangle(j, i, uplo)
-                    A[j, i] = b[i]
+    offset = (c - 1) * S.n
+    lower_index = offset + 1
+    upper_index = c * S.n
+    rvS = rowvals(S)
+    for j in group[c]
+        for k in nzrange(S, j)
+            if lower_index <= compressed_indices[k] <= upper_index
+                l = compressed_indices[k] - offset
+                i = rvS[k]
+                if i == j
+                    # Recover the diagonal coefficients of A
+                    A[i, i] = b[l]
+                else
+                    # Recover the off-diagonal coefficients of A
+                    if in_triangle(i, j, uplo)
+                        A[i, j] = b[l]
+                    end
+                    if in_triangle(j, i, uplo)
+                        A[j, i] = b[l]
+                    end
                 end
             end
         end
