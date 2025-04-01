@@ -94,23 +94,27 @@ function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
 end
 
 """
-    bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
+    bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool=false)
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
-bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool) =
+bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool=false) =
     bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
 
-function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern::Bool)
+function bidirectional_pattern(
+    S::SparsityPatternCSC{T}; symmetric_pattern::Bool=false
+) where {T<:Integer}
     m, n = size(S)
     p = m + n
     nnzS = nnz(S)
-    rowval = Vector{Int}(undef, 2 * nnzS)
-    colptr = zeros(Int, p + 1)
+    rowval = Vector{T}(undef, 2 * nnzS)
+    colptr = zeros(T, p + 1)
+    edge_to_index = Vector{T}(undef, 2 * nnzS)
 
     # Update rowval and colptr for the block A
     for i in 1:nnzS
         rowval[i] = S.rowval[i] + n
+        edge_to_index[i] = i
     end
     for j in 1:n
         colptr[j] = S.colptr[j]
@@ -118,9 +122,16 @@ function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern::Bool)
 
     # Update rowval and colptr for the block Aᵀ
     if symmetric_pattern
+        # Use colptr[n+1:n+m] to store the offsets during the update of edge_to_index
+        offsets = colptr
+
         # We use the sparsity pattern of A for Aᵀ
-        for i in 1:nnzS
-            rowval[nnzS + i] = S.rowval[i]
+        for k in 1:nnzS
+            r = S.rowval[k]
+            rowval[nnzS + k] = r
+            pos = S.colptr[r] + offsets[n + r]
+            edge_to_index[nnzS + pos] = edge_to_index[k]
+            offsets[n + r] += 1
         end
         # m and n are identical because symmetric_pattern is true
         for j in 1:m
@@ -147,6 +158,7 @@ function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern::Bool)
                 i = S.rowval[index]
                 pos = colptr[n + i]
                 rowval[nnzS + pos] = j
+                edge_to_index[nnzS + pos] = edge_to_index[index]
                 colptr[n + i] += 1
             end
         end
@@ -159,12 +171,10 @@ function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern::Bool)
     end
 
     # Create the SparsityPatternCSC of the augmented adjacency matrix
-    S_and_Sᵀ = SparsityPatternCSC{Int}(p, p, colptr, rowval)
-    return S_and_Sᵀ
+    S_and_Sᵀ = SparsityPatternCSC{T}(p, p, colptr, rowval)
+    return S_and_Sᵀ, edge_to_index
 end
 
-# Note that we don't need to do that for bicoloring,
-# we can build that in the same time than the transposed sparsity pattern of A
 function build_edge_to_index(S::SparsityPatternCSC{T}) where {T<:Integer}
     # edge_to_index gives an index for each edge
     edge_to_index = Vector{T}(undef, nnz(S))
@@ -221,9 +231,25 @@ struct AdjacencyGraph{T,has_diagonal}
     vertex_buffer::Vector{T}
 end
 
-function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
-    edge_to_index, vertex_buffer = build_edge_to_index(S)
+function AdjacencyGraph(
+    S::SparsityPatternCSC{T},
+    edge_to_index::Vector{T},
+    vertex_buffer::Vector{T};
+    has_diagonal::Bool=true,
+) where {T}
     return AdjacencyGraph{T,has_diagonal}(S, edge_to_index, vertex_buffer)
+end
+
+function AdjacencyGraph(
+    S::SparsityPatternCSC{T}, edge_to_index::Vector{T}; has_diagonal::Bool=true
+) where {T}
+    vertex_buffer = Vector{Int}(undef, S.n)
+    return AdjacencyGraph(S, edge_to_index, vertex_buffer; has_diagonal)
+end
+
+function AdjacencyGraph(S::SparsityPatternCSC; has_diagonal::Bool=true)
+    edge_to_index, vertex_buffer = build_edge_to_index(S)
+    return AdjacencyGraph(S, edge_to_index, vertex_buffer; has_diagonal)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
@@ -248,8 +274,9 @@ end
 
 function neighbors_with_edge_indices(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
-    neighbors_v = view(rowvals(S), nzrange(S, v))
-    edges_indices_v = view(edge_indices(g), nzrange(S, v))
+    range_v = nzrange(S, v)
+    neighbors_v = view(rowvals(S), range_v)
+    edges_indices_v = view(edge_indices(g), range_v)
     return zip(neighbors_v, edges_indices_v)
 end
 
@@ -328,7 +355,7 @@ When `symmetric_pattern` is `true`, this construction is more efficient.
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct BipartiteGraph{T<:Integer}
+struct BipartiteGraph{T}
     S1::SparsityPatternCSC{T}
     S2::SparsityPatternCSC{T}
 end

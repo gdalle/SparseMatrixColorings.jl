@@ -265,7 +265,7 @@ function _coloring(
     decompression_eltype::Type,
     symmetric_pattern::Bool,
 )
-    ag = AdjacencyGraph(A)
+    ag = AdjacencyGraph(A; has_diagonal=true)
     color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
         return StarSetColoringResult(A, ag, color, star_set)
@@ -282,7 +282,7 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    ag = AdjacencyGraph(A)
+    ag = AdjacencyGraph(A; has_diagonal=true)
     color, tree_set = acyclic_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
         return TreeSetColoringResult(A, ag, color, tree_set, R)
@@ -299,8 +299,8 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
+    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
@@ -319,8 +319,8 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
+    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     color, tree_set = acyclic_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)

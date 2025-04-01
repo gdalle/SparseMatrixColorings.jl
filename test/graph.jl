@@ -27,21 +27,31 @@ using Test
         end
     end
     @testset "Bidirectional" begin
-        @test all(1:1000) do _
+        @testset "symmetric_pattern = false" begin
             m, n = rand(100:1000), rand(100:1000)
             p = 0.05 * rand()
             A = sprand(Bool, m, n, p)
             A_and_Aᵀ = [spzeros(Bool, n, n) transpose(A); A spzeros(Bool, m, m)]
-            S_and_Sᵀ = bidirectional_pattern(A; symmetric_pattern=false)
-            S_and_Sᵀ.colptr == A_and_Aᵀ.colptr && S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+            S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=false)
+            @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
+            @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+            M = SparseMatrixCSC(
+                m + n, m + n, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
+            )
+            @test issymmetric(M)
         end
-        @test all(1:1000) do _
+        @testset "symmetric_pattern = true" begin
             m = rand(100:1000)
             p = 0.05 * rand()
             A = sparse(Symmetric(sprand(Bool, m, m, p)))
             A_and_Aᵀ = [spzeros(Bool, m, m) transpose(A); A spzeros(Bool, m, m)]
-            S_and_Sᵀ = bidirectional_pattern(A; symmetric_pattern=true)
-            S_and_Sᵀ.colptr == A_and_Aᵀ.colptr && S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+            S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=true)
+            @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
+            @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+            M = SparseMatrixCSC(
+                2 * m, 2 * m, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
+            )
+            @test issymmetric(M)
         end
     end
     @testset "size" begin
