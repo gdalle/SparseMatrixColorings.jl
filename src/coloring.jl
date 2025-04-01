@@ -78,7 +78,6 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 """
 function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
     # Initialize data structures
-    S = pattern(g)
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
@@ -158,7 +157,6 @@ function _update_stars!(
     color::AbstractVector{<:Integer},
     first_neighbor::AbstractVector{<:Tuple},
 )
-    S = pattern(g)
     for (w, index_vw) in neighbors_with_edge_indices(g, v)
         !has_diagonal(g) || (v == w && continue)
         iszero(color[w]) && continue
@@ -229,7 +227,6 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 """
 function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
     # Initialize data structures
-    S = pattern(g)
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
