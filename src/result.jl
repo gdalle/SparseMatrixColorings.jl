@@ -112,6 +112,8 @@ end
 
 group_by_color(color::AbstractVector) = group_by_color(Int, color)
 
+const AbstractGroups{T} = AbstractVector{<:AbstractVector{T}}
+
 column_colors(result::AbstractColoringResult{s,:column}) where {s} = result.color
 column_groups(result::AbstractColoringResult{s,:column}) where {s} = result.group
 
@@ -144,11 +146,7 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct ColumnColoringResult{
-    M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:BipartiteGraph{T1},
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:BipartiteGraph{T1},GT1<:AbstractGroups{T1}
 } <: AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
     A::M
@@ -157,7 +155,7 @@ struct ColumnColoringResult{
     "one integer color for each column or row (depending on `partition`)"
     color::Vector{T2}
     "color groups for columns or rows (depending on `partition`)"
-    group::VVT1
+    group::GT1
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
     compressed_indices::Vector{T1}
 end
@@ -197,16 +195,12 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct RowColoringResult{
-    M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:BipartiteGraph{T1},
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:BipartiteGraph{T1},GT1<:AbstractGroups{T1}
 } <: AbstractColoringResult{:nonsymmetric,:row,:direct}
     A::M
     bg::G
     color::Vector{T2}
-    group::VVT1
+    group::GT1
     compressed_indices::Vector{T1}
 end
 
@@ -217,7 +211,7 @@ function RowColoringResult(
     group = group_by_color(T1, color)
     C = length(group)  # ncolors
     rv = rowvals(S)
-    compressed_indices = zeros(Int, nnz(S))
+    compressed_indices = zeros(T1, nnz(S))
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
@@ -245,16 +239,12 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct StarSetColoringResult{
-    M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:AdjacencyGraph{T1},
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:AdjacencyGraph{T1},GT1<:AbstractGroups{T1}
 } <: AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
     color::Vector{T2}
-    group::VVT1
+    group::GT1
     star_set::StarSet{T1}
     compressed_indices::Vector{T1}
 end
@@ -319,13 +309,13 @@ struct TreeSetColoringResult{
     T1<:Integer,
     T2<:Integer,
     G<:AdjacencyGraph{T1},
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    GT1<:AbstractGroups{T1},
     R,
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
     color::Vector{T2}
-    group::VVT1
+    group::GT1
     reverse_bfs_orders::Vector{Vector{Tuple{T1,T1}}}
     diagonal_indices::Vector{T1}
     diagonal_nzind::Vector{T1}
@@ -447,14 +437,14 @@ struct LinearSystemColoringResult{
     T1<:Integer,
     T2<:Integer,
     G<:AdjacencyGraph{T1},
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    GT1<:AbstractGroups{T1},
     R,
     F,
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
     color::Vector{T2}
-    group::VVT1
+    group::GT1
     strict_upper_nonzero_inds::Vector{Tuple{T1,T1}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
     T_factorization::F  # TODO: adjust type
@@ -483,6 +473,7 @@ function LinearSystemColoringResult(
         end
     end
 
+    # type annotated because JET was unhappy
     T::SparseMatrixCSC = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
@@ -588,7 +579,7 @@ struct BicoloringResult{
     T2<:Integer,
     G<:AdjacencyGraph{T1},
     decompression,
-    VVT1<:AbstractVector{<:AbstractVector{T1}},
+    GT1<:AbstractGroups{T1},
     SR<:AbstractColoringResult{:symmetric,:column,decompression},
     R,
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
@@ -601,9 +592,9 @@ struct BicoloringResult{
     "one integer color for each row"
     row_color::Vector{T2}
     "color groups for columns"
-    column_group::VVT1
+    column_group::GT1
     "color groups for rows"
-    row_group::VVT1
+    row_group::GT1
     "result for the coloring of the symmetric 2 x 2 block matrix"
     symmetric_result::SR
     "maps symmetric colors to column colors"

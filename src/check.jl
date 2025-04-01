@@ -262,8 +262,8 @@ function directly_recoverable_columns(
 end
 
 """
-    valid_dynamic_order(g::AdjacencyGraph, π::AbstractVector{Int}, order::DynamicDegreeBasedOrder)
-    valid_dynamic_order(bg::AdjacencyGraph, ::Val{side}, π::AbstractVector{Int}, order::DynamicDegreeBasedOrder)
+    valid_dynamic_order(g::AdjacencyGraph, π::AbstractVector{<:Integer}, order::DynamicDegreeBasedOrder)
+    valid_dynamic_order(bg::AdjacencyGraph, ::Val{side}, π::AbstractVector{<:Integer}, order::DynamicDegreeBasedOrder)
 
 Check that a permutation `π` corresponds to a valid application of a [`DynamicDegreeBasedOrder`](@ref).
 
