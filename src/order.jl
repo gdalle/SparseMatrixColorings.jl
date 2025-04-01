@@ -262,6 +262,7 @@ function vertices(
         u = pop_next_candidate!(db; direction)
         direction == :low2high ? push!(π, u) : pushfirst!(π, u)
         for v in neighbors(g, u)
+            !has_diagonal(g) || (u == v && continue)
             already_ordered(db, v) && continue
             update_bucket!(db, v; degtype, direction)
         end

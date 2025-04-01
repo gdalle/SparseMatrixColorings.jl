@@ -82,8 +82,8 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    edge_to_index = build_edge_to_index(S, forbidden_colors)
+    forbidden_colors = g.vertex_buffer  # Vector of length nv
+    fill!(forbidden_colors, 0)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
     star = Vector{Int}(undef, ne)
@@ -91,9 +91,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
-        for (iw, w) in enumerate(neighbors2(g, v))
-            (v == w || iszero(color[w])) && continue
-            index_vw = edge_to_index[S.colptr[v] + iw - 1]
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)
+            !has_diagonal(g) || (v == w && continue)
+            iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
             (p, q, _) = first_neighbor[color[w]]
             if p == v  # Case 1
@@ -105,9 +105,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
                 _treat!(treated, forbidden_colors, g, v, w, color)
             else
                 first_neighbor[color[w]] = (v, w, index_vw)
-                for (ix, x) in enumerate(neighbors2(g, w))
-                    (w == x || x == v || iszero(color[x])) && continue
-                    index_wx = edge_to_index[S.colptr[w] + ix - 1]
+                for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                    !has_diagonal(g) || (w == x && continue)
+                    (x == v || iszero(color[x])) && continue
                     if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
                         forbidden_colors[color[x]] = v
                     end
@@ -120,14 +120,13 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
                 break
             end
         end
-        _update_stars!(star, hub, g, v, color, first_neighbor, edge_to_index)
+        _update_stars!(star, hub, g, v, color, first_neighbor)
     end
     star_set = StarSet(star, hub)
     if postprocessing
-        # Reuse the vector forbidden_colors to compute offsets during post-processing
-        postprocess!(color, star_set, g, forbidden_colors, edge_to_index)
+        postprocess!(color, star_set, g)
     end
-    return color, star_set, edge_to_index
+    return color, star_set
 end
 
 function _treat!(
@@ -141,6 +140,7 @@ function _treat!(
     color::AbstractVector{<:Integer},
 )
     for x in neighbors(g, w)
+        !has_diagonal(g) || (w == x && continue)
         iszero(color[x]) && continue
         forbidden_colors[color[x]] = v
     end
@@ -157,17 +157,15 @@ function _update_stars!(
     v::Integer,
     color::AbstractVector{<:Integer},
     first_neighbor::AbstractVector{<:Tuple},
-    edge_to_index::AbstractVector{<:Integer},
 )
     S = pattern(g)
-    for (iw, w) in enumerate(neighbors2(g, v))
-        (v == w || iszero(color[w])) && continue
-        index_vw = edge_to_index[S.colptr[v] + iw - 1]
+    for (w, index_vw) in neighbors_with_edge_indices(g, v)
+        !has_diagonal(g) || (v == w && continue)
+        iszero(color[w]) && continue
         x_exists = false
-        for (ix, x) in enumerate(neighbors2(g, w))
-            (w == x) && continue
+        for (x, index_wx) in neighbors_with_edge_indices(g, w)
+            !has_diagonal(g) || (w == x && continue)
             if x != v && color[x] == color[v]  # vw, wx ∈ E
-                index_wx = edge_to_index[S.colptr[w] + ix - 1]
                 star_wx = star[index_wx]
                 hub[star_wx] = w  # this may already be true
                 star[index_vw] = star_wx
@@ -235,8 +233,8 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    edge_to_index = build_edge_to_index(S, forbidden_colors)
+    forbidden_colors = g.vertex_buffer  # Vector of length nv
+    fill!(forbidden_colors, 0)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
     forest = Forest{Int}(ne)
@@ -244,15 +242,17 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
 
     for v in vertices_in_order
         for w in neighbors(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
         end
         for w in neighbors(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
-            for (ix, x) in enumerate(neighbors2(g, w))
-                (w == x || iszero(color[x])) && continue
+            for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                !has_diagonal(g) || (w == x && continue)
+                iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
-                    index_wx = edge_to_index[S.colptr[w] + ix - 1]
                     _prevent_cycle!(
                         v,
                         w,
@@ -272,28 +272,27 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
                 break
             end
         end
-        for (iw, w) in enumerate(neighbors2(g, v))  # grow two-colored stars around the vertex v
-            (v == w || iszero(color[w])) && continue
-            index_vw = edge_to_index[S.colptr[v] + iw - 1]
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
+            !has_diagonal(g) || (v == w && continue)
+            iszero(color[w]) && continue
             _grow_star!(v, w, index_vw, color, first_neighbor, forest)
         end
-        for (iw, w) in enumerate(neighbors2(g, v))
-            (v == w || iszero(color[w])) && continue
-            for (ix, x) in enumerate(neighbors2(g, w))
-                (w == x || x == v || iszero(color[x])) && continue
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)
+            !has_diagonal(g) || (v == w && continue)
+            iszero(color[w]) && continue
+            for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                !has_diagonal(g) || (w == x && continue)
+                (x == v || iszero(color[x])) && continue
                 if color[x] == color[v]
-                    index_vw = edge_to_index[S.colptr[v] + iw - 1]
-                    index_wx = edge_to_index[S.colptr[w] + ix - 1]
                     _merge_trees!(v, w, x, index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
     end
 
-    tree_set = TreeSet(g, forest, edge_to_index)
+    tree_set = TreeSet(g, forest)
     if postprocessing
-        # Reuse the vector forbidden_colors to compute offsets during post-processing
-        postprocess!(color, tree_set, g, forbidden_colors, edge_to_index)
+        postprocess!(color, tree_set, g)
     end
     return color, tree_set
 end
@@ -374,8 +373,9 @@ struct TreeSet
     is_star::Vector{Bool}
 end
 
-function TreeSet(g::AdjacencyGraph, forest::Forest{Int}, edge_to_index::Vector{Int})
+function TreeSet(g::AdjacencyGraph, forest::Forest{Int})
     S = pattern(g)
+    edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
     nt = forest.num_trees
 
@@ -520,10 +520,9 @@ function postprocess!(
     color::AbstractVector{<:Integer},
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
-    offsets::Vector{Int},
-    edge_to_index::Vector{Int},
 )
-    (; S) = g
+    S = pattern(g)
+    edge_to_index = edge_indices(g)
     # flag which colors are actually used during decompression
     nb_colors = maximum(color)
     color_used = zeros(Bool, nb_colors)
@@ -553,7 +552,6 @@ function postprocess!(
         end
 
         # Process the trivial stars (if any)
-        # TODO: Should we compute "compressed_indices" in the same time?
         if nb_trivial_stars > 0
             rvS = rowvals(S)
             for j in axes(S, 2)
@@ -626,6 +624,7 @@ function postprocess!(
 
     # if at least one of the colors is useless, modify the color assignments of vertices
     if any(!, color_used)
+        offsets = g.vertex_buffer
         num_colors_useless = 0
 
         # determine what are the useless colors and compute the offsets

@@ -266,9 +266,9 @@ function _coloring(
     symmetric_pattern::Bool,
 )
     ag = AdjacencyGraph(A)
-    color, star_set, edge_to_index = star_coloring(ag, algo.order, algo.postprocessing)
+    color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, edge_to_index, star_set)
+        return StarSetColoringResult(A, ag, color, star_set)
     else
         return color
     end
@@ -301,11 +301,9 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ; has_diagonal=false)
-    color, star_set, edge_to_index = star_coloring(ag, algo.order, algo.postprocessing)
+    color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(
-            A_and_Aᵀ, ag, color, edge_to_index, star_set
-        )
+        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
         return BicoloringResult(A, ag, symmetric_result, R)
     else
         row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)

@@ -239,13 +239,10 @@ struct StarSetColoringResult{M<:AbstractMatrix,G<:AdjacencyGraph,V} <:
 end
 
 function StarSetColoringResult(
-    A::AbstractMatrix,
-    ag::AdjacencyGraph,
-    color::Vector{Int},
-    edge_to_index::Vector{Int},
-    star_set::StarSet,
+    A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
 )
     # Reuse edge_to_index to store the compressed indices for decompression
+    edge_to_index = edge_indices(ag)
     compressed_indices = edge_to_index
 
     (; star, hub) = star_set

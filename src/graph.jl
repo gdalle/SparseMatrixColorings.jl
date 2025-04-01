@@ -36,7 +36,7 @@ SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the transpose of `S`.
 """
-function Base.transpose(S::SparsityPatternCSC{T}) where {T}
+function Base.transpose(S::SparsityPatternCSC{T}) where {T<:Integer}
     m, n = size(S)
     nnzA = nnz(S)
     A_colptr = S.colptr
@@ -98,10 +98,10 @@ end
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
-bidirectional_pattern(A::AbstractMatrix; symmetric_pattern) =
+bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool) =
     bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
 
-function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern)
+function bidirectional_pattern(S::SparsityPatternCSC; symmetric_pattern::Bool)
     m, n = size(S)
     p = m + n
     nnzS = nnz(S)
@@ -165,11 +165,10 @@ end
 
 # Note that we don't need to do that for bicoloring,
 # we can build that in the same time than the transposed sparsity pattern of A
-function build_edge_to_index(S::SparsityPatternCSC, forbidden_colors::Vector{Int})
+function build_edge_to_index(S::SparsityPatternCSC{T}) where {T<:Integer}
     # edge_to_index gives an index for each edge
-    edge_to_index = Vector{Int}(undef, nnz(S))
-    # use forbidden_colors (or color) for the offsets of each column
-    offsets = forbidden_colors
+    edge_to_index = Vector{T}(undef, nnz(S))
+    offsets = zeros(T, S.n)
     counter = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -187,8 +186,7 @@ function build_edge_to_index(S::SparsityPatternCSC, forbidden_colors::Vector{Int
             end
         end
     end
-    fill!(offsets, 0)
-    return edge_to_index
+    return edge_to_index, offsets
 end
 
 ## Adjacency graph
@@ -205,11 +203,13 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 # Constructors
 
-    AdjacencyGraph(A::SparseMatrixCSC)
+    AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
 
 # Fields
 
 - `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, whose diagonal is empty whenever `has_diagonal` is `false`
+- `edge_to_index::Vector{T}`: A vector mapping each nonzero of `S` to a unique edge index (ignoring diagonal and accounting for symmetry, so that `(i, j)` and `(j, i)` get the same index)
+- `vertex_buffer::Vector{T}`: A buffer of length `S.n`, which is the number of vertices in the graph
 
 # References
 
@@ -217,10 +217,13 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 """
 struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
+    edge_to_index::Vector{T}
+    vertex_buffer::Vector{T}
 end
 
 function AdjacencyGraph(S::SparsityPatternCSC{T}; has_diagonal::Bool=true) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S)
+    edge_to_index, vertex_buffer = build_edge_to_index(S)
+    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index, vertex_buffer)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
@@ -232,30 +235,27 @@ function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
 end
 
 pattern(g::AdjacencyGraph) = g.S
+edge_indices(g::AdjacencyGraph) = g.edge_to_index
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
 vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
+has_diagonal(::AdjacencyGraph{T,hd}) where {T,hd} = hd
 
-has_diagonal(::AdjacencyGraph{T,hl}) where {T,hl} = hl
-
-function neighbors(g::AdjacencyGraph{T,true}, v::Integer) where {T}
-    S = pattern(g)
-    neighbors_v = view(rowvals(S), nzrange(S, v))
-    return Iterators.filter(!=(v), neighbors_v)  # TODO: optimize
-end
-
-function neighbors(g::AdjacencyGraph{T,false}, v::Integer) where {T}
+function neighbors(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
     neighbors_v = view(rowvals(S), nzrange(S, v))
     return neighbors_v
 end
 
-function neighbors2(g::AdjacencyGraph, v::Integer)
+function neighbors_with_edge_indices(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
     neighbors_v = view(rowvals(S), nzrange(S, v))
-    return neighbors_v
+    edges_indices_v = view(edge_indices(g), nzrange(S, v))
+    return zip(neighbors_v, edges_indices_v)
 end
 
-function degree(g::AdjacencyGraph, v::Integer)
+degree(g::AdjacencyGraph{T,false}, v::Integer) where {T} = g.S.colptr[v + 1] - g.S.colptr[v]
+
+function degree(g::AdjacencyGraph{T,true}, v::Integer) where {T}
     d = 0
     for u in neighbors(g, v)
         if u != v
@@ -265,12 +265,12 @@ function degree(g::AdjacencyGraph, v::Integer)
     return d
 end
 
-function nb_edges(g::AdjacencyGraph)
+nb_edges(g::AdjacencyGraph{T,false}) where {T} = nnz(g.S) ÷ 2
+
+function nb_edges(g::AdjacencyGraph{T,true}) where {T}
     ne = 0
     for v in vertices(g)
-        for u in neighbors(g, v)
-            ne += 1
-        end
+        ne += degree(g, v)
     end
     return ne ÷ 2
 end
@@ -280,6 +280,7 @@ minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
     for w in neighbors(g, v)
+        !has_diagonal(g) || (v == w && continue)
         if w == u
             return true
         end
@@ -314,7 +315,7 @@ A `BipartiteGraph` has two sets of vertices, one for the rows of `A` (which we c
 
 # Constructors
 
-    BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern=false)
+    BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
 
 When `symmetric_pattern` is `true`, this construction is more efficient.
 
