@@ -273,7 +273,9 @@ This is done by checking, for each ordered vertex, that its back- or forward-deg
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
 function valid_dynamic_order(
-    g::AdjacencyGraph, π::AbstractVector{Int}, ::DynamicDegreeBasedOrder{degtype,direction}
+    g::AdjacencyGraph,
+    π::AbstractVector{<:Integer},
+    ::DynamicDegreeBasedOrder{degtype,direction},
 ) where {degtype,direction}
     length(π) != nb_vertices(g) && return false
     length(unique(π)) != nb_vertices(g) && return false
@@ -300,7 +302,7 @@ end
 function valid_dynamic_order(
     g::BipartiteGraph,
     ::Val{side},
-    π::AbstractVector{Int},
+    π::AbstractVector{<:Integer},
     ::DynamicDegreeBasedOrder{degtype,direction},
 ) where {side,degtype,direction}
     length(π) != nb_vertices(g, Val(side)) && return false

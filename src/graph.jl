@@ -24,7 +24,7 @@ end
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
-Base.size(S::SparsityPatternCSC, d) = d::Integer <= 2 ? size(S)[d] : 1
+Base.size(S::SparsityPatternCSC, d::Integer) = d::Integer <= 2 ? size(S)[d] : 1
 Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
 
 SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
@@ -222,7 +222,7 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct AdjacencyGraph{T,has_diagonal}
+struct AdjacencyGraph{T<:Integer,has_diagonal}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
 end
@@ -298,7 +298,7 @@ function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
     return false
 end
 
-function degree_in_subset(g::AdjacencyGraph, v::Integer, subset::AbstractVector{Int})
+function degree_in_subset(g::AdjacencyGraph, v::Integer, subset::AbstractVector{<:Integer})
     d = 0
     for u in subset
         if has_neighbor(g, v, u)
@@ -338,7 +338,7 @@ When `symmetric_pattern` is `true`, this construction is more efficient.
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct BipartiteGraph{T}
+struct BipartiteGraph{T<:Integer}
     S1::SparsityPatternCSC{T}
     S2::SparsityPatternCSC{T}
 end
@@ -425,7 +425,7 @@ function has_neighbor_dist2(
 end
 
 function degree_dist2_in_subset(
-    bg::BipartiteGraph, ::Val{side}, v::Integer, subset::AbstractVector{Int}
+    bg::BipartiteGraph, ::Val{side}, v::Integer, subset::AbstractVector{<:Integer}
 ) where {side}
     d = 0
     for u in subset

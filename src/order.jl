@@ -84,11 +84,11 @@ function vertices(g::AdjacencyGraph, ::LargestFirst)
     return sort(vertices(g); by=criterion, rev=true)
 end
 
-function vertices(bg::BipartiteGraph, ::Val{side}, ::LargestFirst) where {side}
+function vertices(bg::BipartiteGraph{T}, ::Val{side}, ::LargestFirst) where {T,side}
     other_side = 3 - side
     n = nb_vertices(bg, Val(side))
     visited = falses(n)  # necessary for distance-2 neighborhoods
-    degrees_dist2 = zeros(Int, n)
+    degrees_dist2 = zeros(T, n)
     for v in vertices(bg, Val(side))
         fill!(visited, false)
         for u in neighbors(bg, Val(side), v)
@@ -129,27 +129,27 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically com
 """
 struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder end
 
-struct DegreeBuckets
-    degrees::Vector{Int}
-    bucket_storage::Vector{Int}
-    bucket_low::Vector{Int}
-    bucket_high::Vector{Int}
-    positions::Vector{Int}
+struct DegreeBuckets{T}
+    degrees::Vector{T}
+    bucket_storage::Vector{T}
+    bucket_low::Vector{T}
+    bucket_high::Vector{T}
+    positions::Vector{T}
 end
 
-function DegreeBuckets(degrees::Vector{Int}, dmax)
+function DegreeBuckets(::Type{T}, degrees::Vector{<:Integer}, dmax::Integer) where {T}
     # number of vertices per degree class
-    deg_count = zeros(Int, dmax + 1)
+    deg_count = zeros(T, dmax + 1)
     for d in degrees
         deg_count[d + 1] += 1
     end
     # bucket limits
     bucket_high = cumsum(deg_count)
-    bucket_low = vcat(0, @view(bucket_high[1:(end - 1)]))
+    bucket_low = vcat(zero(T), @view(bucket_high[1:(end - 1)]))
     bucket_low .+= 1
     # assign each vertex to the correct position inside its degree class
-    bucket_storage = similar(degrees, Int)
-    positions = similar(degrees, Int)
+    bucket_storage = similar(degrees, T)
+    positions = similar(degrees, T)
     for v in eachindex(positions, degrees)
         d = degrees[v]
         positions[v] = bucket_high[d + 1] - deg_count[d + 1] + 1
@@ -168,9 +168,9 @@ function degree_increasing(; degtype, direction)
     return increasing
 end
 
-function mark_ordered!(db::DegreeBuckets, v::Integer)
+function mark_ordered!(db::DegreeBuckets{T}, v::Integer) where {T}
     db.degrees[v] = -1
-    db.positions[v] = typemin(Int)
+    db.positions[v] = typemin(T)
     return nothing
 end
 
@@ -248,15 +248,15 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
 end
 
 function vertices(
-    g::AdjacencyGraph, ::DynamicDegreeBasedOrder{degtype,direction}
-) where {degtype,direction}
+    g::AdjacencyGraph{T}, ::DynamicDegreeBasedOrder{degtype,direction}
+) where {T<:Integer,degtype,direction}
     if degree_increasing(; degtype, direction)
-        degrees = zeros(Int, nb_vertices(g))
+        degrees = zeros(T, nb_vertices(g))
     else
         degrees = [degree(g, v) for v in vertices(g)]
     end
-    db = DegreeBuckets(degrees, maximum_degree(g))
-    π = Int[]
+    db = DegreeBuckets(T, degrees, maximum_degree(g))
+    π = T[]
     sizehint!(π, nb_vertices(g))
     for _ in 1:nb_vertices(g)
         u = pop_next_candidate!(db; direction)
@@ -271,12 +271,12 @@ function vertices(
 end
 
 function vertices(
-    g::BipartiteGraph, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
-) where {side,degtype,direction}
+    g::BipartiteGraph{T}, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
+) where {T<:Integer,side,degtype,direction}
     other_side = 3 - side
     # compute dist-2 degrees in an optimized way
     n = nb_vertices(g, Val(side))
-    degrees_dist2 = zeros(Int, n)
+    degrees_dist2 = zeros(T, n)
     dist2_neighbor = falses(n)
     for v in vertices(g, Val(side))
         fill!(dist2_neighbor, false)
@@ -288,13 +288,13 @@ function vertices(
         degrees_dist2[v] = sum(dist2_neighbor)
     end
     if degree_increasing(; degtype, direction)
-        degrees = zeros(Int, n)
+        degrees = zeros(T, n)
     else
         degrees = degrees_dist2
     end
     maxd2 = maximum(degrees_dist2)
-    db = DegreeBuckets(degrees, maxd2)
-    π = Int[]
+    db = DegreeBuckets(T, degrees, maxd2)
+    π = T[]
     sizehint!(π, n)
     visited = falses(n)
     for _ in 1:nb_vertices(g, Val(side))
