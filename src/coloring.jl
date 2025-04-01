@@ -82,18 +82,18 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
-    star = Dict{Tuple{Int,Int},Int}()
-    sizehint!(star, ne)
+    star = Vector{Int}(undef, ne)
     hub = Int[]  # one hub for each star, including the trivial ones
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
-        for w in neighbors(g, v)
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
-            (p, q) = first_neighbor[color[w]]
+            (p, q, _) = first_neighbor[color[w]]
             if p == v  # Case 1
                 if treated[q] != v
                     # forbid colors of neighbors of q
@@ -102,11 +102,11 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
                 # forbid colors of neighbors of w
                 _treat!(treated, forbidden_colors, g, v, w, color)
             else
-                first_neighbor[color[w]] = (v, w)
-                for x in neighbors(g, w)
+                first_neighbor[color[w]] = (v, w, index_vw)
+                for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                    !has_diagonal(g) || (w == x && continue)
                     (x == v || iszero(color[x])) && continue
-                    wx = _sort(w, x)
-                    if x == hub[star[wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
+                    if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -123,9 +123,68 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     star_set = StarSet(star, hub)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
-        postprocess!(color, star_set, g, forbidden_colors)
+        offsets = forbidden_colors
+        postprocess!(color, star_set, g, offsets)
     end
     return color, star_set
+end
+
+function _treat!(
+    # modified
+    treated::AbstractVector{<:Integer},
+    forbidden_colors::AbstractVector{<:Integer},
+    # not modified
+    g::AdjacencyGraph,
+    v::Integer,
+    w::Integer,
+    color::AbstractVector{<:Integer},
+)
+    for x in neighbors(g, w)
+        !has_diagonal(g) || (w == x && continue)
+        iszero(color[x]) && continue
+        forbidden_colors[color[x]] = v
+    end
+    treated[w] = v
+    return nothing
+end
+
+function _update_stars!(
+    # modified
+    star::AbstractVector{<:Integer},
+    hub::AbstractVector{<:Integer},
+    # not modified
+    g::AdjacencyGraph,
+    v::Integer,
+    color::AbstractVector{<:Integer},
+    first_neighbor::AbstractVector{<:Tuple},
+)
+    for (w, index_vw) in neighbors_with_edge_indices(g, v)
+        !has_diagonal(g) || (v == w && continue)
+        iszero(color[w]) && continue
+        x_exists = false
+        for (x, index_wx) in neighbors_with_edge_indices(g, w)
+            !has_diagonal(g) || (w == x && continue)
+            if x != v && color[x] == color[v]  # vw, wx ∈ E
+                star_wx = star[index_wx]
+                hub[star_wx] = w  # this may already be true
+                star[index_vw] = star_wx
+                x_exists = true
+                break
+            end
+        end
+        if !x_exists
+            (p, q, index_pq) = first_neighbor[color[w]]
+            if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
+                star_vq = star[index_pq]
+                hub[star_vq] = v  # this may already be true
+                star[index_vw] = star_vq
+            else  # vw forms a new star
+                push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
+                star[index_vw] = length(hub)
+            end
+        end
+    end
+    return nothing
 end
 
 """
@@ -139,107 +198,9 @@ $TYPEDFIELDS
 """
 struct StarSet
     "a mapping from edges (pair of vertices) to their star index"
-    star::Dict{Tuple{Int,Int},Int}
+    star::Vector{Int}
     "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
     hub::Vector{Int}
-end
-
-_sort(u, v) = (min(u, v), max(u, v))
-
-function _treat!(
-    # modified
-    treated::AbstractVector{<:Integer},
-    forbidden_colors::AbstractVector{<:Integer},
-    # not modified
-    g::AdjacencyGraph,
-    v::Integer,
-    w::Integer,
-    color::AbstractVector{<:Integer},
-)
-    for x in neighbors(g, w)
-        iszero(color[x]) && continue
-        forbidden_colors[color[x]] = v
-    end
-    treated[w] = v
-    return nothing
-end
-
-function _update_stars!(
-    # modified
-    star::Dict{<:Tuple,<:Integer},
-    hub::AbstractVector{<:Integer},
-    # not modified
-    g::AdjacencyGraph,
-    v::Integer,
-    color::AbstractVector{<:Integer},
-    first_neighbor::AbstractVector{<:Tuple},
-)
-    for w in neighbors(g, v)
-        iszero(color[w]) && continue
-        vw = _sort(v, w)
-        x_exists = false
-        for x in neighbors(g, w)
-            if x != v && color[x] == color[v]  # vw, wx ∈ E
-                wx = _sort(w, x)
-                star_wx = star[wx]
-                hub[star_wx] = w  # this may already be true
-                star[vw] = star_wx
-                x_exists = true
-                break
-            end
-        end
-        if !x_exists
-            (p, q) = first_neighbor[color[w]]
-            if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
-                vq = _sort(v, q)
-                star_vq = star[vq]
-                hub[star_vq] = v  # this may already be true
-                star[vw] = star_vq
-            else  # vw forms a new star
-                push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
-                star[vw] = length(hub)
-            end
-        end
-    end
-    return nothing
-end
-
-"""
-    symmetric_coefficient(
-        i::Integer, j::Integer,
-        color::AbstractVector{<:Integer},
-        star_set::StarSet
-    )
-
-Return the indices `(k, c)` such that `A[i, j] = B[k, c]`, where `A` is the uncompressed symmetric matrix and `B` is the column-compressed matrix.
-
-This function corresponds to algorithm `DirectRecover2` in the paper.
-
-# References
-
-> [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009), Figure 3
-"""
-function symmetric_coefficient(
-    i::Integer, j::Integer, color::AbstractVector{<:Integer}, star_set::StarSet
-)
-    (; star, hub) = star_set
-    if i == j
-        # diagonal
-        return i, color[j]
-    end
-    if i > j  # keys of star are sorted tuples
-        # star only contains one triangle
-        i, j = j, i
-    end
-    star_id = star[i, j]
-    h = abs(hub[star_id])
-    if h == j
-        # i is the spoke
-        return i, color[h]
-    else
-        # j is the spoke
-        return j, color[h]
-    end
 end
 
 """
@@ -271,23 +232,33 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
     ne = nb_edges(g)
     color = zeros(Int, nv)
     forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0), nv)  # at first no neighbors have been encountered
+    first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
     forest = Forest{Int}(ne)
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
         for w in neighbors(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
             forbidden_colors[color[w]] = v
         end
         for w in neighbors(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
-            for x in neighbors(g, w)
+            for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                !has_diagonal(g) || (w == x && continue)
                 iszero(color[x]) && continue
                 if forbidden_colors[color[x]] != v
                     _prevent_cycle!(
-                        v, w, x, color, first_visit_to_tree, forbidden_colors, forest
+                        v,
+                        w,
+                        x,
+                        index_wx,
+                        color,
+                        first_visit_to_tree,
+                        forbidden_colors,
+                        forest,
                     )
                 end
             end
@@ -298,25 +269,29 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
                 break
             end
         end
-        for w in neighbors(g, v)  # grow two-colored stars around the vertex v
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
-            _grow_star!(v, w, color, first_neighbor, forest)
+            _grow_star!(v, w, index_vw, color, first_neighbor, forest)
         end
-        for w in neighbors(g, v)
+        for (w, index_vw) in neighbors_with_edge_indices(g, v)
+            !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
-            for x in neighbors(g, w)
+            for (x, index_wx) in neighbors_with_edge_indices(g, w)
+                !has_diagonal(g) || (w == x && continue)
                 (x == v || iszero(color[x])) && continue
                 if color[x] == color[v]
-                    _merge_trees!(v, w, x, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                    _merge_trees!(v, w, x, index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
     end
 
-    tree_set = TreeSet(forest, nb_vertices(g))
+    tree_set = TreeSet(g, forest)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
-        postprocess!(color, tree_set, g, forbidden_colors)
+        offsets = forbidden_colors
+        postprocess!(color, tree_set, g, offsets)
     end
     return color, tree_set
 end
@@ -326,14 +301,14 @@ function _prevent_cycle!(
     v::Integer,
     w::Integer,
     x::Integer,
+    index_wx::Integer,
     color::AbstractVector{<:Integer},
     # modified
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
     forest::Forest{<:Integer},
 )
-    wx = _sort(w, x)
-    id = find_root!(forest, wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
+    id = find_root!(forest, index_wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
     (p, q) = first_visit_to_tree[id]
     if p != v  # T is being visited from vertex v for the first time
         first_visit_to_tree[id] = (v, w)
@@ -347,21 +322,19 @@ function _grow_star!(
     # not modified
     v::Integer,
     w::Integer,
+    index_vw::Integer,
     color::AbstractVector{<:Integer},
     # modified
     first_neighbor::AbstractVector{<:Tuple},
     forest::Forest{<:Integer},
 )
-    vw = _sort(v, w)
-    push!(forest, vw)  # Create a new tree T_{vw} consisting only of edge vw
-    (p, q) = first_neighbor[color[w]]
+    # Create a new tree T_{vw} consisting only of edge vw
+    (p, q, index_pq) = first_neighbor[color[w]]
     if p != v  # a neighbor of v with color[w] encountered for the first time
-        first_neighbor[color[w]] = (v, w)
+        first_neighbor[color[w]] = (v, w, index_vw)
     else  # merge T_{vw} with a two-colored star being grown around v
-        vw = _sort(v, w)
-        pq = _sort(p, q)
-        root1 = find_root!(forest, vw)
-        root2 = find_root!(forest, pq)
+        root1 = find_root!(forest, index_vw)
+        root2 = find_root!(forest, index_pq)
         root_union!(forest, root1, root2)
     end
     return nothing
@@ -372,13 +345,13 @@ function _merge_trees!(
     v::Integer,
     w::Integer,
     x::Integer,
+    index_vw::Integer,
+    index_wx::Integer,
     # modified
     forest::Forest{<:Integer},
 )
-    vw = _sort(v, w)
-    wx = _sort(w, x)
-    root1 = find_root!(forest, vw)
-    root2 = find_root!(forest, wx)
+    root1 = find_root!(forest, index_vw)
+    root2 = find_root!(forest, index_wx)
     if root1 != root2
         root_union!(forest, root1, root2)
     end
@@ -399,10 +372,10 @@ struct TreeSet
     is_star::Vector{Bool}
 end
 
-function TreeSet(forest::Forest{Int}, nvertices::Int)
-    # Forest is a structure defined in forest.jl
-    # - forest.intmap: a dictionary that maps an edge (i, j) to an integer k
-    # - forest.num_trees: the number of trees in the forest
+function TreeSet(g::AdjacencyGraph, forest::Forest{Int})
+    S = pattern(g)
+    edge_to_index = edge_indices(g)
+    nv = nb_vertices(g)
     nt = forest.num_trees
 
     # dictionary that maps a tree's root to the index of the tree
@@ -412,38 +385,45 @@ function TreeSet(forest::Forest{Int}, nvertices::Int)
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
     trees = [Dict{Int,Vector{Int}}() for i in 1:nt]
 
-    # counter of the number of roots found
-    k = 0
-    for edge in keys(forest.intmap)
-        i, j = edge
-        root = find_root!(forest, edge)
+    # current number of roots found
+    nr = 0
 
-        # Update roots
-        if !haskey(roots, root)
-            k += 1
-            roots[root] = k
-        end
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for pos in nzrange(S, j)
+            i = rvS[pos]
+            if i > j
+                index_ij = edge_to_index[pos]
+                root = find_root!(forest, index_ij)
 
-        # index of the tree T that contains this edge
-        index_tree = roots[root]
+                # Update roots
+                if !haskey(roots, root)
+                    nr += 1
+                    roots[root] = nr
+                end
 
-        # Update the neighbors of i in the tree T
-        if !haskey(trees[index_tree], i)
-            trees[index_tree][i] = [j]
-        else
-            push!(trees[index_tree][i], j)
-        end
+                # index of the tree T that contains this edge
+                index_tree = roots[root]
 
-        # Update the neighbors of j in the tree T
-        if !haskey(trees[index_tree], j)
-            trees[index_tree][j] = [i]
-        else
-            push!(trees[index_tree][j], i)
+                # Update the neighbors of i in the tree T
+                if !haskey(trees[index_tree], i)
+                    trees[index_tree][i] = [j]
+                else
+                    push!(trees[index_tree][i], j)
+                end
+
+                # Update the neighbors of j in the tree T
+                if !haskey(trees[index_tree], j)
+                    trees[index_tree][j] = [i]
+                else
+                    push!(trees[index_tree][j], i)
+                end
+            end
         end
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
-    degrees = Vector{Int}(undef, nvertices)
+    degrees = Vector{Int}(undef, nv)
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
     reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:nt]
@@ -541,7 +521,8 @@ function postprocess!(
     g::AdjacencyGraph,
     offsets::Vector{Int},
 )
-    (; S) = g
+    S = pattern(g)
+    edge_to_index = edge_indices(g)
     # flag which colors are actually used during decompression
     nb_colors = maximum(color)
     color_used = zeros(Bool, nb_colors)
@@ -562,9 +543,9 @@ function postprocess!(
 
         # Iterate through all non-trivial stars
         for s in eachindex(hub)
-            j = hub[s]
-            if j > 0
-                color_used[color[j]] = true
+            h = hub[s]
+            if h > 0
+                color_used[color[h]] = true
             else
                 nb_trivial_stars += 1
             end
@@ -572,17 +553,25 @@ function postprocess!(
 
         # Process the trivial stars (if any)
         if nb_trivial_stars > 0
-            for ((i, j), s) in pairs(star)
-                h = hub[s]
-                if h < 0
-                    h = abs(h)
-                    spoke = i == h ? j : i
-                    if color_used[color[spoke]]
-                        # Switch the hub and the spoke to possibly avoid adding one more used color
-                        hub[s] = spoke
-                    else
-                        # Keep the current hub
-                        color_used[color[h]] = true
+            rvS = rowvals(S)
+            for j in axes(S, 2)
+                for k in nzrange(S, j)
+                    i = rvS[k]
+                    if i > j
+                        index_ij = edge_to_index[k]
+                        s = star[index_ij]
+                        h = hub[s]
+                        if h < 0
+                            h = abs(h)
+                            spoke = h == j ? i : j
+                            if color_used[color[spoke]]
+                                # Switch the hub and the spoke to possibly avoid adding one more used color
+                                hub[s] = spoke
+                            else
+                                # Keep the current hub
+                                color_used[color[h]] = true
+                            end
+                        end
                     end
                 end
             end

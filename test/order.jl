@@ -61,14 +61,15 @@ end;
 end;
 
 @testset "LargestFirst" begin
-    A = sparse([
-        0 1 0
-        1 0 1
-        0 1 0
-    ])
-    ag = AdjacencyGraph(A)
-
-    @test vertices(ag, LargestFirst()) == [2, 1, 3]
+    for has_diagonal in (false, true)
+        A = sparse([
+            0 1 0
+            1 0 1
+            0 1 0
+        ])
+        ag = AdjacencyGraph(A; has_diagonal)
+        @test vertices(ag, LargestFirst()) == [2, 1, 3]
+    end
 
     A = sparse([
         1 1 0 0
