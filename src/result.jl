@@ -243,6 +243,7 @@ function StarSetColoringResult(
 )
     (; star, hub) = star_set
     S = pattern(ag)
+    edge_to_index = edge_indices(ag)
     n = S.n
     group = group_by_color(color)
     rvS = rowvals(S)
