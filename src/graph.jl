@@ -36,7 +36,7 @@ SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the transpose of `S`.
 """
-function Base.transpose(S::SparsityPatternCSC{T}) where {T<:Integer}
+function Base.transpose(S::SparsityPatternCSC{T}) where {T}
     m, n = size(S)
     nnzA = nnz(S)
     A_colptr = S.colptr
@@ -94,16 +94,14 @@ function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
 end
 
 """
-    bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool=false)
+    bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
-bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool=false) =
+bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool) =
     bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
 
-function bidirectional_pattern(
-    S::SparsityPatternCSC{T}; symmetric_pattern::Bool=false
-) where {T<:Integer}
+function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool) where {T}
     m, n = size(S)
     p = m + n
     nnzS = nnz(S)
@@ -175,7 +173,7 @@ function bidirectional_pattern(
     return S_and_Sᵀ, edge_to_index
 end
 
-function build_edge_to_index(S::SparsityPatternCSC{T}) where {T<:Integer}
+function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
     # edge_to_index gives an index for each edge
     edge_to_index = Vector{T}(undef, nnz(S))
     offsets = zeros(T, S.n)
@@ -196,7 +194,7 @@ function build_edge_to_index(S::SparsityPatternCSC{T}) where {T<:Integer}
             end
         end
     end
-    return edge_to_index, offsets
+    return edge_to_index
 end
 
 ## Adjacency graph
@@ -219,7 +217,6 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 - `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, whose diagonal is empty whenever `has_diagonal` is `false`
 - `edge_to_index::Vector{T}`: A vector mapping each nonzero of `S` to a unique edge index (ignoring diagonal and accounting for symmetry, so that `(i, j)` and `(j, i)` get the same index)
-- `vertex_buffer::Vector{T}`: A buffer of length `S.n`, which is the number of vertices in the graph
 
 # References
 
@@ -228,28 +225,14 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 struct AdjacencyGraph{T,has_diagonal}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
-    vertex_buffer::Vector{T}
 end
 
 function AdjacencyGraph(
     S::SparsityPatternCSC{T},
-    edge_to_index::Vector{T},
-    vertex_buffer::Vector{T};
+    edge_to_index::Vector{T}=build_edge_to_index(S);
     has_diagonal::Bool=true,
 ) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index, vertex_buffer)
-end
-
-function AdjacencyGraph(
-    S::SparsityPatternCSC{T}, edge_to_index::Vector{T}; has_diagonal::Bool=true
-) where {T}
-    vertex_buffer = Vector{Int}(undef, S.n)
-    return AdjacencyGraph(S, edge_to_index, vertex_buffer; has_diagonal)
-end
-
-function AdjacencyGraph(S::SparsityPatternCSC; has_diagonal::Bool=true)
-    edge_to_index, vertex_buffer = build_edge_to_index(S)
-    return AdjacencyGraph(S, edge_to_index, vertex_buffer; has_diagonal)
+    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)

@@ -81,8 +81,7 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
-    forbidden_colors = g.vertex_buffer  # Vector of length nv
-    fill!(forbidden_colors, 0)
+    forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     treated = zeros(Int, nv)
     star = Vector{Int}(undef, ne)
@@ -123,7 +122,9 @@ function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::
     end
     star_set = StarSet(star, hub)
     if postprocessing
-        postprocess!(color, star_set, g)
+        # Reuse the vector forbidden_colors to compute offsets during post-processing
+        offsets = forbidden_colors
+        postprocess!(color, star_set, g, offsets)
     end
     return color, star_set
 end
@@ -230,8 +231,7 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
     nv = nb_vertices(g)
     ne = nb_edges(g)
     color = zeros(Int, nv)
-    forbidden_colors = g.vertex_buffer  # Vector of length nv
-    fill!(forbidden_colors, 0)
+    forbidden_colors = zeros(Int, nv)
     first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((0, 0), ne)
     forest = Forest{Int}(ne)
@@ -289,7 +289,9 @@ function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessin
 
     tree_set = TreeSet(g, forest)
     if postprocessing
-        postprocess!(color, tree_set, g)
+        # Reuse the vector forbidden_colors to compute offsets during post-processing
+        offsets = forbidden_colors
+        postprocess!(color, tree_set, g, offsets)
     end
     return color, tree_set
 end
@@ -517,6 +519,7 @@ function postprocess!(
     color::AbstractVector{<:Integer},
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
+    offsets::Vector{Int},
 )
     S = pattern(g)
     edge_to_index = edge_indices(g)
@@ -621,7 +624,6 @@ function postprocess!(
 
     # if at least one of the colors is useless, modify the color assignments of vertices
     if any(!, color_used)
-        offsets = g.vertex_buffer
         num_colors_useless = 0
 
         # determine what are the useless colors and compute the offsets

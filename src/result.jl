@@ -241,15 +241,12 @@ end
 function StarSetColoringResult(
     A::AbstractMatrix, ag::AdjacencyGraph, color::Vector{Int}, star_set::StarSet
 )
-    # Reuse edge_to_index to store the compressed indices for decompression
-    edge_to_index = edge_indices(ag)
-    compressed_indices = edge_to_index
-
     (; star, hub) = star_set
     S = pattern(ag)
     n = S.n
     group = group_by_color(color)
     rvS = rowvals(S)
+    compressed_indices = zeros(Int, nnz(S))  # needs to be independent from the storage in the graph, in case the graph gets reused
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
