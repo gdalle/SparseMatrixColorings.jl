@@ -15,6 +15,7 @@ using Test
 ## SparsityPatternCSC
 
 @testset "SparsityPatternCSC" begin
+    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
         for _ in 1:1000
             m, n = rand(100:1000), rand(100:1000)
@@ -90,6 +91,7 @@ end
     ])
 
     bg = BipartiteGraph(A; symmetric_pattern=false)
+    @test eltype(bg) == Int
     @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 8
@@ -143,6 +145,7 @@ end;
     ])
 
     g = AdjacencyGraph(transpose(A) * A)
+    @test eltype(g) == Int
     @test nb_vertices(g) == 8
     # wrong neighbors, it's okay they are filtered after
     @test collect(neighbors(g, 1)) == sort(vcat(1, [6, 7, 8]))

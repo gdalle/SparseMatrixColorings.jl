@@ -162,3 +162,41 @@ end;
         @inferred decompress(B, result)
     end
 end;
+
+@testset "Single precision" begin
+    A = convert(
+        SparseMatrixCSC{Float32,Int32},
+        sparse(Symmetric(sprand(rng, Float32, 100, 100, 0.1))),
+    )
+    @testset "$structure - $partition - $decompression" for (
+        structure, partition, decompression
+    ) in [
+        (:nonsymmetric, :column, :direct),
+        (:nonsymmetric, :row, :direct),
+        (:symmetric, :column, :direct),
+        (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
+    ]
+        result = coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression);
+        )
+        if partition in (:column, :bidirectional)
+            @test eltype(column_colors(result)) == Int32
+            @test eltype(column_groups(result)[1]) == Int32
+        end
+        if partition in (:row, :bidirectional)
+            @test eltype(row_colors(result)) == Int32
+            @test eltype(row_groups(result)[1]) == Int32
+        end
+        if partition == :bidirectional
+            Br, Bc = compress(A, result)
+            @test decompress(Br, Bc, result) isa SparseMatrixCSC{Float32,Int32}
+        else
+            B = compress(A, result)
+            @test decompress(B, result) isa SparseMatrixCSC{Float32,Int32}
+        end
+    end
+end

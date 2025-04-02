@@ -17,18 +17,18 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005), Algorithm 3.2
 """
 function partial_distance2_coloring(
-    bg::BipartiteGraph, ::Val{side}, order::AbstractOrder
-) where {side}
-    color = Vector{Int}(undef, nb_vertices(bg, Val(side)))
-    forbidden_colors = Vector{Int}(undef, nb_vertices(bg, Val(side)))
+    bg::BipartiteGraph{T}, ::Val{side}, order::AbstractOrder
+) where {T,side}
+    color = Vector{T}(undef, nb_vertices(bg, Val(side)))
+    forbidden_colors = Vector{T}(undef, nb_vertices(bg, Val(side)))
     vertices_in_order = vertices(bg, Val(side), order)
     partial_distance2_coloring!(color, forbidden_colors, bg, Val(side), vertices_in_order)
     return color
 end
 
 function partial_distance2_coloring!(
-    color::Vector{Int},
-    forbidden_colors::Vector{Int},
+    color::AbstractVector{<:Integer},
+    forbidden_colors::AbstractVector{<:Integer},
     bg::BipartiteGraph,
     ::Val{side},
     vertices_in_order::AbstractVector{<:Integer},
@@ -76,16 +76,18 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
-function star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
+function star_coloring(
+    g::AdjacencyGraph{T}, order::AbstractOrder, postprocessing::Bool
+) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
-    color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
-    treated = zeros(Int, nv)
-    star = Vector{Int}(undef, ne)
-    hub = Int[]  # one hub for each star, including the trivial ones
+    color = zeros(T, nv)
+    forbidden_colors = zeros(T, nv)
+    first_neighbor = fill((zero(T), zero(T), zero(T)), nv)  # at first no neighbors have been encountered
+    treated = zeros(T, nv)
+    star = Vector{T}(undef, ne)
+    hub = T[]  # one hub for each star, including the trivial ones
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -196,11 +198,11 @@ Encode a set of 2-colored stars resulting from the [`star_coloring`](@ref) algor
 
 $TYPEDFIELDS
 """
-struct StarSet
+struct StarSet{T}
     "a mapping from edges (pair of vertices) to their star index"
-    star::Vector{Int}
+    star::Vector{T}
     "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
-    hub::Vector{Int}
+    hub::Vector{T}
 end
 
 """
@@ -226,15 +228,17 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
-function acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
+function acyclic_coloring(
+    g::AdjacencyGraph{T}, order::AbstractOrder, postprocessing::Bool
+) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
     ne = nb_edges(g)
-    color = zeros(Int, nv)
-    forbidden_colors = zeros(Int, nv)
-    first_neighbor = fill((0, 0, 0), nv)  # at first no neighbors have been encountered
-    first_visit_to_tree = fill((0, 0), ne)
-    forest = Forest{Int}(ne)
+    color = zeros(T, nv)
+    forbidden_colors = zeros(T, nv)
+    first_neighbor = fill((zero(T), zero(T), zero(T)), nv)  # at first no neighbors have been encountered
+    first_visit_to_tree = fill((zero(T), zero(T)), ne)
+    forest = Forest{T}(ne)
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -367,23 +371,23 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 
 $TYPEDFIELDS
 """
-struct TreeSet
-    reverse_bfs_orders::Vector{Vector{Tuple{Int,Int}}}
+struct TreeSet{T}
+    reverse_bfs_orders::Vector{Vector{Tuple{T,T}}}
     is_star::Vector{Bool}
 end
 
-function TreeSet(g::AdjacencyGraph, forest::Forest{Int})
+function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
     nt = forest.num_trees
 
     # dictionary that maps a tree's root to the index of the tree
-    roots = Dict{Int,Int}()
+    roots = Dict{T,T}()
     sizehint!(roots, nt)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
-    trees = [Dict{Int,Vector{Int}}() for i in 1:nt]
+    trees = [Dict{T,Vector{T}}() for i in 1:nt]
 
     # current number of roots found
     nr = 0
@@ -423,10 +427,10 @@ function TreeSet(g::AdjacencyGraph, forest::Forest{Int})
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
-    degrees = Vector{Int}(undef, nv)
+    degrees = Vector{T}(undef, nv)
 
     # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = [Tuple{Int,Int}[] for i in 1:nt]
+    reverse_bfs_orders = [Tuple{T,T}[] for i in 1:nt]
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
@@ -436,7 +440,7 @@ function TreeSet(g::AdjacencyGraph, forest::Forest{Int})
     end
 
     # Create a queue with a fixed size nvmax
-    queue = Vector{Int}(undef, nvmax)
+    queue = Vector{T}(undef, nvmax)
 
     # Specify if each tree in the forest is a star,
     # meaning that one vertex is directly connected to all other vertices in the tree
@@ -519,7 +523,7 @@ function postprocess!(
     color::AbstractVector{<:Integer},
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
-    offsets::Vector{Int},
+    offsets::AbstractVector{<:Integer},
 )
     S = pattern(g)
     edge_to_index = edge_indices(g)
