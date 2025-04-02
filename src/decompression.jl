@@ -677,12 +677,12 @@ function decompress!(
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
 )
-    (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) = result
+    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
-    strict_upper_nonzeros_A = T_factorization \ vec(B)
+    strict_upper_nonzeros_A = M_factorization \ vec(B)
     fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])

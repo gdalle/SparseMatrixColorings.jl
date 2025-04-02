@@ -146,28 +146,28 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct ColumnColoringResult{
-    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:BipartiteGraph{T1},GT1<:AbstractGroups{T1}
+    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
 } <: AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
     A::M
     "bipartite graph that was used for coloring"
     bg::G
     "one integer color for each column or row (depending on `partition`)"
-    color::Vector{T2}
+    color::Vector{T}
     "color groups for columns or rows (depending on `partition`)"
-    group::GT1
+    group::GT
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
-    compressed_indices::Vector{T1}
+    compressed_indices::Vector{T}
 end
 
 function ColumnColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T1}, color::Vector{T2}
-) where {T1<:Integer,T2<:Integer}
+    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+) where {T<:Integer}
     S = bg.S2
-    group = group_by_color(T1, color)
+    group = group_by_color(T, color)
     n = size(S, 1)
     rv = rowvals(S)
-    compressed_indices = zeros(T1, nnz(S))
+    compressed_indices = zeros(T, nnz(S))
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
@@ -195,23 +195,23 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct RowColoringResult{
-    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:BipartiteGraph{T1},GT1<:AbstractGroups{T1}
+    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
 } <: AbstractColoringResult{:nonsymmetric,:row,:direct}
     A::M
     bg::G
-    color::Vector{T2}
-    group::GT1
-    compressed_indices::Vector{T1}
+    color::Vector{T}
+    group::GT
+    compressed_indices::Vector{T}
 end
 
 function RowColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T1}, color::Vector{T2}
-) where {T1<:Integer,T2<:Integer}
+    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+) where {T<:Integer}
     S = bg.S2
-    group = group_by_color(T1, color)
+    group = group_by_color(T, color)
     C = length(group)  # ncolors
     rv = rowvals(S)
-    compressed_indices = zeros(T1, nnz(S))
+    compressed_indices = zeros(T, nnz(S))
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
@@ -239,26 +239,29 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct StarSetColoringResult{
-    M<:AbstractMatrix,T1<:Integer,T2<:Integer,G<:AdjacencyGraph{T1},GT1<:AbstractGroups{T1}
+    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T}
 } <: AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
-    color::Vector{T2}
-    group::GT1
-    star_set::StarSet{T1}
-    compressed_indices::Vector{T1}
+    color::Vector{T}
+    group::GT
+    star_set::StarSet{T}
+    compressed_indices::Vector{T}
 end
 
 function StarSetColoringResult(
-    A::AbstractMatrix, ag::AdjacencyGraph{T1}, color::Vector{T2}, star_set::StarSet{T1}
-) where {T1<:Integer,T2<:Integer}
+    A::AbstractMatrix,
+    ag::AdjacencyGraph{T},
+    color::Vector{<:Integer},
+    star_set::StarSet{<:Integer},
+) where {T<:Integer}
     (; star, hub) = star_set
     S = pattern(ag)
     edge_to_index = edge_indices(ag)
     n = S.n
-    group = group_by_color(T1, color)
+    group = group_by_color(T, color)
     rvS = rowvals(S)
-    compressed_indices = zeros(T1, nnz(S))  # needs to be independent from the storage in the graph, in case the graph gets reused
+    compressed_indices = zeros(T, nnz(S))  # needs to be independent from the storage in the graph, in case the graph gets reused
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
@@ -305,41 +308,36 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct TreeSetColoringResult{
-    M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:AdjacencyGraph{T1},
-    GT1<:AbstractGroups{T1},
-    R,
+    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T},R
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
-    color::Vector{T2}
-    group::GT1
-    reverse_bfs_orders::Vector{Vector{Tuple{T1,T1}}}
-    diagonal_indices::Vector{T1}
-    diagonal_nzind::Vector{T1}
-    lower_triangle_offsets::Vector{T1}
-    upper_triangle_offsets::Vector{T1}
+    color::Vector{T}
+    group::GT
+    reverse_bfs_orders::Vector{Vector{Tuple{T,T}}}
+    diagonal_indices::Vector{T}
+    diagonal_nzind::Vector{T}
+    lower_triangle_offsets::Vector{T}
+    upper_triangle_offsets::Vector{T}
     buffer::Vector{R}
 end
 
 function TreeSetColoringResult(
     A::AbstractMatrix,
-    ag::AdjacencyGraph{T1},
-    color::Vector{T2},
-    tree_set::TreeSet{T1},
+    ag::AdjacencyGraph{T},
+    color::Vector{<:Integer},
+    tree_set::TreeSet{<:Integer},
     decompression_eltype::Type{R},
-) where {T1<:Integer,T2<:Integer,R}
+) where {T<:Integer,R}
     (; reverse_bfs_orders) = tree_set
     (; S) = ag
     nvertices = length(color)
-    group = group_by_color(T1, color)
+    group = group_by_color(T, color)
     rv = rowvals(S)
 
     # Vector for the decompression of the diagonal coefficients
-    diagonal_indices = T1[]
-    diagonal_nzind = T1[]
+    diagonal_indices = T[]
+    diagonal_nzind = T[]
     ndiag = 0
 
     if has_diagonal(ag)
@@ -357,8 +355,8 @@ function TreeSetColoringResult(
 
     # Vectors for the decompression of the off-diagonal coefficients
     nedges = (nnz(S) - ndiag) ÷ 2
-    lower_triangle_offsets = Vector{T1}(undef, nedges)
-    upper_triangle_offsets = Vector{T1}(undef, nedges)
+    lower_triangle_offsets = Vector{T}(undef, nedges)
+    upper_triangle_offsets = Vector{T}(undef, nedges)
 
     # Index in lower_triangle_offsets and upper_triangle_offsets
     index_offsets = 0
@@ -433,39 +431,33 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct LinearSystemColoringResult{
-    M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:AdjacencyGraph{T1},
-    GT1<:AbstractGroups{T1},
-    R,
-    F,
+    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T},R,F
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
-    color::Vector{T2}
-    group::GT1
-    strict_upper_nonzero_inds::Vector{Tuple{T1,T1}}
+    color::Vector{T}
+    group::GT
+    strict_upper_nonzero_inds::Vector{Tuple{T,T}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
-    T_factorization::F  # TODO: adjust type
+    M_factorization::F  # TODO: adjust type
 end
 
 function LinearSystemColoringResult(
     A::AbstractMatrix,
-    ag::AdjacencyGraph{T1},
-    color::Vector{T2},
+    ag::AdjacencyGraph{T},
+    color::Vector{<:Integer},
     decompression_eltype::Type{R},
-) where {T1<:Integer,T2<:Integer,R<:Real}
-    group = group_by_color(T1, color)
+) where {T<:Integer,R<:Real}
+    group = group_by_color(T, color)
     C = length(group)  # ncolors
     S = ag.S
     rv = rowvals(S)
 
-    # build T such that T * strict_upper_nonzeros(A) = B
+    # build M such that M * strict_upper_nonzeros(A) = B
     # and solve a linear least-squares problem
     # only consider the strict upper triangle of A because of symmetry
     n = checksquare(S)
-    strict_upper_nonzero_inds = Tuple{T1,T1}[]
+    strict_upper_nonzero_inds = Tuple{T,T}[]
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rv[k]
@@ -474,22 +466,22 @@ function LinearSystemColoringResult(
     end
 
     # type annotated because JET was unhappy
-    T::SparseMatrixCSC = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
+    M::SparseMatrixCSC = spzeros(float(R), n * C, length(strict_upper_nonzero_inds))
     for (l, (i, j)) in enumerate(strict_upper_nonzero_inds)
         ci = color[i]
         cj = color[j]
         if ci > 0
             ki = (ci - 1) * n + j  # A[i, j] appears in B[j, ci]
-            T[ki, l] = 1
+            M[ki, l] = 1
         end
         if cj > 0
             kj = (cj - 1) * n + i  # A[i, j] appears in B[i, cj]
-            T[kj, l] = 1
+            M[kj, l] = 1
         end
     end
-    T_factorization = factorize(T)
+    M_factorization = factorize(M)
 
-    strict_upper_nonzeros_A = Vector{float(R)}(undef, size(T, 2))
+    strict_upper_nonzeros_A = Vector{float(R)}(undef, size(M, 2))
 
     return LinearSystemColoringResult(
         A,
@@ -498,7 +490,7 @@ function LinearSystemColoringResult(
         group,
         strict_upper_nonzero_inds,
         strict_upper_nonzeros_A,
-        T_factorization,
+        M_factorization,
     )
 end
 
@@ -575,11 +567,10 @@ $TYPEDFIELDS
 """
 struct BicoloringResult{
     M<:AbstractMatrix,
-    T1<:Integer,
-    T2<:Integer,
-    G<:AdjacencyGraph{T1},
+    T<:Integer,
+    G<:AdjacencyGraph{T},
     decompression,
-    GT1<:AbstractGroups{T1},
+    GT<:AbstractGroups{T},
     SR<:AbstractColoringResult{:symmetric,:column,decompression},
     R,
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
@@ -588,25 +579,25 @@ struct BicoloringResult{
     "augmented adjacency graph that was used for bicoloring"
     abg::G
     "one integer color for each column"
-    column_color::Vector{T2}
+    column_color::Vector{T}
     "one integer color for each row"
-    row_color::Vector{T2}
+    row_color::Vector{T}
     "color groups for columns"
-    column_group::GT1
+    column_group::GT
     "color groups for rows"
-    row_group::GT1
+    row_group::GT
     "result for the coloring of the symmetric 2 x 2 block matrix"
     symmetric_result::SR
     "maps symmetric colors to column colors"
-    symmetric_to_column::Vector{T1}
+    symmetric_to_column::Vector{T}
     "maps symmetric colors to row colors"
-    symmetric_to_row::Vector{T1}
+    symmetric_to_row::Vector{T}
     "combination of `Br` and `Bc` (almost a concatenation up to color remapping)"
     Br_and_Bc::Matrix{R}
     "CSC storage of `A_and_noAᵀ - `colptr`"
-    large_colptr::Vector{T1}
+    large_colptr::Vector{T}
     "CSC storage of `A_and_noAᵀ - `rowval`"
-    large_rowval::Vector{T1}
+    large_rowval::Vector{T}
 end
 
 column_colors(result::BicoloringResult) = result.column_color

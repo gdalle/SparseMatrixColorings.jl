@@ -23,6 +23,7 @@ end
 
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
+Base.eltype(::SparsityPatternCSC{Ti}) where {Ti} = Ti
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
 Base.size(S::SparsityPatternCSC, d::Integer) = d::Integer <= 2 ? size(S)[d] : 1
 Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
@@ -227,6 +228,8 @@ struct AdjacencyGraph{T<:Integer,has_diagonal}
     edge_to_index::Vector{T}
 end
 
+Base.eltype(::AdjacencyGraph{T}) where {T} = T
+
 function AdjacencyGraph(
     S::SparsityPatternCSC{T},
     edge_to_index::Vector{T}=build_edge_to_index(S);
@@ -342,6 +345,8 @@ struct BipartiteGraph{T<:Integer}
     S1::SparsityPatternCSC{T}
     S2::SparsityPatternCSC{T}
 end
+
+Base.eltype(::BipartiteGraph{T}) where {T} = T
 
 function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
     return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)

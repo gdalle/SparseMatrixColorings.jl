@@ -65,7 +65,10 @@ julia> column_colors(result)
 - [`ADTypes.row_coloring`](@extref ADTypes.row_coloring)
 """
 struct ConstantColoringAlgorithm{
-    partition,M<:AbstractMatrix,T,R<:AbstractColoringResult{:nonsymmetric,partition,:direct}
+    partition,
+    M<:AbstractMatrix,
+    T<:Integer,
+    R<:AbstractColoringResult{:nonsymmetric,partition,:direct},
 } <: ADTypes.AbstractColoringAlgorithm
     matrix_template::M
     color::Vector{T}
@@ -77,7 +80,7 @@ function ConstantColoringAlgorithm{:column}(
 )
     bg = BipartiteGraph(matrix_template)
     result = ColumnColoringResult(matrix_template, bg, color)
-    T, M, R = eltype(color), typeof(matrix_template), typeof(result)
+    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
     return ConstantColoringAlgorithm{:column,M,T,R}(matrix_template, color, result)
 end
 
@@ -86,7 +89,7 @@ function ConstantColoringAlgorithm{:row}(
 )
     bg = BipartiteGraph(matrix_template)
     result = RowColoringResult(matrix_template, bg, color)
-    T, M, R = eltype(color), typeof(matrix_template), typeof(result)
+    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
     return ConstantColoringAlgorithm{:row,M,T,R}(matrix_template, color, result)
 end
 

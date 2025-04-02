@@ -87,7 +87,7 @@ function star_coloring(
     first_neighbor = fill((zero(T), zero(T), zero(T)), nv)  # at first no neighbors have been encountered
     treated = zeros(T, nv)
     star = Vector{T}(undef, ne)
-    hub = Int[]  # one hub for each star, including the trivial ones
+    hub = T[]  # one hub for each star, including the trivial ones
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
