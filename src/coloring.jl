@@ -87,7 +87,9 @@ function star_coloring(
     first_neighbor = fill((zero(T), zero(T), zero(T)), nv)  # at first no neighbors have been encountered
     treated = zeros(T, nv)
     star = Vector{T}(undef, ne)
-    hub = T[]  # one hub for each star, including the trivial ones
+    # duplicate the hub for non-trivial star -- store both vertices for trivial stars
+    # we always use the first component of the tuple as the hub for decompression
+    hub = Tuple{T,T}[]
     vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
@@ -108,7 +110,8 @@ function star_coloring(
                 for (x, index_wx) in neighbors_with_edge_indices(g, w)
                     !has_diagonal(g) || (w == x && continue)
                     (x == v || iszero(color[x])) && continue
-                    if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
+                    (h, h2) = hub[star[index_wx]]
+                    if (h == h2) && (x == h) # potential Case 2 (which is always false for trivial stars with undefined hub)
                         forbidden_colors[color[x]] = v
                     end
                 end
@@ -153,7 +156,7 @@ end
 function _update_stars!(
     # modified
     star::AbstractVector{<:Integer},
-    hub::AbstractVector{<:Integer},
+    hub::AbstractVector{<:Tuple},
     # not modified
     g::AdjacencyGraph,
     v::Integer,
@@ -168,7 +171,7 @@ function _update_stars!(
             !has_diagonal(g) || (w == x && continue)
             if x != v && color[x] == color[v]  # vw, wx ∈ E
                 star_wx = star[index_wx]
-                hub[star_wx] = w  # this may already be true
+                hub[star_wx] = (w, w)  # this may already be true
                 star[index_vw] = star_wx
                 x_exists = true
                 break
@@ -178,10 +181,10 @@ function _update_stars!(
             (p, q, index_pq) = first_neighbor[color[w]]
             if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
                 star_vq = star[index_pq]
-                hub[star_vq] = v  # this may already be true
+                hub[star_vq] = (v, v)  # this may already be true
                 star[index_vw] = star_vq
             else  # vw forms a new star
-                push!(hub, -max(v, w))  # star is trivial (composed only of two vertices) so we set the hub to a negative value, but it allows us to choose one of the two vertices
+                push!(hub, (v, w))  # star is trivial (composed only of two vertices)
                 star[index_vw] = length(hub)
             end
         end
@@ -201,8 +204,8 @@ $TYPEDFIELDS
 struct StarSet{T}
     "a mapping from edges (pair of vertices) to their star index"
     star::Vector{T}
-    "a mapping from star indices to their hub (undefined hubs for single-edge stars are the negative value of one of the vertices, picked arbitrarily)"
-    hub::Vector{T}
+    "a mapping from star indices to their hub"
+    hub::Vector{Tuple{T,T}}
 end
 
 """
@@ -546,9 +549,8 @@ function postprocess!(
         nb_trivial_stars = 0
 
         # Iterate through all non-trivial stars
-        for s in eachindex(hub)
-            h = hub[s]
-            if h > 0
+        for (h, h2) in hub
+            if h == h2
                 color_used[color[h]] = true
             else
                 nb_trivial_stars += 1
@@ -557,25 +559,15 @@ function postprocess!(
 
         # Process the trivial stars (if any)
         if nb_trivial_stars > 0
-            rvS = rowvals(S)
-            for j in axes(S, 2)
-                for k in nzrange(S, j)
-                    i = rvS[k]
-                    if i > j
-                        index_ij = edge_to_index[k]
-                        s = star[index_ij]
-                        h = hub[s]
-                        if h < 0
-                            h = abs(h)
-                            spoke = h == j ? i : j
-                            if color_used[color[spoke]]
-                                # Switch the hub and the spoke to possibly avoid adding one more used color
-                                hub[s] = spoke
-                            else
-                                # Keep the current hub
-                                color_used[color[h]] = true
-                            end
-                        end
+            for s in eachindex(hub)
+                (h, h2) = hub[s]
+                if h != h2
+                    if color_used[color[h2]]
+                        # Switch the hub and the spoke to possibly avoid adding one more used color
+                        hub[s] = (h2, h)
+                    else
+                        # Keep the current hub
+                        color_used[color[h]] = true
                     end
                 end
             end

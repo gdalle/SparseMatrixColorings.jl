@@ -273,9 +273,7 @@ function StarSetColoringResult(
                 # off-diagonal coefficients
                 index_ij = edge_to_index[k]
                 s = star[index_ij]
-                h = abs(hub[s])
-
-                # Assign the non-hub vertex (spoke) to the correct position in spokes
+                h, _ = hub[s]
                 if i == h
                     # i is the hub and j is the spoke
                     c = color[i]
