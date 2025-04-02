@@ -376,7 +376,7 @@ struct TreeSet{T}
     is_star::Vector{Bool}
 end
 
-function TreeSet(g::AdjacencyGraph{T}, forest::Forest) where {T}
+function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
