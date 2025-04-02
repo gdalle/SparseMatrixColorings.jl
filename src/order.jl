@@ -146,9 +146,8 @@ function DegreeBuckets(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
     # bucket limits
     bucket_high = accumulate(+, deg_count)
     bucket_low = similar(bucket_high)
-    bucket_low[1] = 0
-    bucket_low[2:end] .= bucket_high[1:(end - 1)]
-    bucket_low .+= 1
+    bucket_low[1] = 1
+    bucket_low[2:end] .= @view(bucket_high[1:(end - 1)]) .+ 1
     # assign each vertex to the correct position inside its degree class
     bucket_storage = similar(degrees, T)
     positions = similar(degrees, T)
@@ -379,4 +378,15 @@ The `elimination_algorithm` must be an instance of `CliqueTrees.EliminationAlgor
 """
 struct PerfectEliminationOrder{E} <: AbstractOrder
     elimination_algorithm::E
+end
+
+function all_orders()
+    return [
+        NaturalOrder(),
+        RandomOrder(),
+        LargestFirst(),
+        SmallestLast(),
+        IncidenceDegree(),
+        DynamicLargestFirst(),
+    ]
 end

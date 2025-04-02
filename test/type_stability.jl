@@ -3,7 +3,7 @@ using JET
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: matrix_versions, respectful_similar
+using SparseMatrixColorings: matrix_versions, respectful_similar, all_orders
 using StableRNGs
 using Test
 
@@ -178,7 +178,7 @@ end;
         (:nonsymmetric, :bidirectional, :direct),
         (:nonsymmetric, :bidirectional, :substitution),
     ]
-        for order in (NaturalOrder(), RandomOrder(), LargestFirst(), DynamicLargestFirst())
+        @testset for order in all_orders()
             result = coloring(
                 A,
                 ColoringProblem(; structure, partition),
