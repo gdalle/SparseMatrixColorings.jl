@@ -144,7 +144,7 @@ function DegreeBuckets(::Type{T}, degrees::Vector{<:Integer}, dmax::Integer) whe
         deg_count[d + 1] += 1
     end
     # bucket limits
-    bucket_high = cumsum(deg_count)
+    bucket_high = convert(Vector{T}, cumsum(deg_count))
     bucket_low = vcat(zero(T), @view(bucket_high[1:(end - 1)]))
     bucket_low .+= 1
     # assign each vertex to the correct position inside its degree class
@@ -253,7 +253,7 @@ function vertices(
     if degree_increasing(; degtype, direction)
         degrees = zeros(T, nb_vertices(g))
     else
-        degrees = [degree(g, v) for v in vertices(g)]
+        degrees = T[degree(g, v) for v in vertices(g)]
     end
     db = DegreeBuckets(T, degrees, maximum_degree(g))
     π = T[]
