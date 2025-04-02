@@ -91,6 +91,7 @@ end
     ])
 
     bg = BipartiteGraph(A; symmetric_pattern=false)
+    @test eltype(bg) == Int
     @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 8
