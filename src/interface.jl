@@ -306,7 +306,9 @@ function _coloring(
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
         return BicoloringResult(A, ag, symmetric_result, R)
     else
-        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        row_color, column_color, _ = remap_colors(
+            eltype(ag), color, maximum(color), size(A)...
+        )
         return row_color, column_color
     end
 end
@@ -326,7 +328,9 @@ function _coloring(
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
         return BicoloringResult(A, ag, symmetric_result, R)
     else
-        row_color, column_color, _ = remap_colors(color, maximum(color), size(A)...)
+        row_color, column_color, _ = remap_colors(
+            eltype(ag), color, maximum(color), size(A)...
+        )
         return row_color, column_color
     end
 end
