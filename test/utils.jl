@@ -86,6 +86,18 @@ function test_coloring_decompression(
             @test decompress(B, result) ≈ A0  # check result wasn't modified
             @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
             @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+            if decompression == :direct && A isa SparseMatrixCSC
+                A_bigger = respectful_similar(A, eltype(B))
+                for _ in 1:10
+                    nb_coeffs_added = rand(1:minimum(size(A)))
+                    for _ in nb_coeffs_added
+                        i = rand(axes(A, 1))
+                        j = rand(axes(A, 2))
+                        A_bigger[i, j] = one(eltype(B))
+                    end
+                    @test decompress!(A_bigger, B, result) ≈ A0
+                end
+            end
         end
 
         @testset "Single-color decompression" begin

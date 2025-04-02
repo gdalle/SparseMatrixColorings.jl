@@ -61,25 +61,24 @@ function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
     return respectful_similar(sparse(A), T)
 end
 
-"""
-    same_pattern(A, B)
-
-Perform a partial equality check on the sparsity patterns of `A` and `B`:
-
-- if the return is `true`, they might have the same sparsity pattern but we're not sure
-- if the return is `false`, they definitely don't have the same sparsity pattern
-"""
-same_pattern(A, B) = size(A) == size(B)
-
-function same_pattern(
-    A::Union{SparseMatrixCSC,SparsityPatternCSC},
-    B::Union{SparseMatrixCSC,SparsityPatternCSC},
-)
-    return size(A) == size(B) && nnz(A) == nnz(B)
+same_pattern(A::AbstractMatrix, S; allow_superset::Bool=false) = true
+function same_pattern(A::SparseMatrixCSC, S; allow_superset::Bool=false)
+    return allow_superset ? nnz(A) >= nnz(S) : nnz(A) == nnz(S)
 end
 
-function check_same_pattern(A, S)
-    if !same_pattern(A, S)
-        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+function check_same_pattern(A, S; allow_superset::Bool=false)
+    if size(A) != size(S)
+        throw(
+            DimensionMismatch(
+                "Decompression target must have the same size as sparsity  pattern"
+            ),
+        )
+    elseif !same_pattern(A, S; allow_superset)
+        throw(
+            DimensionMismatch(
+                """Decompression target must $(allow_superset ? "contain the nonzeros of the sparsity pattern" : "be equal to the sparsity pattern") used for coloring""",
+            ),
+        )
     end
+    return true
 end

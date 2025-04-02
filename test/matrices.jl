@@ -48,5 +48,8 @@ end
     @test !same_pattern(A2, S)
     @test same_pattern(Matrix(A2), S)
 
+    @test_throws DimensionMismatch check_same_pattern(vcat(A1, A1), S)
     @test_throws DimensionMismatch check_same_pattern(A2, S)
+    @test check_same_pattern(A1, S; allow_superset=true)
+    @test check_same_pattern(A2, S; allow_superset=true)
 end

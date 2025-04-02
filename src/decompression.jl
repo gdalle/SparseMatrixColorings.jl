@@ -189,6 +189,8 @@ The out-of-place alternative is [`decompress`](@ref).
 
 !!! note
     In-place decompression is faster when `A isa SparseMatrixCSC`.
+      - In general, this case requires the sparsity pattern of `A` to match the sparsity pattern `S` from which the coloring result was computed.
+      - For a coloring result with `decompression=:direct`, we also allow _full_ decompression into an `A` whose sparsity pattern is a strict superset of `S`.
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
@@ -356,10 +358,25 @@ end
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
     (; compressed_indices) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    check_same_pattern(A, S; allow_superset=true)
     nzA = nonzeros(A)
-    for k in eachindex(nzA, compressed_indices)
-        nzA[k] = B[compressed_indices[k]]
+    if nnz(A) == nnz(S)
+        for k in eachindex(compressed_indices)
+            nzA[k] = B[compressed_indices[k]]
+        end
+    else  # nnz(A) > nnz(Z)
+        fill!(nonzeros(A), zero(eltype(A)))
+        rvA, rvS = rowvals(A), rowvals(S)
+        shift = 0
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                    shift += 1
+                end
+                nzA[k + shift] = B[compressed_indices[k]]
+            end
+        end
     end
     return A
 end
@@ -418,10 +435,25 @@ end
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
     (; compressed_indices) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    check_same_pattern(A, S; allow_superset=true)
     nzA = nonzeros(A)
-    for k in eachindex(nzA, compressed_indices)
-        nzA[k] = B[compressed_indices[k]]
+    if nnz(A) == nnz(S)
+        for k in eachindex(nzA, compressed_indices)
+            nzA[k] = B[compressed_indices[k]]
+        end
+    else  # nnz(A) > nnz(S)
+        fill!(nonzeros(A), zero(eltype(A)))
+        rvA, rvS = rowvals(A), rowvals(S)
+        shift = 0
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                    shift += 1
+                end
+                nzA[k + shift] = B[compressed_indices[k]]
+            end
+        end
     end
     return A
 end
@@ -492,9 +524,24 @@ function decompress!(
     (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
-        check_same_pattern(A, S)
-        for k in eachindex(nzA, compressed_indices)
-            nzA[k] = B[compressed_indices[k]]
+        check_same_pattern(A, S; allow_superset=true)
+        if nnz(A) == nnz(S)
+            for k in eachindex(nzA, compressed_indices)
+                nzA[k] = B[compressed_indices[k]]
+            end
+        else  # nnz(A) > nnz(S)
+            fill!(nonzeros(A), zero(eltype(A)))
+            rvA, rvS = rowvals(A), rowvals(S)
+            shift = 0
+            for j in axes(S, 2)
+                for k in nzrange(S, j)
+                    i = rvS[k]
+                    while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                        shift += 1
+                    end
+                    nzA[k + shift] = B[compressed_indices[k]]
+                end
+            end
         end
     else
         rvS = rowvals(S)
