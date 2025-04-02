@@ -210,39 +210,39 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
     low, high = bucket_low[d + 1], bucket_high[d + 1]
     # select previous or next bucket for the move
     if degree_increasing(; degtype, direction)
-        # put v at the end of its bucket by swapping
+        # move the vertex w located at the end of the current bucket to v's position
         w = bucket_storage[high]
         bucket_storage[p] = w
-        bucket_storage[high] = v
         positions[w] = p
-        positions[v] = high
-        # move v to the beginning of the next bucket (mind the gap)
+        # shrink current bucket from the right
+        # morally we put v at the end and then ignore it
+        bucket_high[d + 1] -= 1
+        # move v to the beginning of the next bucket (!= ColPack)
         d_new = d + 1
         low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
         bucket_storage[low_new - 1] = v
-        # update v stats
+        # grow next bucket to the left
+        bucket_low[d_new + 1] -= 1
+        # update v's stats
         degrees[v] = d_new
         positions[v] = low_new - 1
-        # grow next bucket to the left, shrink current one from the right
-        bucket_low[d_new + 1] -= 1
-        bucket_high[d + 1] -= 1
     else
-        # put v at the beginning of its bucket by swapping
+        # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
         w = bucket_storage[low]
         bucket_storage[p] = w
-        bucket_storage[low] = v
         positions[w] = p
-        positions[v] = low
-        # move v to the end of the previous bucket (mind the gap)
+        # shrink current bucket from the left
+        # morally we put v at the start and then ignore it
+        bucket_low[d + 1] += 1
+        # move v to the end of the previous bucket
         d_new = d - 1
         low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
         bucket_storage[high_new + 1] = v
-        # update v stats
+        # grow previous bucket to the right
+        bucket_high[d_new + 1] += 1
+        # update v's stats
         degrees[v] = d_new
         positions[v] = high_new + 1
-        # grow previous bucket to the right, shrink current one from the left
-        bucket_high[d_new + 1] += 1
-        bucket_low[d + 1] += 1
     end
     return nothing
 end
