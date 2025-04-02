@@ -3,7 +3,7 @@ using JET
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: matrix_versions, respectful_similar
+using SparseMatrixColorings: matrix_versions, respectful_similar, all_orders
 using StableRNGs
 using Test
 
@@ -178,25 +178,27 @@ end;
         (:nonsymmetric, :bidirectional, :direct),
         (:nonsymmetric, :bidirectional, :substitution),
     ]
-        result = coloring(
-            A,
-            ColoringProblem(; structure, partition),
-            GreedyColoringAlgorithm(; decompression);
-        )
-        if partition in (:column, :bidirectional)
-            @test eltype(column_colors(result)) == Int32
-            @test eltype(column_groups(result)[1]) == Int32
-        end
-        if partition in (:row, :bidirectional)
-            @test eltype(row_colors(result)) == Int32
-            @test eltype(row_groups(result)[1]) == Int32
-        end
-        if partition == :bidirectional
-            Br, Bc = compress(A, result)
-            @test decompress(Br, Bc, result) isa SparseMatrixCSC{Float32,Int32}
-        else
-            B = compress(A, result)
-            @test decompress(B, result) isa SparseMatrixCSC{Float32,Int32}
+        @testset for order in all_orders()
+            result = coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression);
+            )
+            if partition in (:column, :bidirectional)
+                @test eltype(column_colors(result)) == Int32
+                @test eltype(column_groups(result)[1]) == Int32
+            end
+            if partition in (:row, :bidirectional)
+                @test eltype(row_colors(result)) == Int32
+                @test eltype(row_groups(result)[1]) == Int32
+            end
+            if partition == :bidirectional
+                Br, Bc = compress(A, result)
+                @test decompress(Br, Bc, result) isa SparseMatrixCSC{Float32,Int32}
+            else
+                B = compress(A, result)
+                @test decompress(B, result) isa SparseMatrixCSC{Float32,Int32}
+            end
         end
     end
 end
