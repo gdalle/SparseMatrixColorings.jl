@@ -550,8 +550,6 @@ function remap_colors(
     return row_color, column_color, symmetric_to_row, symmetric_to_column
 end
 
-remap_colors(color, num_sym_colors, m, n) = remap_colors(Int, color, num_sym_colors, m, n)
-
 """
 $TYPEDEF
 
