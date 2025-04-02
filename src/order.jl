@@ -137,15 +137,17 @@ struct DegreeBuckets{T}
     positions::Vector{T}
 end
 
-function DegreeBuckets(::Type{T}, degrees::Vector{<:Integer}, dmax::Integer) where {T}
+function DegreeBuckets(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
     # number of vertices per degree class
     deg_count = zeros(T, dmax + 1)
     for d in degrees
         deg_count[d + 1] += 1
     end
     # bucket limits
-    bucket_high = convert(Vector{T}, cumsum(deg_count))
-    bucket_low = vcat(zero(T), @view(bucket_high[1:(end - 1)]))
+    bucket_high = accumulate(+, deg_count)
+    bucket_low = similar(bucket_high)
+    bucket_low[1] = 0
+    bucket_low[2:end] .= bucket_high[1:(end - 1)]
     bucket_low .+= 1
     # assign each vertex to the correct position inside its degree class
     bucket_storage = similar(degrees, T)
