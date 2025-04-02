@@ -23,7 +23,7 @@ end
 
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
-Base.eltype(::SparsityPatternCSC{Ti}) where {Ti} = Ti
+Base.eltype(::SparsityPatternCSC{Ti}) where {T} = T
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
 Base.size(S::SparsityPatternCSC, d::Integer) = d::Integer <= 2 ? size(S)[d] : 1
 Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
