@@ -61,24 +61,18 @@ function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
     return respectful_similar(sparse(A), T)
 end
 
-same_pattern(A::AbstractMatrix, S; allow_superset::Bool=false) = true
-function same_pattern(A::SparseMatrixCSC, S; allow_superset::Bool=false)
-    return allow_superset ? nnz(A) >= nnz(S) : nnz(A) == nnz(S)
+same_pattern(A::AbstractMatrix, S; allow_denser::Bool=false) = true
+function same_pattern(A::SparseMatrixCSC, S; allow_denser::Bool=false)
+    return allow_denser ? nnz(A) >= nnz(S) : nnz(A) == nnz(S)
 end
 
-function check_same_pattern(A, S; allow_superset::Bool=false)
+function check_same_pattern(A, S; allow_denser::Bool=false)
     if size(A) != size(S)
-        throw(
-            DimensionMismatch(
-                "Decompression target must have the same size as sparsity  pattern"
-            ),
-        )
-    elseif !same_pattern(A, S; allow_superset)
-        throw(
-            DimensionMismatch(
-                """Decompression target must $(allow_superset ? "contain the nonzeros of the sparsity pattern" : "be equal to the sparsity pattern") used for coloring""",
-            ),
-        )
+        msg = "Decompression target must have the same size as the sparsity pattern used for coloring"
+        throw(DimensionMismatch(msg))
+    elseif !same_pattern(A, S; allow_denser)
+        msg = """Decompression target must have $(allow_denser ? "at least" : "exactly") as many nonzeros as the sparsity pattern used for coloring"""
+        throw(DimensionMismatch(msg))
     end
     return true
 end

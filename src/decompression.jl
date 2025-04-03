@@ -189,14 +189,24 @@ The out-of-place alternative is [`decompress`](@ref).
 
 !!! note
     In-place decompression is faster when `A isa SparseMatrixCSC`.
-      - In general, this case requires the sparsity pattern of `A` to match the sparsity pattern `S` from which the coloring result was computed.
-      - For a coloring result with `decompression=:direct`, we also allow _full_ decompression into an `A` whose sparsity pattern is a strict superset of `S`.
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
 
+# Details
+
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
+
+Some coloring algorithms ([`GreedyColoringAlgorithm`](@ref) and [`ConstantColoringAlgorithm`](@ref)) have an option called `allow_denser`, which enables in-place decompression into a `SparseMatrixCSC` containing more structural nonzeros than the sparsity pattern used for coloring.
+
+!!! warning
+    Decompression into a denser `SparseMatrixCSC` is only implemented when all the conditions below are satisfied simultaneously:
+      - the partition is `:row` or `:column` (not `:bidirectional`)
+      - the decompression is `:direct` (not `:substitution`)
+      - the decompression is full (so [`decompress_single_color!`](@ref) will not work)
+    
+    Outside of these cases, it is up to the user to make sure that the sparsity pattern of the decompression target is an exact match. 
 
 # Example
 
@@ -211,6 +221,8 @@ julia> A = sparse([
        ]);
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
+
+julia> result_tolerant = coloring(A, ColoringProblem(), GreedyColoringAlgorithm(; allow_denser=true));
 
 julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
@@ -227,6 +239,8 @@ julia> B = compress(A, result)
 
 julia> A2 = similar(A);
 
+julia> A3 = similar(A); A3[1, 1] = A3[end, end] = 1;
+
 julia> decompress!(A2, B, result)
 4×6 SparseMatrixCSC{Int64, Int64} with 9 stored entries:
  ⋅  ⋅  4  6  ⋅  9
@@ -235,6 +249,16 @@ julia> decompress!(A2, B, result)
  ⋅  3  5  ⋅  ⋅  ⋅
 
 julia> A2 == A
+true
+
+julia> decompress!(A3, B, result_tolerant)
+4×6 SparseMatrixCSC{Int64, Int64} with 11 stored entries:
+ 0  ⋅  4  6  ⋅  9
+ 1  ⋅  ⋅  ⋅  7  ⋅
+ ⋅  2  ⋅  ⋅  8  ⋅
+ ⋅  3  5  ⋅  ⋅  0
+
+julia> A3 == A
 true
 ```
 
@@ -259,6 +283,8 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
+
+# Details
 
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
@@ -356,27 +382,28 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
-    (; compressed_indices) = result
+    (; compressed_indices, allow_denser) = result
     S = result.bg.S2
-    check_same_pattern(A, S; allow_superset=true)
+    check_same_pattern(A, S; allow_denser)
     nzA = nonzeros(A)
     if nnz(A) == nnz(S)
         for k in eachindex(compressed_indices)
             nzA[k] = B[compressed_indices[k]]
         end
-    else  # nnz(A) > nnz(Z)
-        fill!(nonzeros(A), zero(eltype(A)))
+    else  # nnz(A) > nnz(S)
         rvA, rvS = rowvals(A), rowvals(S)
         shift = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rvS[k]
                 while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                    nzA[k + shift] = zero(eltype(A))
                     shift += 1
                 end
                 nzA[k + shift] = B[compressed_indices[k]]
             end
         end
+        nzA[(nnz(S) + shift + 1):end] .= zero(eltype(A))
     end
     return A
 end
@@ -433,27 +460,28 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
-    (; compressed_indices) = result
+    (; compressed_indices, allow_denser) = result
     S = result.bg.S2
-    check_same_pattern(A, S; allow_superset=true)
+    check_same_pattern(A, S; allow_denser)
     nzA = nonzeros(A)
     if nnz(A) == nnz(S)
         for k in eachindex(nzA, compressed_indices)
             nzA[k] = B[compressed_indices[k]]
         end
     else  # nnz(A) > nnz(S)
-        fill!(nonzeros(A), zero(eltype(A)))
         rvA, rvS = rowvals(A), rowvals(S)
         shift = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rvS[k]
                 while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                    nzA[k + shift] = zero(eltype(A))
                     shift += 1
                 end
                 nzA[k + shift] = B[compressed_indices[k]]
             end
         end
+        nzA[(nnz(S) + shift + 1):end] .= zero(eltype(A))
     end
     return A
 end
@@ -520,39 +548,53 @@ end
 function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, compressed_indices) = result
+    (; ag, compressed_indices, allow_denser) = result
     (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
-        check_same_pattern(A, S; allow_superset=true)
+        check_same_pattern(A, S; allow_denser)
         if nnz(A) == nnz(S)
             for k in eachindex(nzA, compressed_indices)
                 nzA[k] = B[compressed_indices[k]]
             end
         else  # nnz(A) > nnz(S)
-            fill!(nonzeros(A), zero(eltype(A)))
             rvA, rvS = rowvals(A), rowvals(S)
             shift = 0
             for j in axes(S, 2)
                 for k in nzrange(S, j)
                     i = rvS[k]
                     while (k + shift) < A.colptr[j] || rvA[k + shift] < i
+                        nzA[k + shift] = zero(eltype(A))
                         shift += 1
                     end
                     nzA[k + shift] = B[compressed_indices[k]]
                 end
             end
+            nzA[(nnz(S) + shift + 1):end] .= zero(eltype(A))
         end
     else
-        rvS = rowvals(S)
+        rvA, rvS = rowvals(A), rowvals(S)
         l = 0  # assume A has the same pattern as the triangle
+        shift = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rvS[k]
                 if in_triangle(i, j, uplo)
                     l += 1
-                    nzA[l] = B[compressed_indices[k]]
+                    while (l + shift) < A.colptr[j] || rvA[l + shift] < i
+                        nzA[l + shift] = zero(eltype(A))
+                        shift += 1
+                    end
+                    nzA[l + shift] = B[compressed_indices[k]]
                 end
+            end
+            nzA[(l + shift + 1):end] .= zero(eltype(A))
+            if !allow_denser && shift > 0
+                throw(
+                    DimensionMismatch(
+                        "Decompression target must have exactly as many nonzeros as the sparsity pattern used for coloring",
+                    ),
+                )
             end
         end
     end
@@ -796,7 +838,8 @@ end
 function decompress!(
     A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
-    (; large_colptr, large_rowval, symmetric_result) = result
+    (; S, large_colptr, large_rowval, symmetric_result) = result
+    check_same_pattern(A, S)
     m, n = size(A)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
     # pretend A is larger

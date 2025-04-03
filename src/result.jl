@@ -158,10 +158,12 @@ struct ColumnColoringResult{
     group::GT
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
     compressed_indices::Vector{T}
+    "whether to allow full decompression into a `SparseMatrixCSC` with a strictly larger sparsity pattern"
+    allow_denser::Bool
 end
 
 function ColumnColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}; allow_denser::Bool
 ) where {T<:Integer}
     S = bg.S2
     group = group_by_color(T, color)
@@ -176,7 +178,7 @@ function ColumnColoringResult(
             compressed_indices[k] = (c - 1) * n + i
         end
     end
-    return ColumnColoringResult(A, bg, color, group, compressed_indices)
+    return ColumnColoringResult(A, bg, color, group, compressed_indices, allow_denser)
 end
 
 """
@@ -202,10 +204,11 @@ struct RowColoringResult{
     color::Vector{T}
     group::GT
     compressed_indices::Vector{T}
+    allow_denser::Bool
 end
 
 function RowColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}; allow_denser::Bool
 ) where {T<:Integer}
     S = bg.S2
     group = group_by_color(T, color)
@@ -220,7 +223,7 @@ function RowColoringResult(
             compressed_indices[k] = (j - 1) * C + c
         end
     end
-    return RowColoringResult(A, bg, color, group, compressed_indices)
+    return RowColoringResult(A, bg, color, group, compressed_indices, allow_denser)
 end
 
 """
@@ -247,13 +250,15 @@ struct StarSetColoringResult{
     group::GT
     star_set::StarSet{T}
     compressed_indices::Vector{T}
+    allow_denser::Bool
 end
 
 function StarSetColoringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph{T},
     color::Vector{<:Integer},
-    star_set::StarSet{<:Integer},
+    star_set::StarSet{<:Integer};
+    allow_denser::Bool,
 ) where {T<:Integer}
     (; star, hub) = star_set
     S = pattern(ag)
@@ -289,7 +294,9 @@ function StarSetColoringResult(
         end
     end
 
-    return StarSetColoringResult(A, ag, color, group, star_set, compressed_indices)
+    return StarSetColoringResult(
+        A, ag, color, group, star_set, compressed_indices, allow_denser
+    )
 end
 
 """
@@ -574,6 +581,8 @@ struct BicoloringResult{
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,decompression}
     "matrix that was colored"
     A::M
+    "sparsity pattern of `A`"
+    S::SparsityPatternCSC{T}
     "augmented adjacency graph that was used for bicoloring"
     abg::G
     "one integer color for each column"
@@ -606,6 +615,7 @@ row_groups(result::BicoloringResult) = result.row_group
 
 function BicoloringResult(
     A::AbstractMatrix,
+    S::SparsityPatternCSC{T},
     ag::AdjacencyGraph{T},
     symmetric_result::AbstractColoringResult{:symmetric,:column},
     decompression_eltype::Type{R},
@@ -624,6 +634,7 @@ function BicoloringResult(
     large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
     return BicoloringResult(
         A,
+        S,
         ag,
         column_color,
         row_color,
