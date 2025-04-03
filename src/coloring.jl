@@ -391,7 +391,7 @@ function TreeSet(
     nt = forest.num_trees
 
     # root_to_tree is a vector that maps a tree's root to the index of the tree
-    # We can recycle forest.ranks because we don't need anymore to merge trees
+    # We can recycle forest.ranks because we don't need it anymore to merge trees
     root_to_tree = forest.ranks
     fill!(root_to_tree, zero(T))
 
