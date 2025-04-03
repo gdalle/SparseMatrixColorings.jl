@@ -89,8 +89,14 @@ end;
 end;
 
 @testset "Dynamic degree-based orders" begin
-    @testset "$order" for order in
-                          [SmallestLast(), IncidenceDegree(), DynamicLargestFirst()]
+    @testset "$order" for order in [
+        SmallestLast(),
+        SmallestLast(; reproduce_colpack=true),
+        IncidenceDegree(),
+        IncidenceDegree(; reproduce_colpack=true),
+        DynamicLargestFirst(),
+        DynamicLargestFirst(; reproduce_colpack=true),
+    ]
         @testset "AdjacencyGraph" begin
             for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
                 yield()
