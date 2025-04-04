@@ -104,28 +104,40 @@ function vertices(bg::BipartiteGraph{T}, ::Val{side}, ::LargestFirst) where {T,s
     return sort(vertices(bg, Val(side)); by=criterion, rev=true)
 end
 
+const COLPACK_WARNING = """
+!!! danger
+    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
+    This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
+"""
+
 """
     DynamicDegreeBasedOrder{degtype,direction}(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically computed degree.
+
+This order works by assigning vertices to buckets based on their dynamic degree, and then updating buckets iteratively by transfering vertices between them.
 
 # Type parameters
 
 - `degtype::Symbol`: can be `:forward` (for the forward degree) or `:back` (for the back degree)
 - `direction::Symbol`: can be `:low2high` (if the order is defined from lowest to highest, i.e. `1` to `n`) or `:high2low` (if the order is defined from highest to lowest, i.e. `n` to `1`)
 
-# Settings
-
-- `reproduce_colpack::Bool`: whether to manage the buckets in the exact same way as the original ColPack implementation. When `reproduce_colpack=true`, we always append and remove vertices from the end of a bucket, which incurs a significant performance penalty because every modification requires a circular permutation of the corresponding bucket. This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
-
-!!! danger
-    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
-
 # Concrete variants
 
 - [`IncidenceDegree`](@ref)
 - [`SmallestLast`](@ref)
 - [`DynamicLargestFirst`](@ref)
+
+# Settings
+
+- `reproduce_colpack::Bool`: whether to manage the buckets in the exact same way as the original ColPack implementation.
+  - When `reproduce_colpack=true`, we always append and remove vertices at the end of a bucket (unilateral).
+  - When `reproduce_colpack=false` (the default), we can append and remove vertices either at the start or at the end of a bucket (bilateral).
+
+Allowing modifications on both sides of a bucket enables storage optimization, with a single fixed-size vector for all buckets instead of one dynamically-sized vector per bucket.
+Our implementation is optimized for this bilateral setting, which means we pay a large performance penalty to artificially imitate the unilateral setting.
+
+$COLPACK_WARNING
 
 # References
 
@@ -391,8 +403,7 @@ end
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic back degree.
 
-!!! danger
-    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
+$COLPACK_WARNING
 
 # See also
 
@@ -405,8 +416,7 @@ const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest using the dynamic back degree.
 
-!!! danger
-    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
+$COLPACK_WARNING
 
 # See also
 
@@ -419,8 +429,7 @@ const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic forward degree.
 
-!!! danger
-    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
+$COLPACK_WARNING
 
 # See also
     
