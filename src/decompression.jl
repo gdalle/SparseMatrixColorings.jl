@@ -204,7 +204,7 @@ Some coloring algorithms ([`GreedyColoringAlgorithm`](@ref) and [`ConstantColori
     Decompression into a denser `SparseMatrixCSC` is only implemented when all the conditions below are satisfied simultaneously:
       - the partition is `:row` or `:column` (not `:bidirectional`)
       - the decompression is `:direct` (not `:substitution`)
-      - the decompression is full (so [`decompress_single_color!`](@ref) will not work)
+      - the decompression is for all colors (so [`decompress_single_color!`](@ref) will not work)
     
     Outside of these cases, it is up to the user to make sure that the sparsity pattern of the decompression target is an exact match. 
 
