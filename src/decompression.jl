@@ -671,7 +671,7 @@ function decompress!(
     (; S) = ag
     A_colptr = A.colptr
     nzA = nonzeros(A)
-    uplo == :F && check_same_pattern(A, S)
+    uplo == :F && check_compatible_pattern(A, S)
 
     if eltype(buffer) == R
         buffer_right_type = buffer
