@@ -1,7 +1,7 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
-    check_same_pattern, matrix_versions, respectful_similar, same_pattern
+    check_compatible_pattern, matrix_versions, respectful_similar, compatible_pattern
 using StableRNGs
 using Test
 
@@ -44,12 +44,11 @@ end
     A2 = copy(S)
     A2[1, 1] = 1
 
-    @test same_pattern(A1, S)
-    @test !same_pattern(A2, S)
-    @test same_pattern(Matrix(A2), S)
+    @test compatible_pattern(A1, S)
+    @test !compatible_pattern(A2, S)
 
-    @test_throws DimensionMismatch check_same_pattern(vcat(A1, A1), S)
-    @test_throws DimensionMismatch check_same_pattern(A2, S)
-    @test check_same_pattern(A1, S; allow_denser=true)
-    @test check_same_pattern(A2, S; allow_denser=true)
+    @test_throws DimensionMismatch check_compatible_pattern(vcat(A1, A1), S)
+    @test_throws DimensionMismatch check_compatible_pattern(A2, S)
+    @test check_compatible_pattern(A1, S; allow_denser=true)
+    @test check_compatible_pattern(A2, S; allow_denser=true)
 end

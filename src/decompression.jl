@@ -352,7 +352,7 @@ end
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColoringResult)
     (; color) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    @assert size(A) == size(S)
     fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -370,7 +370,7 @@ function decompress_single_color!(
 )
     (; group) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    @assert size(A) == size(S)
     rvS = rowvals(S)
     for j in group[c]
         for k in nzrange(S, j)
@@ -384,7 +384,7 @@ end
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
     (; compressed_indices, allow_denser) = result
     S = result.bg.S2
-    check_same_pattern(A, S; allow_denser)
+    check_compatible_pattern(A, S; allow_denser)
     nzA = nonzeros(A)
     if nnz(A) == nnz(S)
         for k in eachindex(compressed_indices)
@@ -413,7 +413,7 @@ function decompress_single_color!(
 )
     (; group) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    check_compatible_pattern(A, S)
     rvS = rowvals(S)
     nzA = nonzeros(A)
     for j in group[c]
@@ -430,7 +430,7 @@ end
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringResult)
     (; color) = result
     S = result.bg.S2
-    check_same_pattern(A, S)
+    @assert size(A) == size(S)
     fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -448,7 +448,7 @@ function decompress_single_color!(
 )
     (; group) = result
     S, Sᵀ = result.bg.S2, result.bg.S1
-    check_same_pattern(A, S)
+    @assert size(A) == size(S)
     rvSᵀ = rowvals(Sᵀ)
     for i in group[c]
         for k in nzrange(Sᵀ, i)
@@ -462,7 +462,7 @@ end
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
     (; compressed_indices, allow_denser) = result
     S = result.bg.S2
-    check_same_pattern(A, S; allow_denser)
+    check_compatible_pattern(A, S; allow_denser)
     nzA = nonzeros(A)
     if nnz(A) == nnz(S)
         for k in eachindex(nzA, compressed_indices)
@@ -493,7 +493,7 @@ function decompress!(
 )
     (; ag, compressed_indices) = result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    @assert size(A) == size(S)
     fill!(A, zero(eltype(A)))
 
     rvS = rowvals(S)
@@ -517,7 +517,7 @@ function decompress_single_color!(
 )
     (; ag, compressed_indices, group) = result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    @assert size(A) == size(S)
 
     lower_index = (c - 1) * S.n + 1
     upper_index = c * S.n
@@ -552,7 +552,7 @@ function decompress!(
     (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
-        check_same_pattern(A, S; allow_denser)
+        check_compatible_pattern(A, S; allow_denser)
         if nnz(A) == nnz(S)
             for k in eachindex(nzA, compressed_indices)
                 nzA[k] = B[compressed_indices[k]]
@@ -608,7 +608,7 @@ function decompress!(
 )
     (; ag, color, reverse_bfs_orders, buffer) = result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    @assert size(A) == size(S)
     R = eltype(A)
     fill!(A, zero(R))
 
@@ -671,7 +671,7 @@ function decompress!(
     (; S) = ag
     A_colptr = A.colptr
     nzA = nonzeros(A)
-    uplo == :F && check_same_pattern(A, S)
+    @assert size(A) == size(S)
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -768,7 +768,7 @@ function decompress!(
 )
     (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
     S = result.ag.S
-    uplo == :F && check_same_pattern(A, S)
+    @assert size(A) == size(S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
     strict_upper_nonzeros_A = M_factorization \ vec(B)
@@ -829,6 +829,7 @@ function decompress!(
     A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
     m, n = size(A)
+    @assert size(A) == size(result.S)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
     A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
     copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
@@ -839,7 +840,7 @@ function decompress!(
     A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
     (; S, large_colptr, large_rowval, symmetric_result) = result
-    check_same_pattern(A, S)
+    check_compatible_pattern(A, S)
     m, n = size(A)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
     # pretend A is larger
