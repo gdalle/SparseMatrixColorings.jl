@@ -105,7 +105,7 @@ function vertices(bg::BipartiteGraph{T}, ::Val{side}, ::LargestFirst) where {T,s
 end
 
 """
-    DynamicDegreeBasedOrder{degtype,direction}
+    DynamicDegreeBasedOrder{degtype,direction}(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically computed degree.
 
@@ -117,6 +117,10 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically com
 - `degtype::Symbol`: can be `:forward` (for the forward degree) or `:back` (for the back degree)
 - `direction::Symbol`: can be `:low2high` (if the order is defined from lowest to highest, i.e. `1` to `n`) or `:high2low` (if the order is defined from highest to lowest, i.e. `n` to `1`)
 
+# Settings
+
+- `reproduce_colpack::Bool`: whether to manage the buckets in the same way as the original ColPack implementation. When `reproduce_colpack=true`, we always append and remove vertices from the end of a bucket, which incurs a large performance penalty because every modification requires a circular permutation of the corresponding bucket. This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
+
 # Concrete variants
 
 - [`IncidenceDegree`](@ref)
@@ -127,7 +131,15 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically com
 
 - [_ColPack: Software for graph coloring and related problems in scientific computing_](https://dl.acm.org/doi/10.1145/2513109.2513110), Gebremedhin et al. (2013), Section 5
 """
-struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder end
+struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder
+    reproduce_colpack::Bool
+end
+
+function DynamicDegreeBasedOrder{degtype,direction}(;
+    reproduce_colpack::Bool=false
+) where {degtype,direction}
+    return DynamicDegreeBasedOrder{degtype,direction}(reproduce_colpack)
+end
 
 struct DegreeBuckets{T}
     degrees::Vector{T}
@@ -135,9 +147,12 @@ struct DegreeBuckets{T}
     bucket_low::Vector{T}
     bucket_high::Vector{T}
     positions::Vector{T}
+    reproduce_colpack::Bool
 end
 
-function DegreeBuckets(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
+function DegreeBuckets(
+    ::Type{T}, degrees::Vector{T}, dmax::Integer; reproduce_colpack::Bool
+) where {T}
     # number of vertices per degree class
     deg_count = zeros(T, dmax + 1)
     for d in degrees
@@ -157,7 +172,9 @@ function DegreeBuckets(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
         bucket_storage[positions[v]] = v
         deg_count[d + 1] -= 1
     end
-    return DegreeBuckets(degrees, bucket_storage, bucket_low, bucket_high, positions)
+    return DegreeBuckets(
+        degrees, bucket_storage, bucket_low, bucket_high, positions, reproduce_colpack
+    )
 end
 
 maxdeg(db::DegreeBuckets) = length(db.bucket_low) - 1
@@ -205,8 +222,42 @@ function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
     return candidate
 end
 
+function rotate_bucket_left!(db::DegreeBuckets, d::Integer)
+    (; bucket_storage, bucket_high, bucket_low, positions) = db
+    low, high = bucket_low[d + 1], bucket_high[d + 1]
+    # remember first element v
+    v = bucket_storage[low]
+    # shift everyone else one index down
+    for i in (low + 1):high
+        w = bucket_storage[i]
+        bucket_storage[i - 1] = w
+        positions[w] = i - 1
+    end
+    # put v back at the end
+    bucket_storage[high] = v
+    positions[v] = high
+    return nothing
+end
+
+function rotate_bucket_right!(db::DegreeBuckets, d::Integer)
+    (; bucket_storage, bucket_high, bucket_low, positions) = db
+    low, high = bucket_low[d + 1], bucket_high[d + 1]
+    # remember last element v
+    v = bucket_storage[high]
+    # shift everyone else one index up
+    for i in (high - 1):-1:low
+        w = bucket_storage[i]
+        bucket_storage[i + 1] = w
+        positions[w] = i + 1
+    end
+    # put v back at the start
+    bucket_storage[low] = v
+    positions[v] = low
+    return nothing
+end
+
 function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
-    (; degrees, bucket_storage, bucket_low, bucket_high, positions) = db
+    (; degrees, bucket_storage, bucket_low, bucket_high, positions, reproduce_colpack) = db
     d, p = degrees[v], positions[v]
     low, high = bucket_low[d + 1], bucket_high[d + 1]
     # select previous or next bucket for the move
@@ -227,11 +278,27 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
         # update v's stats
         degrees[v] = d_new
         positions[v] = low_new - 1
+        if reproduce_colpack
+            # move v from start to end of the next bucket, preserving order
+            rotate_bucket_left!(db, d_new)  # expensive
+        end
     else
-        # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
-        w = bucket_storage[low]
-        bucket_storage[p] = w
-        positions[w] = p
+        if reproduce_colpack
+            # move the vertex w located at the end of the current bucket to v's position
+            w = bucket_storage[high]
+            bucket_storage[p] = w
+            positions[w] = p
+            # explicitly put v at the end
+            bucket_storage[high] = v
+            positions[v] = high
+            # move v from end to start of the current bucket, preserving order
+            rotate_bucket_right!(db, d)  # expensive
+        else
+            # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
+            w = bucket_storage[low]
+            bucket_storage[p] = w
+            positions[w] = p
+        end
         # shrink current bucket from the left
         # morally we put v at the start and then ignore it
         bucket_low[d + 1] += 1
@@ -249,14 +316,16 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype, direction)
 end
 
 function vertices(
-    g::AdjacencyGraph{T}, ::DynamicDegreeBasedOrder{degtype,direction}
+    g::AdjacencyGraph{T}, order::DynamicDegreeBasedOrder{degtype,direction}
 ) where {T<:Integer,degtype,direction}
     if degree_increasing(; degtype, direction)
         degrees = zeros(T, nb_vertices(g))
     else
         degrees = T[degree(g, v) for v in vertices(g)]
     end
-    db = DegreeBuckets(T, degrees, maximum_degree(g))
+    db = DegreeBuckets(
+        T, degrees, maximum_degree(g); reproduce_colpack=order.reproduce_colpack
+    )
     π = T[]
     sizehint!(π, nb_vertices(g))
     for _ in 1:nb_vertices(g)
@@ -272,7 +341,7 @@ function vertices(
 end
 
 function vertices(
-    g::BipartiteGraph{T}, ::Val{side}, ::DynamicDegreeBasedOrder{degtype,direction}
+    g::BipartiteGraph{T}, ::Val{side}, order::DynamicDegreeBasedOrder{degtype,direction}
 ) where {T<:Integer,side,degtype,direction}
     other_side = 3 - side
     # compute dist-2 degrees in an optimized way
@@ -294,7 +363,7 @@ function vertices(
         degrees = degrees_dist2
     end
     maxd2 = maximum(degrees_dist2)
-    db = DegreeBuckets(T, degrees, maxd2)
+    db = DegreeBuckets(T, degrees, maxd2; reproduce_colpack=order.reproduce_colpack)
     π = T[]
     sizehint!(π, n)
     visited = falses(n)
@@ -318,7 +387,7 @@ function vertices(
 end
 
 """
-    IncidenceDegree()
+    IncidenceDegree(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic back degree.
 
@@ -332,7 +401,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest 
 const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
 
 """
-    SmallestLast()
+    SmallestLast(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest using the dynamic back degree.
 
@@ -346,7 +415,7 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest 
 const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
 
 """
-    DynamicLargestFirst()
+    DynamicLargestFirst(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic forward degree.
 
