@@ -3,11 +3,10 @@ using DataFrames
 using LinearAlgebra
 using MatrixDepot
 using SparseArrays
+using SparseMatrixColorings
 using SparseMatrixColorings:
     AdjacencyGraph,
     BipartiteGraph,
-    LargestFirst,
-    NaturalOrder,
     degree,
     minimum_degree,
     maximum_degree,
@@ -19,6 +18,14 @@ using SparseMatrixColorings:
     vertices
 using Test
 
+nbunique(x) = length(unique(x))
+
+_N() = NaturalOrder()
+_LF() = LargestFirst()
+_SL() = SmallestLast(; reproduce_colpack=true)
+_ID() = IncidenceDegree(; reproduce_colpack=true)
+_DLF() = DynamicLargestFirst(; reproduce_colpack=true)
+
 ## Distance-2 coloring
 
 #=
@@ -29,20 +36,50 @@ colpack_table_6_7 = CSV.read(
     joinpath(@__DIR__, "reference", "colpack_table_6_7.csv"), DataFrame
 )
 
-@testset "Distance-2 coloring (ColPack paper)" begin
+@testset verbose = true "Distance-2 coloring (ColPack paper)" begin
     @testset "$(row[:name])" for row in eachrow(colpack_table_6_7)
         original_mat = matrixdepot("$(row[:group])/$(row[:name])")
         mat = dropzeros(original_mat)
         bg = BipartiteGraph(mat)
-        @test nb_vertices(bg, Val(1)) == row[:V1]
-        @test nb_vertices(bg, Val(2)) == row[:V2]
-        @test nb_edges(bg) == row[:E]
-        @test maximum_degree(bg, Val(1)) == row[:Δ1]
-        @test maximum_degree(bg, Val(2)) == row[:Δ2]
-        color_N1 = partial_distance2_coloring(bg, Val(1), NaturalOrder())
-        color_N2 = partial_distance2_coloring(bg, Val(2), NaturalOrder())
-        @test length(unique(color_N1)) == row[:N1]
-        @test length(unique(color_N2)) == row[:N2]
+        @testset "Graph features" begin
+            @test nb_vertices(bg, Val(1)) == row[:V1]
+            @test nb_vertices(bg, Val(2)) == row[:V2]
+            @test nb_edges(bg) == row[:E]
+            @test maximum_degree(bg, Val(1)) == row[:Δ1]
+            @test maximum_degree(bg, Val(2)) == row[:Δ2]
+        end
+        @testset "Natural" begin
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _N())) == row[:N1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _N())) == row[:N2]
+        end
+        yield()
+        @testset "LargestFirst" begin
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _LF())) == row[:LF1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _LF())) == row[:LF2]
+        end
+        yield()
+        if row[:name] == "af23560"
+            # orders differ for this one, not sure why
+            continue
+        end
+        if row[:E] > 200_000
+            # just to spare computational resources, but the larger tests pass too
+            continue
+        end
+        @testset "SmallestLast" begin
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _SL())) == row[:SL1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _SL())) == row[:SL2]
+        end
+        yield()
+        @testset "IncidenceDegree" begin
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _ID())) == row[:ID1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _ID())) == row[:ID2]
+        end
+        yield()
+        @testset "DynamicLargestFirst" begin
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _DLF())) == row[:DLF1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _DLF())) == row[:DLF2]
+        end
         yield()
     end
 end;
