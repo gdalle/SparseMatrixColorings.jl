@@ -148,7 +148,7 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
         counter = 1
         for col in (n + 1):p
             nnz_col = colptr[col]
-            colptr[col] = counter
+            colptr[col] = nnzS + counter
             counter += nnz_col
         end
 
@@ -156,15 +156,15 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
             for index in S.colptr[j]:(S.colptr[j + 1] - 1)
                 i = S.rowval[index]
                 pos = colptr[n + i]
-                rowval[nnzS + pos] = j
-                edge_to_index[nnzS + pos] = edge_to_index[index]
+                rowval[pos] = j
+                edge_to_index[pos] = edge_to_index[index]
                 colptr[n + i] += 1
             end
         end
 
         colptr[p + 1] = nnzS + counter
         for col in p:-1:(n + 2)
-            colptr[col] = nnzS + colptr[col - 1]
+            colptr[col] = colptr[col - 1]
         end
         colptr[n + 1] = nnzS + 1
     end
