@@ -109,9 +109,6 @@ end
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically computed degree.
 
-!!! danger
-    This order is still experimental and needs more tests, correctness is not yet guaranteed.
-
 # Type parameters
 
 - `degtype::Symbol`: can be `:forward` (for the forward degree) or `:back` (for the back degree)
@@ -119,7 +116,10 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using a dynamically com
 
 # Settings
 
-- `reproduce_colpack::Bool`: whether to manage the buckets in the same way as the original ColPack implementation. When `reproduce_colpack=true`, we always append and remove vertices from the end of a bucket, which incurs a large performance penalty because every modification requires a circular permutation of the corresponding bucket. This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
+- `reproduce_colpack::Bool`: whether to manage the buckets in the exact same way as the original ColPack implementation. When `reproduce_colpack=true`, we always append and remove vertices from the end of a bucket, which incurs a significant performance penalty because every modification requires a circular permutation of the corresponding bucket. This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
+
+!!! danger
+    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
 
 # Concrete variants
 
@@ -392,7 +392,7 @@ end
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic back degree.
 
 !!! danger
-    This order is still experimental and needs more tests, correctness is not yet guaranteed.
+    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
 
 # See also
 
@@ -406,7 +406,7 @@ const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
 Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest using the dynamic back degree.
 
 !!! danger
-    This order is still experimental and needs more tests, correctness is not yet guaranteed.
+    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
 
 # See also
 
@@ -420,7 +420,7 @@ const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic forward degree.
 
 !!! danger
-    This order is still experimental and needs more tests, correctness is not yet guaranteed.
+    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
 
 # See also
     
