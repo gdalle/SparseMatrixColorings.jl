@@ -291,7 +291,9 @@ function acyclic_coloring(
         end
     end
 
-    tree_set = TreeSet(g, forest)
+    buffer = forbidden_colors
+    reverse_bfs_orders = first_visit_to_tree
+    tree_set = TreeSet(g, forest, buffer, reverse_bfs_orders)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         offsets = forbidden_colors
@@ -372,19 +374,29 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 $TYPEDFIELDS
 """
 struct TreeSet{T}
-    reverse_bfs_orders::Vector{Vector{Tuple{T,T}}}
+    reverse_bfs_orders::Vector{Tuple{T,T}}
     is_star::Vector{Bool}
+    num_edges_per_tree::Vector{T}
 end
 
-function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
+function TreeSet(
+    g::AdjacencyGraph{T},
+    forest::Forest{T},
+    buffer::AbstractVector{T},
+    reverse_bfs_orders::Vector{Tuple{T,T}},
+) where {T}
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
     nt = forest.num_trees
 
-    # dictionary that maps a tree's root to the index of the tree
-    roots = Dict{T,T}()
-    sizehint!(roots, nt)
+    # root_to_tree is a vector that maps a tree's root to the index of the tree
+    # We can recycle forest.ranks because we don't need it anymore to merge trees
+    root_to_tree = forest.ranks
+    fill!(root_to_tree, zero(T))
+
+    # Contains the number of edges per tree
+    num_edges_per_tree = zeros(T, nt)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
     trees = [Dict{T,Vector{T}}() for i in 1:nt]
@@ -401,13 +413,14 @@ function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
                 root = find_root!(forest, index_ij)
 
                 # Update roots
-                if !haskey(roots, root)
+                if iszero(root_to_tree[root])
                     nr += 1
-                    roots[root] = nr
+                    root_to_tree[root] = nr
                 end
 
                 # index of the tree T that contains this edge
-                index_tree = roots[root]
+                index_tree = root_to_tree[root]
+                num_edges_per_tree[index_tree] += 1
 
                 # Update the neighbors of i in the tree T
                 if !haskey(trees[index_tree], i)
@@ -427,10 +440,7 @@ function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
-    degrees = Vector{T}(undef, nv)
-
-    # reverse breadth first (BFS) traversal order for each tree in the forest
-    reverse_bfs_orders = [Tuple{T,T}[] for i in 1:nt]
+    degrees = buffer
 
     # nvmax is the number of vertices of the biggest tree in the forest
     nvmax = 0
@@ -446,6 +456,10 @@ function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
     # meaning that one vertex is directly connected to all other vertices in the tree
     is_star = Vector{Bool}(undef, nt)
 
+    # Number of edges treated
+    num_edges_treated = zero(T)
+
+    # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
     for k in 1:nt
         tree = trees[k]
 
@@ -483,7 +497,8 @@ function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
                     # (leaf, neighbor) represents the next edge to visit during decompression
-                    push!(reverse_bfs_orders[k], (leaf, neighbor))
+                    num_edges_treated += 1
+                    reverse_bfs_orders[num_edges_treated] = (leaf, neighbor)
 
                     if bool_star
                         # Initialize the potential hub of the star with the first parent of a leaf
@@ -514,7 +529,7 @@ function TreeSet(g::AdjacencyGraph{T}, forest::Forest{T}) where {T}
         is_star[k] = bool_star
     end
 
-    return TreeSet(reverse_bfs_orders, is_star)
+    return TreeSet(reverse_bfs_orders, is_star, num_edges_per_tree)
 end
 
 ## Postprocessing, mirrors decompression code
@@ -582,46 +597,52 @@ function postprocess!(
         end
     else
         # only the colors of non-leaf vertices are used
-        (; reverse_bfs_orders, is_star) = star_or_tree_set
+        (; reverse_bfs_orders, is_star, num_edges_per_tree) = star_or_tree_set
         nb_trivial_trees = 0
 
+        # Index of the first edge in reverse_bfs_orders for the current tree
+        first = 1
+
         # Iterate through all non-trivial trees
-        for k in eachindex(reverse_bfs_orders)
-            reverse_bfs_order = reverse_bfs_orders[k]
+        for k in eachindex(num_edges_per_tree)
+            ne_tree = num_edges_per_tree[k]
             # Check if we have more than one edge in the tree (non-trivial tree)
-            if length(reverse_bfs_order) > 1
+            if ne_tree > 1
                 # Determine if the tree is a star
                 if is_star[k]
                     # It is a non-trivial star and only the color of the hub is needed
-                    (_, hub) = reverse_bfs_order[1]
+                    (_, hub) = reverse_bfs_orders[first]
                     color_used[color[hub]] = true
                 else
                     # It is not a star and both colors are needed during the decompression
-                    (i, j) = reverse_bfs_order[1]
+                    (i, j) = reverse_bfs_orders[first]
                     color_used[color[i]] = true
                     color_used[color[j]] = true
                 end
             else
                 nb_trivial_trees += 1
             end
+            first += ne_tree
         end
 
         # Process the trivial trees (if any)
         if nb_trivial_trees > 0
-            for k in eachindex(reverse_bfs_orders)
-                reverse_bfs_order = reverse_bfs_orders[k]
+            first = 1
+            for k in eachindex(num_edges_per_tree)
+                ne_tree = num_edges_per_tree[k]
                 # Check if we have exactly one edge in the tree
-                if length(reverse_bfs_order) == 1
-                    (i, j) = reverse_bfs_order[1]
+                if ne_tree == 1
+                    (i, j) = reverse_bfs_orders[first]
                     if color_used[color[i]]
                         # Make i the root to avoid possibly adding one more used color
                         # Switch it with the (only) leaf
-                        reverse_bfs_order[1] = (j, i)
+                        reverse_bfs_orders[first] = (j, i)
                     else
                         # Keep j as the root
                         color_used[color[j]] = true
                     end
                 end
+                first += ne_tree
             end
         end
     end

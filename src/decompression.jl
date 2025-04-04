@@ -517,7 +517,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, buffer) = result
+    (; ag, color, reverse_bfs_orders, num_edges_per_tree, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -531,24 +531,32 @@ function decompress!(
 
     # Recover the diagonal coefficients of A
     if has_diagonal(ag)
-        for i in axes(A, 1)
+        for i in axes(S, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
             end
         end
     end
 
+    # Index of the first edge in reverse_bfs_orders for the current tree
+    first = 1
+
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(reverse_bfs_orders)
+    for k in eachindex(num_edges_per_tree)
+        ne_tree = num_edges_per_tree[k]
+        last = first + ne_tree - 1
+
         # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
         # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
+        (_, root) = reverse_bfs_orders[last]
         buffer_right_type[root] = zero(R)
 
-        for (i, j) in reverse_bfs_orders[k]
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
 
@@ -559,6 +567,7 @@ function decompress!(
                 A[j, i] = val
             end
         end
+        first += ne_tree
     end
     return A
 end
@@ -573,6 +582,7 @@ function decompress!(
         ag,
         color,
         reverse_bfs_orders,
+        num_edges_per_tree,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
@@ -612,20 +622,28 @@ function decompress!(
         end
     end
 
+    # Index of the first edge in reverse_bfs_orders for the current tree
+    first = 1
+
     # Index of offsets in lower_triangle_offsets and upper_triangle_offsets
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(reverse_bfs_orders)
+    for k in eachindex(num_edges_per_tree)
+        ne_tree = num_edges_per_tree[k]
+        last = first + ne_tree - 1
+
         # Reset the buffer to zero for all vertices in a tree (except the root)
-        for (vertex, _) in reverse_bfs_orders[k]
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
         # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[k][end]
+        (_, root) = reverse_bfs_orders[last]
         buffer_right_type[root] = zero(R)
 
-        for (i, j) in reverse_bfs_orders[k]
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
             counter += 1
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
@@ -665,6 +683,7 @@ function decompress!(
             end
             #! format: on
         end
+        first += ne_tree
     end
     return A
 end
