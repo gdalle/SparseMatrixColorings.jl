@@ -314,10 +314,10 @@ function _prevent_cycle!(
     forbidden_colors::AbstractVector{<:Integer},
     forest::Forest{<:Integer},
 )
-    id = find_root!(forest, index_wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
-    (p, q) = first_visit_to_tree[id]
+    root_wx = find_root!(forest, index_wx)  # The edge wx belongs to the 2-colored tree T, represented by an edge with an integer ID
+    (p, q) = first_visit_to_tree[root_wx]
     if p != v  # T is being visited from vertex v for the first time
-        first_visit_to_tree[id] = (v, w)
+        first_visit_to_tree[root_wx] = (v, w)
     elseif q != w  # T is connected to vertex v via at least two edges
         forbidden_colors[color[x]] = v
     end
