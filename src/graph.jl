@@ -99,8 +99,9 @@ end
 
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
-bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool) =
+function bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
     bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
+end
 
 function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool) where {T}
     m, n = size(S)
