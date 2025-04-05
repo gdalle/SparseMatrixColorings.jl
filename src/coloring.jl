@@ -611,7 +611,7 @@ function postprocess!(
 
         # Iterate through all non-trivial trees
         for k in 1:nt
-            # Starting index of the first edge in the tree
+            # Position of the first edge in the tree
             first = tree_edge_indices[k]
 
             # Total number of edges in the tree
@@ -638,7 +638,7 @@ function postprocess!(
         # Process the trivial trees (if any)
         if nb_trivial_trees > 0
             for k in 1:nt
-                # Starting index of the first edge in the tree
+                # Position of the first edge in the tree
                 first = tree_edge_indices[k]
 
                 # Total number of edges in the tree
