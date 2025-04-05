@@ -482,7 +482,11 @@ function TreeSet(
 
     # nvmax is the number of vertices in the largest tree of the forest
     # In a tree, the number of vertices is equal to the number of edges plus one
-    nvmax = maximum(num_edges_per_tree) + 1
+    nvmax = zero(T)
+    for ne_tree in num_edges_per_tree
+        nvmax = max(nvmax, ne_tree)
+    end
+    nvmax = nvmax + 1
 
     # Create a queue with a fixed size nvmax
     queue = Vector{T}(undef, nvmax)
