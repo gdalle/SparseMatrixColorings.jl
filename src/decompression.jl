@@ -517,7 +517,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, num_edges_per_tree, buffer) = result
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -538,13 +538,11 @@ function decompress!(
         end
     end
 
-    # Index of the first edge in reverse_bfs_orders for the current tree
-    first = 1
-
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(num_edges_per_tree)
-        ne_tree = num_edges_per_tree[k]
-        last = first + ne_tree - 1
+    for k in 1:nt
+        # Positions of the edges for each tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
 
         # Reset the buffer to zero for all vertices in a tree (except the root)
         for pos in first:last
@@ -567,7 +565,6 @@ function decompress!(
                 A[j, i] = val
             end
         end
-        first += ne_tree
     end
     return A
 end
@@ -582,7 +579,8 @@ function decompress!(
         ag,
         color,
         reverse_bfs_orders,
-        num_edges_per_tree,
+        tree_edge_indices,
+        nt,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
@@ -622,16 +620,14 @@ function decompress!(
         end
     end
 
-    # Index of the first edge in reverse_bfs_orders for the current tree
-    first = 1
-
     # Index of offsets in lower_triangle_offsets and upper_triangle_offsets
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(num_edges_per_tree)
-        ne_tree = num_edges_per_tree[k]
-        last = first + ne_tree - 1
+    for k in 1:nt
+        # Positions of the edges for each tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
 
         # Reset the buffer to zero for all vertices in a tree (except the root)
         for pos in first:last
@@ -683,7 +679,6 @@ function decompress!(
             end
             #! format: on
         end
-        first += ne_tree
     end
     return A
 end

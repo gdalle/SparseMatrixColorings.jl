@@ -11,7 +11,7 @@ $TYPEDFIELDS
 """
 mutable struct Forest{T<:Integer}
     "current number of distinct trees in the forest"
-    num_trees::T
+    nt::T
     "vector storing the index of a parent in the tree for each edge, used in union-find operations"
     parents::Vector{T}
     "vector approximating the depth of each tree to optimize path compression"
@@ -19,10 +19,10 @@ mutable struct Forest{T<:Integer}
 end
 
 function Forest{T}(n::Integer) where {T<:Integer}
-    num_trees = T(n)
+    nt = T(n)
     parents = collect(Base.OneTo(T(n)))
     ranks = zeros(T, T(n))
-    return Forest{T}(num_trees, parents, ranks)
+    return Forest{T}(nt, parents, ranks)
 end
 
 function _find_root!(parents::Vector{T}, index_edge::T) where {T<:Integer}
@@ -49,6 +49,6 @@ function root_union!(forest::Forest{T}, index_edge1::T, index_edge2::T) where {T
         rks[index_edge1] += one(T)
     end
     parents[index_edge2] = index_edge1
-    forest.num_trees -= one(T)
+    forest.nt -= one(T)
     return nothing
 end

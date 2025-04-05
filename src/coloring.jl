@@ -376,7 +376,8 @@ $TYPEDFIELDS
 struct TreeSet{T}
     reverse_bfs_orders::Vector{Tuple{T,T}}
     is_star::Vector{Bool}
-    num_edges_per_tree::Vector{T}
+    tree_edge_indices::Vector{T}
+    nt::T
 end
 
 function TreeSet(
@@ -388,20 +389,20 @@ function TreeSet(
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
-    nt = forest.num_trees
+    (; nt, ranks) = forest
 
     # root_to_tree is a vector that maps a tree's root to the index of the tree
-    # We can recycle forest.ranks because we don't need it anymore to merge trees
-    root_to_tree = forest.ranks
+    # We can recycle the vector "ranks" because we don't need it anymore to merge trees
+    root_to_tree = ranks
     fill!(root_to_tree, zero(T))
 
-    # Contains the number of edges per tree
-    num_edges_per_tree = zeros(T, nt)
+    # vector specifying the starting and ending indices of edges for each tree
+    tree_edge_indices = zeros(T, nt + 1)
 
     # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
     trees = [Dict{T,Vector{T}}() for i in 1:nt]
 
-    # current number of roots found
+    # number of roots found
     nr = 0
 
     rvS = rowvals(S)
@@ -418,18 +419,20 @@ function TreeSet(
                     root_to_tree[root] = nr
                 end
 
-                # index of the tree T that contains this edge
+                # index of the tree that contains this edge
                 index_tree = root_to_tree[root]
-                num_edges_per_tree[index_tree] += 1
 
-                # Update the neighbors of i in the tree T
+                # Update the number of edges for the current tree (shifted by 1 to facilitate the final cumsum)
+                tree_edge_indices[index_tree + 1] += 1
+
+                # Update the neighbors of i in the current tree
                 if !haskey(trees[index_tree], i)
                     trees[index_tree][i] = [j]
                 else
                     push!(trees[index_tree][i], j)
                 end
 
-                # Update the neighbors of j in the tree T
+                # Update the neighbors of j in the current tree
                 if !haskey(trees[index_tree], j)
                     trees[index_tree][j] = [i]
                 else
@@ -437,6 +440,12 @@ function TreeSet(
                 end
             end
         end
+    end
+
+    # Compute a shifted cumulative sum of tree_edge_indices, starting from one
+    tree_edge_indices[1] = one(T)
+    for k in 2:(nt + 1)
+        tree_edge_indices[k] += tree_edge_indices[k - 1]
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
@@ -529,7 +538,7 @@ function TreeSet(
         is_star[k] = bool_star
     end
 
-    return TreeSet(reverse_bfs_orders, is_star, num_edges_per_tree)
+    return TreeSet(reverse_bfs_orders, is_star, tree_edge_indices, nt)
 end
 
 ## Postprocessing, mirrors decompression code
@@ -597,15 +606,17 @@ function postprocess!(
         end
     else
         # only the colors of non-leaf vertices are used
-        (; reverse_bfs_orders, is_star, num_edges_per_tree) = star_or_tree_set
+        (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = star_or_tree_set
         nb_trivial_trees = 0
 
-        # Index of the first edge in reverse_bfs_orders for the current tree
-        first = 1
-
         # Iterate through all non-trivial trees
-        for k in eachindex(num_edges_per_tree)
-            ne_tree = num_edges_per_tree[k]
+        for k in 1:nt
+            # Starting index of the first edge in the tree
+            first = tree_edge_indices[k]
+
+            # Total number of edges in the tree
+            ne_tree = tree_edge_indices[k + 1] - first
+
             # Check if we have more than one edge in the tree (non-trivial tree)
             if ne_tree > 1
                 # Determine if the tree is a star
@@ -622,14 +633,17 @@ function postprocess!(
             else
                 nb_trivial_trees += 1
             end
-            first += ne_tree
         end
 
         # Process the trivial trees (if any)
         if nb_trivial_trees > 0
-            first = 1
-            for k in eachindex(num_edges_per_tree)
-                ne_tree = num_edges_per_tree[k]
+            for k in 1:nt
+                # Starting index of the first edge in the tree
+                first = tree_edge_indices[k]
+
+                # Total number of edges in the tree
+                ne_tree = tree_edge_indices[k + 1] - first
+
                 # Check if we have exactly one edge in the tree
                 if ne_tree == 1
                     (i, j) = reverse_bfs_orders[first]
@@ -642,7 +656,6 @@ function postprocess!(
                         color_used[color[j]] = true
                     end
                 end
-                first += ne_tree
             end
         end
     end
