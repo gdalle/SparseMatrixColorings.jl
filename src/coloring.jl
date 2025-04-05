@@ -435,8 +435,6 @@ function TreeSet(
         pos_vertices2[k] = pos_vertices2[k - 1] + 2 * num_edges_per_tree[k - 1]
     end
 
-    verbose = false
-
     rvS = rowvals(S)
     for j in axes(S, 2)
         # Use this vector to determine if j appears in the trees
@@ -449,27 +447,21 @@ function TreeSet(
                 root = forest.parents[index_ij]
                 index_tree = root_to_tree[root]
                 t = index_tree
-                verbose && println("t: $t")
                 if !found_in_tree[index_tree]
                     # j appears for the first time in the current tree
                     found_in_tree[index_tree] = true
                     pos_vertices1[index_tree] += 1
                     # add j in the list of vertices of the current tree
                     p = pos_vertices1[index_tree]
-                    verbose && println("pos_vertices1[$t]: $p")
-                    verbose && println("vertices1[$p]: $j")
                     vertices1[p] = j
                 end
                 # increase the number of neighbors for j in the current tree
                 p = pos_vertices1[index_tree]
                 colptr_tree[p] += 1
-                verbose && println("colptr_tree[$p]: $(colptr_tree[p])")
                 # increase the position of the visited neighbors in the current tree
                 pos_vertices2[index_tree] += 1
                 q = pos_vertices2[index_tree]
                 vertices2[q] = i
-                verbose && println("pos_vertices2[$t]: $q")
-                verbose && println("vertices2[$q]: $i")
             end
         end
     end
@@ -505,12 +497,7 @@ function TreeSet(
     first = 1
     # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
     for k in 1:nt
-        verbose && println("Arbre: $k")
-        verbose && println("First index: $first")
         last = first + num_edges_per_tree[k]
-        verbose && println("Last index: $last")
-        verbose && println("ne: $(num_edges_per_tree[k])")
-        verbose && println("nv: $(num_edges_per_tree[k] + 1)")
 
         # Boolean indicating whether the current tree is a star (a single central vertex connected to all others)
         bool_star = true
@@ -527,8 +514,6 @@ function TreeSet(
             vertex = vertices1[pos1]
             degree = colptr_tree[pos1 + 1] - colptr_tree[pos1]
             degrees[vertex] = degree
-            verbose && println("vertices1[$pos1] = $vertex")
-            verbose && println("mapping[$vertex] = $pos1")
 
             # store a reverse mapping
             mapping[vertex] = pos1
@@ -549,11 +534,8 @@ function TreeSet(
             degrees[leaf] = 0
 
             mleaf = mapping[leaf]
-            verbose && println("mleaf = $mleaf")
             for pos2 in colptr_tree[mleaf]:(colptr_tree[mleaf + 1] - 1)
-                verbose && println("pos2 = $pos2")
                 neighbor = vertices2[pos2]
-                verbose && println("vertices2[$pos2] = $neighbor")
 
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0

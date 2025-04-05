@@ -33,12 +33,12 @@ function _find_root!(parents::Vector{<:Integer}, index_edge::Integer)
     return p
 end
 
-function find_root!(forest::Forest, index_edge::Integer)
+function find_root!(forest::Forest{<:Integer}, index_edge::Integer)
     return _find_root!(forest.parents, index_edge)
 end
 
 function root_union!(
-    forest::Forest{<:Integer}, index_edge1::Integer, index_edge2::Integer
+    forest::Forest{T}, index_edge1::Integer, index_edge2::Integer
 ) where {T<:Integer}
     parents = forest.parents
     rks = forest.ranks
