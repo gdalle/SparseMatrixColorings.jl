@@ -339,9 +339,9 @@ function _grow_star!(
     if p != v  # a neighbor of v with color[w] encountered for the first time
         first_neighbor[color[w]] = (v, w, index_vw)
     else  # merge T_{vw} with a two-colored star being grown around v
-        root1 = find_root!(forest, index_vw)
-        root2 = find_root!(forest, index_pq)
-        root_union!(forest, root1, root2)
+        root_vw = find_root!(forest, index_vw)
+        root_pq = find_root!(forest, index_pq)
+        root_union!(forest, root_vw, root_pq)
     end
     return nothing
 end
@@ -356,10 +356,10 @@ function _merge_trees!(
     # modified
     forest::Forest{<:Integer},
 )
-    root1 = find_root!(forest, index_vw)
-    root2 = find_root!(forest, index_wx)
-    if root1 != root2
-        root_union!(forest, root1, root2)
+    root_vw = find_root!(forest, index_vw)
+    root_wx = find_root!(forest, index_wx)
+    if root_vw != root_wx
+        root_union!(forest, root_vw, root_wx)
     end
     return nothing
 end
