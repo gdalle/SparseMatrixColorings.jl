@@ -245,7 +245,6 @@ struct StarSetColoringResult{
     ag::G
     color::Vector{T}
     group::GT
-    star_set::StarSet{T}
     compressed_indices::Vector{T}
 end
 
@@ -289,7 +288,7 @@ function StarSetColoringResult(
         end
     end
 
-    return StarSetColoringResult(A, ag, color, group, star_set, compressed_indices)
+    return StarSetColoringResult(A, ag, color, group, compressed_indices)
 end
 
 """
