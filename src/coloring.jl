@@ -389,7 +389,7 @@ function TreeSet(
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
-    nt = forest.num_trees
+    nt = forest.nt
 
     # root_to_tree is a vector that maps a tree's root to the index of the tree
     # We can recycle forest.ranks because we don't need it anymore to merge trees
@@ -421,8 +421,8 @@ function TreeSet(
 
     found_in_tree = Vector{Bool}(undef, nt)
     colptr_tree = zeros(T, ne + nt + 1)
-    vertices1 = Vector{T}(undef, ne + nt)
-    vertices2 = Vector{T}(undef, 2 * ne)
+    vertices_trees = Vector{T}(undef, ne + nt)
+    neighbors_trees = Vector{T}(undef, 2 * ne)
 
     pos_vertices1 = Vector{T}(undef, nt)
     pos_vertices2 = Vector{T}(undef, nt)
@@ -453,7 +453,7 @@ function TreeSet(
                     pos_vertices1[index_tree] += 1
                     # add j in the list of vertices of the current tree
                     p = pos_vertices1[index_tree]
-                    vertices1[p] = j
+                    vertices_trees[p] = j
                 end
                 # increase the number of neighbors for j in the current tree
                 p = pos_vertices1[index_tree]
@@ -461,7 +461,7 @@ function TreeSet(
                 # increase the position of the visited neighbors in the current tree
                 pos_vertices2[index_tree] += 1
                 q = pos_vertices2[index_tree]
-                vertices2[q] = i
+                neighbors_trees[q] = i
             end
         end
     end
@@ -515,7 +515,7 @@ function TreeSet(
 
         # compute the degree of each vertex in the tree
         for pos1 in first:last
-            vertex = vertices1[pos1]
+            vertex = vertices_trees[pos1]
             degree = colptr_tree[pos1 + 1] - colptr_tree[pos1]
             degrees[vertex] = degree
 
@@ -539,7 +539,7 @@ function TreeSet(
 
             mleaf = mapping[leaf]
             for pos2 in colptr_tree[mleaf]:(colptr_tree[mleaf + 1] - 1)
-                neighbor = vertices2[pos2]
+                neighbor = neighbors_trees[pos2]
 
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
