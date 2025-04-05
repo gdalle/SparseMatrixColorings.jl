@@ -1,3 +1,4 @@
+using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 using SparseMatrixColorings:
@@ -194,5 +195,51 @@ end;
             GreedyColoringAlgorithm{:substitution}(order; postprocessing=true);
             test_fast=true,
         )
+    end
+end;
+
+@testset verbose = true "Mismatched sparsity pattern during decompression" begin
+    A = sparse(Diagonal(ones(10)))
+    A_denser = copy(A)
+    A_denser[1, 2] = A_denser[2, 1] = 1
+    A_sparser = copy(A)
+    A_sparser[1, 1] = 0
+    dropzeros!(A_sparser)
+
+    @testset "$structure - $partition - $decompression" for (
+        structure, partition, decompression
+    ) in [
+        (:nonsymmetric, :column, :direct),
+        (:nonsymmetric, :row, :direct),
+        (:symmetric, :column, :direct),
+        (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
+    ]
+        problem = ColoringProblem(; structure, partition)
+        algo = GreedyColoringAlgorithm(; decompression)
+        algo_tolerant = GreedyColoringAlgorithm(; decompression, allow_denser=true)
+        result = coloring(A, problem, algo)
+        result_tolerant = coloring(A, problem, algo_tolerant)
+        Bs = if partition == :bidirectional
+            compress(A, result)
+        else
+            (compress(A, result),)
+        end
+        @test_throws DimensionMismatch decompress!(copy(A_denser), Bs..., result)
+        @test_throws DimensionMismatch decompress!(copy(A_sparser), Bs..., result_tolerant)
+        if decompression == :direct && partition in (:row, :column)
+            @test decompress!(copy(A_denser), Bs..., result_tolerant) == A
+        else
+            @test_throws DimensionMismatch decompress!(
+                copy(A_denser), Bs..., result_tolerant
+            )
+        end
+        if structure == :symmetric && decompression == :direct
+            @test decompress!(copy(tril(A_denser)), Bs..., result_tolerant, :L) == tril(A)
+            @test_throws DimensionMismatch decompress!(
+                copy(tril(A_denser)), Bs..., result, :L
+            )
+        end
     end
 end;

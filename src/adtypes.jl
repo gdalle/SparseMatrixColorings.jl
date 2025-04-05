@@ -6,7 +6,7 @@ function coloring(
 )
     bg = BipartiteGraph(A)
     color = convert(Vector{eltype(bg)}, ADTypes.column_coloring(A, algo))
-    return ColumnColoringResult(A, bg, color)
+    return ColumnColoringResult(A, bg, color; allow_denser=false)
 end
 
 function coloring(
@@ -17,5 +17,5 @@ function coloring(
 )
     bg = BipartiteGraph(A)
     color = convert(Vector{eltype(bg)}, ADTypes.row_coloring(A, algo))
-    return RowColoringResult(A, bg, color)
+    return RowColoringResult(A, bg, color; allow_denser=false)
 end

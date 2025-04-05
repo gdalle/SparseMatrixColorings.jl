@@ -69,12 +69,23 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false)
-    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, decompression=:direct)
+    GreedyColoringAlgorithm{decompression}(
+        order=NaturalOrder();
+        postprocessing=false,
+        allow_denser=false,
+    )
+
+    GreedyColoringAlgorithm(
+        order=NaturalOrder();
+        decompression=:direct
+        postprocessing=false,
+        allow_denser=false,
+    )
 
 - `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
-- `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
+- `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
+- `allow_denser::Bool`: whether or not to allow decompression into a `SparseMatrixCSC` which has more nonzeros than the original sparsity pattern (see [`decompress!`](@ref) to know when this is implemented).
 
 !!! warning
     The second constructor (based on keyword arguments) is type-unstable.
@@ -92,28 +103,36 @@ See their respective docstrings for details.
 # See also
 
 - [`AbstractOrder`](@ref)
-- [`decompress`](@ref)
+- [`decompress`](@ref), [`decompress!`](@ref)
 """
 struct GreedyColoringAlgorithm{decompression,O<:AbstractOrder} <:
        ADTypes.AbstractColoringAlgorithm
     order::O
     postprocessing::Bool
+    allow_denser::Bool
 end
 
 function GreedyColoringAlgorithm{decompression}(
-    order::AbstractOrder=NaturalOrder(); postprocessing::Bool=false
+    order::AbstractOrder=NaturalOrder();
+    postprocessing::Bool=false,
+    allow_denser::Bool=false,
 ) where {decompression}
     check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(
+        order, postprocessing, allow_denser
+    )
 end
 
 function GreedyColoringAlgorithm(
     order::AbstractOrder=NaturalOrder();
-    postprocessing::Bool=false,
     decompression::Symbol=:direct,
+    postprocessing::Bool=false,
+    allow_denser::Bool=false,
 )
     check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
+    return GreedyColoringAlgorithm{decompression,typeof(order)}(
+        order, postprocessing, allow_denser
+    )
 end
 
 ## Coloring
@@ -232,7 +251,7 @@ function _coloring(
     )
     color = partial_distance2_coloring(bg, Val(2), algo.order)
     if speed_setting isa WithResult
-        return ColumnColoringResult(A, bg, color)
+        return ColumnColoringResult(A, bg, color; allow_denser=algo.allow_denser)
     else
         return color
     end
@@ -251,7 +270,7 @@ function _coloring(
     )
     color = partial_distance2_coloring(bg, Val(1), algo.order)
     if speed_setting isa WithResult
-        return RowColoringResult(A, bg, color)
+        return RowColoringResult(A, bg, color; allow_denser=algo.allow_denser)
     else
         return color
     end
@@ -268,7 +287,7 @@ function _coloring(
     ag = AdjacencyGraph(A; has_diagonal=true)
     color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set)
+        return StarSetColoringResult(A, ag, color, star_set; allow_denser=algo.allow_denser)
     else
         return color
     end
@@ -299,12 +318,14 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(S_and_Sᵀ, edge_to_index; has_diagonal=false)
     color, star_set = star_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        symmetric_result = StarSetColoringResult(
+            S_and_Sᵀ, ag, color, star_set; allow_denser=false
+        )
+        return BicoloringResult(A, S, ag, symmetric_result, R)
     else
         row_color, column_color, _ = remap_colors(
             eltype(ag), color, maximum(color), size(A)...
@@ -321,12 +342,12 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(S_and_Sᵀ, edge_to_index; has_diagonal=false)
     color, tree_set = acyclic_coloring(ag, algo.order, algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        symmetric_result = TreeSetColoringResult(S_and_Sᵀ, ag, color, tree_set, R)
+        return BicoloringResult(A, S, ag, symmetric_result, R)
     else
         row_color, column_color, _ = remap_colors(
             eltype(ag), color, maximum(color), size(A)...

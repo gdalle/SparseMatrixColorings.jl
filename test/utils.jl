@@ -86,6 +86,18 @@ function test_coloring_decompression(
             @test decompress(B, result) ≈ A0  # check result wasn't modified
             @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
             @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+            if algo.allow_denser && decompression == :direct && A isa SparseMatrixCSC
+                A_bigger = respectful_similar(A, eltype(B))
+                for _ in 1:10
+                    nb_coeffs_added = rand(1:minimum(size(A)))
+                    for _ in nb_coeffs_added
+                        i = rand(axes(A, 1))
+                        j = rand(axes(A, 2))
+                        A_bigger[i, j] = one(eltype(B))
+                    end
+                    @test decompress!(A_bigger, B, result) ≈ A0
+                end
+            end
         end
 
         @testset "Single-color decompression" begin
@@ -120,6 +132,22 @@ function test_coloring_decompression(
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
                 @test A3both ≈ A0
+
+                if algo.allow_denser && decompression == :direct && A isa SparseMatrixCSC
+                    A3upper_bigger = respectful_similar(A3upper, eltype(B))
+                    A3lower_bigger = respectful_similar(A3lower, eltype(B))
+                    for _ in 1:10
+                        nb_coeffs_added = rand(1:minimum(size(A)))
+                        for _ in nb_coeffs_added
+                            i = rand(axes(A, 1))
+                            j = rand(axes(A, 2))
+                            A3upper_bigger[min(i, j), max(i, j)] = one(eltype(B))
+                            A3lower_bigger[max(i, j), min(i, j)] = one(eltype(B))
+                        end
+                        @test decompress!(A3upper_bigger, B, result, :U) ≈ triu(A0)
+                        @test decompress!(A3lower_bigger, B, result, :L) ≈ tril(A0)
+                    end
+                end
             end
         end
 
@@ -183,6 +211,7 @@ function test_bicoloring_decompression(
         end
         Br, Bc = compress(A, result)
         row_color, column_color = row_colors(result), column_colors(result)
+        T = promote_eltype(Br, Bc)
 
         @testset "Coherence" begin
             @test size(Br, 1) == length(unique(row_color[row_color .> 0]))
@@ -202,12 +231,8 @@ function test_bicoloring_decompression(
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
-            @test decompress!(
-                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
-            ) ≈ A0
-            @test decompress!(
-                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
-            ) ≈ A0
+            @test decompress!(respectful_similar(A, T), Br, Bc, result) ≈ A0
+            @test decompress!(respectful_similar(A, T), Br, Bc, result) ≈ A0
         end
     end
 end

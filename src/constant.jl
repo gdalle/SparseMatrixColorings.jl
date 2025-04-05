@@ -9,12 +9,22 @@ Indeed, for symmetric coloring problems, we need more than just the vector of co
 
 # Constructors
 
-    ConstantColoringAlgorithm{partition}(matrix_template, color)
-    ConstantColoringAlgorithm(matrix_template, color; partition=:column)
-
+    ConstantColoringAlgorithm{partition}(
+        matrix_template,
+        color;
+        allow_denser=false
+    )
+    
+    ConstantColoringAlgorithm(
+        matrix_template, color;
+        partition=:column,
+        allow_denser=false
+    )
+    
 - `partition::Symbol`: either `:row` or `:column`.
 - `matrix_template::AbstractMatrix`: matrix for which the vector of colors was precomputed (the algorithm will only accept matrices of the exact same size).
 - `color::Vector{<:Integer}`: vector of integer colors, one for each row or column (depending on `partition`).
+- `allow_denser::Bool`: whether or not to allow decompression into a `SparseMatrixCSC` which has more nonzeros than the original sparsity pattern (see [`decompress!`](@ref) to know when this is implemented).
 
 !!! warning
     The second constructor (based on keyword arguments) is type-unstable.
@@ -73,30 +83,38 @@ struct ConstantColoringAlgorithm{
     matrix_template::M
     color::Vector{T}
     result::R
+    allow_denser::Bool
 end
 
 function ConstantColoringAlgorithm{:column}(
-    matrix_template::AbstractMatrix, color::Vector{<:Integer}
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}; allow_denser::Bool=false
 )
     bg = BipartiteGraph(matrix_template)
-    result = ColumnColoringResult(matrix_template, bg, color)
+    result = ColumnColoringResult(matrix_template, bg, color; allow_denser)
     T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:column,M,T,R}(matrix_template, color, result)
+    return ConstantColoringAlgorithm{:column,M,T,R}(
+        matrix_template, color, result, allow_denser
+    )
 end
 
 function ConstantColoringAlgorithm{:row}(
-    matrix_template::AbstractMatrix, color::Vector{<:Integer}
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}; allow_denser::Bool=false
 )
     bg = BipartiteGraph(matrix_template)
-    result = RowColoringResult(matrix_template, bg, color)
+    result = RowColoringResult(matrix_template, bg, color; allow_denser)
     T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:row,M,T,R}(matrix_template, color, result)
+    return ConstantColoringAlgorithm{:row,M,T,R}(
+        matrix_template, color, result, allow_denser
+    )
 end
 
 function ConstantColoringAlgorithm(
-    matrix_template::AbstractMatrix, color::Vector{<:Integer}; partition::Symbol=:column
+    matrix_template::AbstractMatrix,
+    color::Vector{<:Integer};
+    partition::Symbol=:column,
+    allow_denser::Bool=false,
 )
-    return ConstantColoringAlgorithm{partition}(matrix_template, color)
+    return ConstantColoringAlgorithm{partition}(matrix_template, color; allow_denser)
 end
 
 function coloring(

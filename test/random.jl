@@ -21,7 +21,7 @@ symmetric_params = vcat(
 
 @testset "Column coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
-    algo = GreedyColoringAlgorithm(; decompression=:direct)
+    algo = GreedyColoringAlgorithm(; decompression=:direct, allow_denser=true)
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
@@ -36,7 +36,7 @@ end;
 
 @testset "Row coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
-    algo = GreedyColoringAlgorithm(; decompression=:direct)
+    algo = GreedyColoringAlgorithm(; decompression=:direct, allow_denser=true)
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
@@ -52,8 +52,12 @@ end;
 @testset "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     @testset for algo in (
-        GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct),
-        GreedyColoringAlgorithm(; postprocessing=true, decompression=:direct),
+        GreedyColoringAlgorithm(;
+            postprocessing=false, decompression=:direct, allow_denser=true
+        ),
+        GreedyColoringAlgorithm(;
+            postprocessing=true, decompression=:direct, allow_denser=true
+        ),
     )
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = sparse(Symmetric(sprand(rng, n, n, p)))
