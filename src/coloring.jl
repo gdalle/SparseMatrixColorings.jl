@@ -293,7 +293,7 @@ function acyclic_coloring(
 
     buffer = forbidden_colors
     reverse_bfs_orders = first_visit_to_tree
-    tree_set = TreeSet(g, forest, buffer, reverse_bfs_orders)
+    tree_set = TreeSet(g, forest, buffer, reverse_bfs_orders, ne)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         offsets = forbidden_colors
@@ -384,6 +384,7 @@ function TreeSet(
     forest::Forest{T},
     buffer::AbstractVector{T},
     reverse_bfs_orders::Vector{Tuple{T,T}},
+    ne::Integer,
 ) where {T}
     S = pattern(g)
     edge_to_index = edge_indices(g)
@@ -398,70 +399,118 @@ function TreeSet(
     # Contains the number of edges per tree
     num_edges_per_tree = zeros(T, nt)
 
-    # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
-    trees = [Dict{T,Vector{T}}() for i in 1:nt]
-
     # current number of roots found
     nr = 0
 
+    # determine the number of edges for each tree and map each root to a tree index
+    for index_edge in 1:ne
+        root = find_root!(forest, index_edge)
+
+        # create a mapping between roots and tree indices
+        if iszero(root_to_tree[root])
+            nr += 1
+            root_to_tree[root] = nr
+        end
+
+        # index of the tree that contains this edge
+        index_tree = root_to_tree[root]
+
+        # update the number of edges in the tree that contains this edge
+        num_edges_per_tree[index_tree] += 1
+    end
+
+    found_in_tree = Vector{Bool}(undef, nt)
+    colptr_tree = zeros(T, ne + nt + 1)
+    vertices1 = Vector{T}(undef, ne + nt)
+    vertices2 = Vector{T}(undef, 2 * ne)
+
+    pos_vertices1 = Vector{T}(undef, nt)
+    pos_vertices2 = Vector{T}(undef, nt)
+    if nt > 0
+        pos_vertices1[1] = zero(T)
+        pos_vertices2[1] = zero(T)
+    end
+    for k in 2:nt
+        pos_vertices1[k] = pos_vertices1[k - 1] + num_edges_per_tree[k - 1] + 1
+        pos_vertices2[k] = pos_vertices2[k - 1] + 2 * num_edges_per_tree[k - 1]
+    end
+
+    verbose = false
+
     rvS = rowvals(S)
     for j in axes(S, 2)
+        # Use this vector to determine if j appears in the trees
+        found_in_tree .= false
         for pos in nzrange(S, j)
             i = rvS[pos]
-            if i > j
+            if i != j
                 index_ij = edge_to_index[pos]
-                root = find_root!(forest, index_ij)
-
-                # Update roots
-                if iszero(root_to_tree[root])
-                    nr += 1
-                    root_to_tree[root] = nr
-                end
-
-                # index of the tree T that contains this edge
+                # we don't need to use find_root! because the paths are compressed
+                root = forest.parents[index_ij]
                 index_tree = root_to_tree[root]
-                num_edges_per_tree[index_tree] += 1
-
-                # Update the neighbors of i in the tree T
-                if !haskey(trees[index_tree], i)
-                    trees[index_tree][i] = [j]
-                else
-                    push!(trees[index_tree][i], j)
+                t = index_tree
+                verbose && println("t: $t")
+                if !found_in_tree[index_tree]
+                    # j appears for the first time in the current tree
+                    found_in_tree[index_tree] = true
+                    pos_vertices1[index_tree] += 1
+                    # add j in the list of vertices of the current tree
+                    p = pos_vertices1[index_tree]
+                    verbose && println("pos_vertices1[$t]: $p")
+                    verbose && println("vertices1[$p]: $j")
+                    vertices1[p] = j
                 end
-
-                # Update the neighbors of j in the tree T
-                if !haskey(trees[index_tree], j)
-                    trees[index_tree][j] = [i]
-                else
-                    push!(trees[index_tree][j], i)
-                end
+                # increase the number of neighbors for j in the current tree
+                p = pos_vertices1[index_tree]
+                colptr_tree[p] += 1
+                verbose && println("colptr_tree[$p]: $(colptr_tree[p])")
+                # increase the position of the visited neighbors in the current tree
+                pos_vertices2[index_tree] += 1
+                q = pos_vertices2[index_tree]
+                vertices2[q] = i
+                verbose && println("pos_vertices2[$t]: $q")
+                verbose && println("vertices2[$q]: $i")
             end
         end
     end
 
+    # Update tree_colptr
+    for k in (ne + nt):-1:1
+        colptr_tree[k + 1] = colptr_tree[k]
+    end
+    colptr_tree[1] = 1
+    for k in 2:(ne + nt + 1)
+        colptr_tree[k] += colptr_tree[k - 1]
+    end
+
     # degrees is a vector of integers that stores the degree of each vertex in a tree
     degrees = buffer
+    mapping = Vector{T}(undef, nv)
+    fill!(mapping, -1)
 
-    # nvmax is the number of vertices of the biggest tree in the forest
-    nvmax = 0
-    for k in 1:nt
-        nb_vertices_tree = length(trees[k])
-        nvmax = max(nvmax, nb_vertices_tree)
-    end
+    # nvmax is the number of vertices in the largest tree of the forest
+    # In a tree, the number of vertices is equal to the number of edges plus one
+    nvmax = maximum(num_edges_per_tree) + 1
 
     # Create a queue with a fixed size nvmax
     queue = Vector{T}(undef, nvmax)
 
     # Specify if each tree in the forest is a star,
     # meaning that one vertex is directly connected to all other vertices in the tree
-    is_star = Vector{Bool}(undef, nt)
+    is_star = found_in_tree
 
     # Number of edges treated
     num_edges_treated = zero(T)
 
+    first = 1
     # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
     for k in 1:nt
-        tree = trees[k]
+        verbose && println("Arbre: $k")
+        verbose && println("First index: $first")
+        last = first + num_edges_per_tree[k]
+        verbose && println("Last index: $last")
+        verbose && println("ne: $(num_edges_per_tree[k])")
+        verbose && println("nv: $(num_edges_per_tree[k] + 1)")
 
         # Boolean indicating whether the current tree is a star (a single central vertex connected to all others)
         bool_star = true
@@ -474,9 +523,15 @@ function TreeSet(
         queue_end = 0
 
         # compute the degree of each vertex in the tree
-        for (vertex, neighbors) in tree
-            degree = length(neighbors)
+        for pos1 in first:last
+            vertex = vertices1[pos1]
+            degree = colptr_tree[pos1 + 1] - colptr_tree[pos1]
             degrees[vertex] = degree
+            verbose && println("vertices1[$pos1] = $vertex")
+            verbose && println("mapping[$vertex] = $pos1")
+
+            # store a reverse mapping
+            mapping[vertex] = pos1
 
             # the vertex is a leaf
             if degree == 1
@@ -493,7 +548,13 @@ function TreeSet(
             # Mark the vertex as removed
             degrees[leaf] = 0
 
-            for neighbor in tree[leaf]
+            mleaf = mapping[leaf]
+            verbose && println("mleaf = $mleaf")
+            for pos2 in colptr_tree[mleaf]:(colptr_tree[mleaf + 1] - 1)
+                verbose && println("pos2 = $pos2")
+                neighbor = vertices2[pos2]
+                verbose && println("vertices2[$pos2] = $neighbor")
+
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
                     # (leaf, neighbor) represents the next edge to visit during decompression
@@ -524,6 +585,8 @@ function TreeSet(
                 end
             end
         end
+
+        first = last + 1
 
         # Specify if the tree is a star or not
         is_star[k] = bool_star
