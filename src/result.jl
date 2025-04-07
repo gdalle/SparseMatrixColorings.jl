@@ -314,7 +314,8 @@ struct TreeSetColoringResult{
     color::Vector{T}
     group::GT
     reverse_bfs_orders::Vector{Tuple{T,T}}
-    num_edges_per_tree::Vector{T}
+    tree_edge_indices::Vector{T}
+    nt::T
     diagonal_indices::Vector{T}
     diagonal_nzind::Vector{T}
     lower_triangle_offsets::Vector{T}
@@ -329,7 +330,7 @@ function TreeSetColoringResult(
     tree_set::TreeSet{<:Integer},
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
-    (; reverse_bfs_orders, num_edges_per_tree) = tree_set
+    (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
     (; S) = ag
     nvertices = length(color)
     group = group_by_color(T, color)
@@ -358,15 +359,13 @@ function TreeSetColoringResult(
     lower_triangle_offsets = Vector{T}(undef, nedges)
     upper_triangle_offsets = Vector{T}(undef, nedges)
 
-    # Index of the first edge in reverse_bfs_orders for the current tree
-    first = 1
-
     # Index in lower_triangle_offsets and upper_triangle_offsets
     index_offsets = 0
 
-    for k in eachindex(num_edges_per_tree)
-        ne_tree = num_edges_per_tree[k]
-        last = first + ne_tree - 1
+    for k in 1:nt
+        # Positions of the edges for each tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
 
         for pos in first:last
             (leaf, neighbor) = reverse_bfs_orders[pos]
@@ -400,7 +399,6 @@ function TreeSetColoringResult(
             end
             #! format: on
         end
-        first += ne_tree
     end
 
     # buffer holds the sum of edge values for subtrees in a tree.
@@ -413,7 +411,8 @@ function TreeSetColoringResult(
         color,
         group,
         reverse_bfs_orders,
-        num_edges_per_tree,
+        tree_edge_indices,
+        nt,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
