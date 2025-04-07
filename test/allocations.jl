@@ -154,11 +154,7 @@ end
             b64 = @b fast_coloring(A64, problem, algo)
             b32 = @b fast_coloring(A32, problem, algo)
             # check that we allocate no more than 50% + epsilon with Int32
-            if decompression == :direct
-                @test b32.bytes < 0.6 * b64.bytes
-            else
-                @test_broken b32.bytes < 0.6 * b64.bytes
-            end
+            @test b32.bytes < 0.6 * b64.bytes
         end
     end
 end;
