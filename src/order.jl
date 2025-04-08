@@ -88,16 +88,20 @@ end
 function vertices(bg::BipartiteGraph{T}, ::Val{side}, ::LargestFirst) where {T,side}
     other_side = 3 - side
     n = nb_vertices(bg, Val(side))
-    visited = falses(n)  # necessary for distance-2 neighborhoods
+    visited = fill(false, n)  # necessary for distance-2 neighborhoods
     degrees_dist2 = zeros(T, n)
     for v in vertices(bg, Val(side))
-        fill!(visited, false)
         for u in neighbors(bg, Val(side), v)
             for w in neighbors(bg, Val(other_side), u)
                 if w != v && !visited[w]
                     degrees_dist2[v] += 1
                     visited[w] = true  # avoid double counting
                 end
+            end
+        end
+        for u in neighbors(bg, Val(side), v)
+            for w in neighbors(bg, Val(other_side), u)
+                visited[w] = false  # reset only the toggled ones to false
             end
         end
     end
@@ -331,13 +335,14 @@ end
 function vertices(
     g::AdjacencyGraph{T}, order::DynamicDegreeBasedOrder{degtype,direction}
 ) where {T<:Integer,degtype,direction}
+    true_degrees = degrees = T[degree(g, v) for v in vertices(g)]
     if degree_increasing(; degtype, direction)
         degrees = zeros(T, nb_vertices(g))
     else
-        degrees = T[degree(g, v) for v in vertices(g)]
+        degrees = true_degrees
     end
     db = DegreeBuckets(
-        T, degrees, maximum_degree(g); reproduce_colpack=order.reproduce_colpack
+        T, degrees, maximum(true_degrees); reproduce_colpack=order.reproduce_colpack
     )
     π = T[]
     sizehint!(π, nb_vertices(g))
@@ -360,15 +365,21 @@ function vertices(
     # compute dist-2 degrees in an optimized way
     n = nb_vertices(g, Val(side))
     degrees_dist2 = zeros(T, n)
-    dist2_neighbor = falses(n)
+    visited = fill(false, n)
     for v in vertices(g, Val(side))
-        fill!(dist2_neighbor, false)
         for w1 in neighbors(g, Val(side), v)
             for w2 in neighbors(g, Val(other_side), w1)
-                dist2_neighbor[w2] = true
+                if w != v && !visited[w]
+                    degrees_dist2[v] += 1
+                    visited[w2] = true
+                end
             end
         end
-        degrees_dist2[v] = sum(dist2_neighbor)
+        for w1 in neighbors(g, Val(side), v)
+            for w2 in neighbors(g, Val(other_side), w1)
+                visited[w2] = false
+            end
+        end
     end
     if degree_increasing(; degtype, direction)
         degrees = zeros(T, n)
@@ -379,7 +390,7 @@ function vertices(
     db = DegreeBuckets(T, degrees, maxd2; reproduce_colpack=order.reproduce_colpack)
     π = T[]
     sizehint!(π, n)
-    visited = falses(n)
+    fill!(visited, false)
     for _ in 1:nb_vertices(g, Val(side))
         u = pop_next_candidate!(db; direction)
         direction == :low2high ? push!(π, u) : pushfirst!(π, u)
@@ -394,7 +405,11 @@ function vertices(
                 update_bucket!(db, v; degtype, direction)
             end
         end
-        fill!(visited, false)
+        for w in neighbors(g, Val(side), u)
+            for v in neighbors(g, Val(other_side), w)
+                visited[v] = false  # reset only the toggled ones to false
+            end
+        end
     end
     return π
 end
