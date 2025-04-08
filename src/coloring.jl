@@ -424,7 +424,7 @@ function TreeSet(
     # Note: the number of vertices in a tree is equal the number of edges plus one
     nvmax = maximum(tree_edge_indices) + one(T)
 
-    # Vector containing the list of vertices, grouped by tree
+    # Vector containing the list of vertices, grouped by tree (each vertex appears once for every tree it belongs to)
     # Note: the total number of edges in the graph is "ne", so there are "ne + nt" vertices across all trees
     tree_vertices = Vector{T}(undef, ne + nt)
 
