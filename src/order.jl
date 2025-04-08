@@ -369,7 +369,7 @@ function vertices(
     for v in vertices(g, Val(side))
         for w1 in neighbors(g, Val(side), v)
             for w2 in neighbors(g, Val(other_side), w1)
-                if w != v && !visited[w]
+                if w2 != v && !visited[w2]
                     degrees_dist2[v] += 1
                     visited[w2] = true
                 end
