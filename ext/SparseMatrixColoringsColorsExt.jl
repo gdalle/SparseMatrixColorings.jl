@@ -142,6 +142,7 @@ function allocate_outputs(
     hA, wA = size(A) .* (scale + 2border + pad) .+ (pad)
     hBr, wBr = size(Br) .* (scale + 2border + pad) .+ (pad)
     hBc, wBc = size(Bc) .* (scale + 2border + pad) .+ (pad)
+    Arc_img = fill(background_color, hA, wA)
     Ar_img = fill(background_color, hA, wA)
     Ac_img = fill(background_color, hA, wA)
     Br_img = fill(background_color, hBr, wBr)
@@ -150,8 +151,10 @@ function allocate_outputs(
         if !iszero(A[I])
             area = matrix_entry_area(I, scale, border, pad)
             barea = matrix_entry_plus_border_area(I, scale, border, pad)
+            Arc_img[barea] .= border_color
             Ar_img[barea] .= border_color
             Ac_img[barea] .= border_color
+            Arc_img[area] .= background_color
             Ar_img[area] .= background_color
             Ac_img[area] .= background_color
         end
@@ -172,7 +175,7 @@ function allocate_outputs(
             Bc_img[area] .= background_color
         end
     end
-    return Ar_img, Ac_img, Br_img, Bc_img
+    return Arc_img, Ar_img, Ac_img, Br_img, Bc_img
 end
 
 ## Implementations for different AbstractColoringResult types start here
@@ -247,7 +250,11 @@ function show_colors!(
     return A_img, B_img
 end
 
+mytriu(area) = [area[i, j] for i in axes(area, 1) for j in axes(area, 2) if i < j]
+mytril(area) = [area[i, j] for i in axes(area, 1) for j in axes(area, 2) if i > j]
+
 function show_colors!(
+    Arc_img::AbstractMatrix{<:Colorant},
     Ar_img::AbstractMatrix{<:Colorant},
     Ac_img::AbstractMatrix{<:Colorant},
     Br_img::AbstractMatrix{<:Colorant},
@@ -264,9 +271,8 @@ function show_colors!(
     A_ccolor_indices = mod1.(column_colors(res), length(colorscheme))
     A_rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme))
     B_ccolor_indices = mod1.(1:maximum(column_colors(res)), length(colorscheme))
-    B_rcolor_indices = mod1.(
-        (row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme)
-    )
+    B_rcolor_indices =
+        mod1.((row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme))
     A_ccolors = colorscheme[A_ccolor_indices]
     A_rcolors = colorscheme[A_rcolor_indices]
     B_ccolors = colorscheme[B_ccolor_indices]
@@ -278,9 +284,11 @@ function show_colors!(
             r, c = Tuple(I)
             area = matrix_entry_area(I, scale, border, pad)
             if column_colors(res)[c] > 0
+                Arc_img[mytriu(area)] .= A_ccolors[c]
                 Ac_img[area] .= A_ccolors[c]
             end
             if row_colors(res)[r] > 0
+                Arc_img[mytril(area)] .= A_rcolors[r]
                 Ar_img[area] .= A_rcolors[r]
             end
         end
@@ -299,7 +307,7 @@ function show_colors!(
             Bc_img[area] .= B_ccolors[c]
         end
     end
-    return Ar_img, Ac_img, Br_img, Bc_img
+    return Arc_img, Ar_img, Ac_img, Br_img, Bc_img
 end
 
 end # module
