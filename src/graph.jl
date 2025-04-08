@@ -270,13 +270,9 @@ end
 degree(g::AdjacencyGraph{T,false}, v::Integer) where {T} = g.S.colptr[v + 1] - g.S.colptr[v]
 
 function degree(g::AdjacencyGraph{T,true}, v::Integer) where {T}
-    d = 0
-    for u in neighbors(g, v)
-        if u != v
-            d += 1
-        end
-    end
-    return d
+    neigh = neighbors(g, v)
+    has_selfloop = insorted(v, neigh)
+    return g.S.colptr[v + 1] - g.S.colptr[v] - has_selfloop
 end
 
 nb_edges(g::AdjacencyGraph{T,false}) where {T} = nnz(g.S) ÷ 2
