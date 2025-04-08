@@ -80,7 +80,8 @@ Instance of [`AbstractOrder`](@ref) which sorts vertices using their degree in t
 struct LargestFirst <: AbstractOrder end
 
 function vertices(g::AdjacencyGraph, ::LargestFirst)
-    criterion(v) = degree(g, v)
+    degrees = map(Base.Fix1(degree, g), vertices(g))
+    criterion(v) = degrees[v]
     return sort(vertices(g); by=criterion, rev=true)
 end
 
