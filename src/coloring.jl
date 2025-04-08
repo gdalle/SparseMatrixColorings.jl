@@ -451,8 +451,7 @@ function TreeSet(
     end
 
     # found_in_tree indicates if a given vertex is in each tree
-    found_in_tree = Vector{Bool}(undef, nt)
-    fill!(found_in_tree, false)
+    found_in_tree = fill(false, nt)
 
     # Maintain a record of visited trees to efficiently reset found_in_tree
     visited_trees = Vector{T}(undef, nt)
