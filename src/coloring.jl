@@ -452,11 +452,15 @@ function TreeSet(
 
     # found_in_tree indicates if a given vertex is in each tree
     found_in_tree = Vector{Bool}(undef, nt)
+    fill!(found_in_tree, false)
+
+    # Maintain a record of visited trees to efficiently reset found_in_tree
+    visited_trees = Vector{T}(undef, nt)
 
     rvS = rowvals(S)
     for j in axes(S, 2)
-        # Reset the vector found_in_tree to indicate that the vertex j is not present in any tree yet
-        fill!(found_in_tree, false)
+        # Number of visited trees that contain vertex j
+        ntree_visited = 0
 
         for pos in nzrange(S, j)
             i = rvS[pos]
@@ -476,6 +480,10 @@ function TreeSet(
                     # Mark that vertex j is present in the current tree
                     found_in_tree[index_tree] = true
 
+                    # This is the first time an edge with vertex j has been found in the tree
+                    nt_visited += 1
+                    visited_trees[nt_visited] = index_tree
+
                     # Insert j into tree_vertices
                     vertex_position[index_tree] += 1
                     vertex_index += 1
@@ -490,6 +498,11 @@ function TreeSet(
                 # Increment neighbor count for j in the tree (shifted by 1 to facilitate the final cumsum)
                 tree_neighbor_indices[vertex_index + 1] += 1
             end
+        end
+
+        # Reset found_in_tree
+        for t in 1:nt_visited
+            found_in_tree[visited_trees[t]] = false
         end
     end
 
