@@ -456,10 +456,10 @@ function TreeSet(
     # Maintain a record of visited trees to efficiently reset found_in_tree
     visited_trees = Vector{T}(undef, nt)
 
+    # Number of trees visited for each column of S
+    nt_visited = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
-        # Number of visited trees that contain vertex j
-        ntree_visited = 0
 
         for pos in nzrange(S, j)
             i = rvS[pos]
@@ -503,6 +503,7 @@ function TreeSet(
         for t in 1:nt_visited
             found_in_tree[visited_trees[t]] = false
         end
+        nt_visited = 0
     end
 
     # Compute a shifted cumulative sum of tree_edge_indices, starting from one
