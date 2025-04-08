@@ -460,7 +460,6 @@ function TreeSet(
     nt_visited = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
-
         for pos in nzrange(S, j)
             i = rvS[pos]
             if i != j
