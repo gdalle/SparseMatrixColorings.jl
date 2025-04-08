@@ -293,7 +293,7 @@ function acyclic_coloring(
 
     buffer = forbidden_colors
     reverse_bfs_orders = first_visit_to_tree
-    tree_set = TreeSet(g, forest, buffer, reverse_bfs_orders)
+    tree_set = TreeSet(g, forest, buffer, reverse_bfs_orders, ne)
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         offsets = forbidden_colors
@@ -385,11 +385,12 @@ function TreeSet(
     forest::Forest{T},
     buffer::AbstractVector{T},
     reverse_bfs_orders::Vector{Tuple{T,T}},
+    ne::Integer,
 ) where {T}
     S = pattern(g)
     edge_to_index = edge_indices(g)
     nv = nb_vertices(g)
-    (; nt, ranks) = forest
+    (; nt, ranks, parents) = forest
 
     # root_to_tree is a vector that maps a tree's root to the index of the tree
     # We can recycle the vector "ranks" because we don't need it anymore to merge trees
@@ -399,47 +400,109 @@ function TreeSet(
     # vector specifying the starting and ending indices of edges for each tree
     tree_edge_indices = zeros(T, nt + 1)
 
-    # vector of dictionaries where each dictionary stores the neighbors of each vertex in a tree
-    trees = [Dict{T,Vector{T}}() for i in 1:nt]
-
     # number of roots found
     nr = 0
 
+    # determine the number of edges for each tree and map each root to a tree index
+    for index_edge in 1:ne
+        root = find_root!(forest, index_edge)
+
+        # create a mapping between roots and tree indices
+        if iszero(root_to_tree[root])
+            nr += 1
+            root_to_tree[root] = nr
+        end
+
+        # index of the tree that contains this edge
+        index_tree = root_to_tree[root]
+
+        # Update the number of edges for the current tree (shifted by 1 to facilitate the final cumsum)
+        tree_edge_indices[index_tree + 1] += 1
+    end
+
+    # nvmax is the number of vertices in the largest tree of the forest
+    # Note: the number of vertices in a tree is equal the number of edges plus one
+    nvmax = maximum(tree_edge_indices) + one(T)
+
+    # Vector containing the list of vertices, grouped by tree (each vertex appears once for every tree it belongs to)
+    # Note: the total number of edges in the graph is "ne", so there are "ne + nt" vertices across all trees
+    tree_vertices = Vector{T}(undef, ne + nt)
+
+    # Provide the positions of the first and last neighbors for each vertex in "tree_vertices", within the tree to which the vertex belongs
+    # These positions refer to indices in the vector "tree_neighbors"
+    tree_neighbor_indices = zeros(T, ne + nt + 1)
+
+    # Packed representation of the neighbors of each vertex in "tree_vertices"
+    tree_neighbors = Vector{T}(undef, 2 * ne)
+
+    # Track the positions for inserting vertices and neighbors per tree
+    vertex_position = Vector{T}(undef, nt)
+    neighbor_position = Vector{T}(undef, nt)
+
+    # Compute starting positions for vertices and neighbors in each tree
+    if nt > 0
+        vertex_position[1] = zero(T)
+        neighbor_position[1] = zero(T)
+    end
+    for k in 2:nt
+        # Note: tree_edge_indices[k] is the number of edges in the tree k-1
+        vertex_position[k] = vertex_position[k - 1] + tree_edge_indices[k] + 1
+        neighbor_position[k] = neighbor_position[k - 1] + 2 * tree_edge_indices[k]
+    end
+
+    # found_in_tree indicates if a given vertex is in each tree
+    found_in_tree = fill(false, nt)
+
+    # Maintain a record of visited trees to efficiently reset found_in_tree
+    visited_trees = Vector{T}(undef, nt)
+
+    # Number of trees visited for each column of S
+    nt_visited = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
         for pos in nzrange(S, j)
             i = rvS[pos]
-            if i > j
+            if i != j
                 index_ij = edge_to_index[pos]
-                root = find_root!(forest, index_ij)
 
-                # Update roots
-                if iszero(root_to_tree[root])
-                    nr += 1
-                    root_to_tree[root] = nr
-                end
+                # No need to call "find_root!" because paths have already been compressed
+                root = parents[index_ij]
 
-                # index of the tree that contains this edge
+                # Index of the tree containing edge (i, j)
                 index_tree = root_to_tree[root]
 
-                # Update the number of edges for the current tree (shifted by 1 to facilitate the final cumsum)
-                tree_edge_indices[index_tree + 1] += 1
+                # Position in tree_vertices where vertex j should be found or inserted
+                vertex_index = vertex_position[index_tree]
 
-                # Update the neighbors of i in the current tree
-                if !haskey(trees[index_tree], i)
-                    trees[index_tree][i] = [j]
-                else
-                    push!(trees[index_tree][i], j)
+                if !found_in_tree[index_tree]
+                    # Mark that vertex j is present in the current tree
+                    found_in_tree[index_tree] = true
+
+                    # This is the first time an edge with vertex j has been found in the tree
+                    nt_visited += 1
+                    visited_trees[nt_visited] = index_tree
+
+                    # Insert j into tree_vertices
+                    vertex_position[index_tree] += 1
+                    vertex_index += 1
+                    tree_vertices[vertex_index] = j
                 end
 
-                # Update the neighbors of j in the current tree
-                if !haskey(trees[index_tree], j)
-                    trees[index_tree][j] = [i]
-                else
-                    push!(trees[index_tree][j], i)
-                end
+                # Append neighbor i to the list of neighbors of j in the tree
+                neighbor_position[index_tree] += 1
+                neighbor_index = neighbor_position[index_tree]
+                tree_neighbors[neighbor_index] = i
+
+                # Increment neighbor count for j in the tree (shifted by 1 to facilitate the final cumsum)
+                tree_neighbor_indices[vertex_index + 1] += 1
             end
         end
+
+        # Reset found_in_tree
+        for t in 1:nt_visited
+            found_in_tree[visited_trees[t]] = false
+        end
+        nt_visited = 0
     end
 
     # Compute a shifted cumulative sum of tree_edge_indices, starting from one
@@ -448,44 +511,50 @@ function TreeSet(
         tree_edge_indices[k] += tree_edge_indices[k - 1]
     end
 
+    # Compute a shifted cumulative sum of tree_neighbor_indices, starting from one
+    tree_neighbor_indices[1] = 1
+    for k in 2:(ne + nt + 1)
+        tree_neighbor_indices[k] += tree_neighbor_indices[k - 1]
+    end
+
     # degrees is a vector of integers that stores the degree of each vertex in a tree
     degrees = buffer
 
-    # nvmax is the number of vertices of the biggest tree in the forest
-    nvmax = 0
-    for k in 1:nt
-        nb_vertices_tree = length(trees[k])
-        nvmax = max(nvmax, nb_vertices_tree)
-    end
+    # For each vertex in the current tree, reverse_mapping will hold its corresponding index in tree_vertices
+    reverse_mapping = Vector{T}(undef, nv)
 
     # Create a queue with a fixed size nvmax
     queue = Vector{T}(undef, nvmax)
 
-    # Specify if each tree in the forest is a star,
-    # meaning that one vertex is directly connected to all other vertices in the tree
-    is_star = Vector{Bool}(undef, nt)
+    # Determine if each tree in the forest is a star
+    # In a star, at most one vertex has a degree strictly greater than one
+    is_star = found_in_tree
 
     # Number of edges treated
     num_edges_treated = zero(T)
 
     # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
     for k in 1:nt
-        tree = trees[k]
-
-        # Boolean indicating whether the current tree is a star (a single central vertex connected to all others)
-        bool_star = true
-
-        # Candidate hub vertex if the current tree is a star
-        virtual_hub = 0
-
         # Initialize the queue to store the leaves
         queue_start = 1
         queue_end = 0
 
+        # Positions of the first and last vertices in the current tree
+        # Note: tree_edge_indices contains the positions of the first and last edges,
+        # so we add to add an offset k-1 between edge indices and vertex indices
+        first_vertex = tree_edge_indices[k] + (k-1)
+        last_vertex = tree_edge_indices[k + 1] + (k-1)
+
         # compute the degree of each vertex in the tree
-        for (vertex, neighbors) in tree
-            degree = length(neighbors)
+        for index_vertex in first_vertex:last_vertex
+            vertex = tree_vertices[index_vertex]
+            degree =
+                tree_neighbor_indices[index_vertex + 1] -
+                tree_neighbor_indices[index_vertex]
             degrees[vertex] = degree
+
+            # store a reverse mapping to get the position of the vertex in tree_vertices
+            reverse_mapping[vertex] = index_vertex
 
             # the vertex is a leaf
             if degree == 1
@@ -493,6 +562,13 @@ function TreeSet(
                 queue[queue_end] = vertex
             end
         end
+
+        # number of vertices in the tree
+        nv_tree = tree_edge_indices[k + 1] - tree_edge_indices[k] + 1
+
+        # Check that no more than one vertex has a degree strictly greater than one
+        # "queue_end" currently represents the number of vertices considered as leaves in the tree before any pruning
+        is_star[k] = queue_end >= nv_tree - 1
 
         # continue until all leaves are treated
         while queue_start <= queue_end
@@ -502,25 +578,22 @@ function TreeSet(
             # Mark the vertex as removed
             degrees[leaf] = 0
 
-            for neighbor in tree[leaf]
+            # Position of the leaf in tree_vertices
+            index_leaf = reverse_mapping[leaf]
+
+            # Positions of the first and last neighbors of the leaf in the current tree
+            first_neighbor = tree_neighbor_indices[index_leaf]
+            last_neighbor = tree_neighbor_indices[index_leaf + 1] - 1
+
+            # Iterate over all neighbors of the leaf to be pruned
+            for index_neighbor in first_neighbor:last_neighbor
+                neighbor = tree_neighbors[index_neighbor]
+
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
                 if degrees[neighbor] != 0
                     # (leaf, neighbor) represents the next edge to visit during decompression
                     num_edges_treated += 1
                     reverse_bfs_orders[num_edges_treated] = (leaf, neighbor)
-
-                    if bool_star
-                        # Initialize the potential hub of the star with the first parent of a leaf
-                        if virtual_hub == 0
-                            virtual_hub = neighbor
-                        else
-                            # Verify if the tree still qualifies as a star
-                            # If we find leaves with different parents, then it can't be a star
-                            if virtual_hub != neighbor
-                                bool_star = false
-                            end
-                        end
-                    end
 
                     # reduce the degree of the neighbor
                     degrees[neighbor] -= 1
@@ -533,9 +606,6 @@ function TreeSet(
                 end
             end
         end
-
-        # Specify if the tree is a star or not
-        is_star[k] = bool_star
     end
 
     return TreeSet(reverse_bfs_orders, is_star, tree_edge_indices, nt)

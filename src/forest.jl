@@ -25,7 +25,7 @@ function Forest{T}(n::Integer) where {T<:Integer}
     return Forest{T}(nt, parents, ranks)
 end
 
-function _find_root!(parents::Vector{T}, index_edge::T) where {T<:Integer}
+function _find_root!(parents::Vector{<:Integer}, index_edge::Integer)
     p = parents[index_edge]
     if parents[p] != p
         parents[index_edge] = p = _find_root!(parents, p)
@@ -33,11 +33,13 @@ function _find_root!(parents::Vector{T}, index_edge::T) where {T<:Integer}
     return p
 end
 
-function find_root!(forest::Forest{T}, index_edge::T) where {T<:Integer}
+function find_root!(forest::Forest{<:Integer}, index_edge::Integer)
     return _find_root!(forest.parents, index_edge)
 end
 
-function root_union!(forest::Forest{T}, index_edge1::T, index_edge2::T) where {T<:Integer}
+function root_union!(
+    forest::Forest{T}, index_edge1::Integer, index_edge2::Integer
+) where {T<:Integer}
     parents = forest.parents
     rks = forest.ranks
     rank1 = rks[index_edge1]

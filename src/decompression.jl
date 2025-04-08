@@ -540,11 +540,11 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in 1:nt
-        # Positions of the edges for each tree
+        # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in a tree (except the root)
+        # Reset the buffer to zero for all vertices in the tree (except the root)
         for pos in first:last
             (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
@@ -625,11 +625,11 @@ function decompress!(
 
     # Recover the off-diagonal coefficients of A
     for k in 1:nt
-        # Positions of the edges for each tree
+        # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in a tree (except the root)
+        # Reset the buffer to zero for all vertices in the tree (except the root)
         for pos in first:last
             (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
