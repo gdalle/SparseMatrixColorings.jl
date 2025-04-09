@@ -52,11 +52,13 @@ algo = GreedyColoringAlgorithm(; decompression=:direct)
         Br, Bc = compress(A, result)
 
         scale = 3
-        Ar_img, Ac_img, Br_img, Bc_img = show_colors(result; scale=scale)
+        Arc_img, Ar_img, Ac_img, Br_img, Bc_img = show_colors(result; scale=scale)
+        @test size(Arc_img) == size(A) .* scale
         @test size(Ar_img) == size(A) .* scale
         @test size(Ac_img) == size(A) .* scale
         @test size(Br_img) == size(Br) .* scale
         @test size(Bc_img) == size(Bc) .* scale
+        @test Arc_img isa Matrix{<:Colorant}
         @test Ar_img isa Matrix{<:Colorant}
         @test Ac_img isa Matrix{<:Colorant}
         @test Br_img isa Matrix{<:Colorant}
