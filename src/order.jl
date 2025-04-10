@@ -203,9 +203,6 @@ function DegreeBucketsSMC(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T
     return DegreeBucketsSMC(degrees, bucket_storage, bucket_low, bucket_high, positions)
 end
 
-maxdeg(db::DegreeBucketsColPack) = length(db.buckets) - 1
-maxdeg(db::DegreeBucketsSMC) = length(db.bucket_low) - 1
-
 function nonempty_bucket(db::DegreeBucketsSMC, d::Integer)
     return db.bucket_high[d + 1] >= db.bucket_low[d + 1]
 end
