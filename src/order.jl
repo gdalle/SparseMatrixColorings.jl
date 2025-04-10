@@ -161,7 +161,7 @@ struct DegreeBucketsColPack{T} <: AbstractDegreeBuckets{T}
     positions::Vector{T}
 end
 
-struct DegreeBucketsFast{T} <: AbstractDegreeBuckets{T}
+struct DegreeBucketsSMC{T} <: AbstractDegreeBuckets{T}
     degrees::Vector{T}
     bucket_storage::Vector{T}
     bucket_low::Vector{T}
@@ -188,7 +188,7 @@ function DegreeBucketsColPack(::Type{T}, degrees::Vector{T}, dmax::Integer) wher
     return DegreeBucketsColPack(degrees, buckets, positions)
 end
 
-function DegreeBucketsFast(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
+function DegreeBucketsSMC(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
     # number of vertices per degree class
     deg_count = zeros(T, dmax + 1)
     for d in degrees
@@ -208,13 +208,13 @@ function DegreeBucketsFast(::Type{T}, degrees::Vector{T}, dmax::Integer) where {
         bucket_storage[positions[v]] = v
         deg_count[d + 1] -= 1
     end
-    return DegreeBucketsFast(degrees, bucket_storage, bucket_low, bucket_high, positions)
+    return DegreeBucketsSMC(degrees, bucket_storage, bucket_low, bucket_high, positions)
 end
 
 maxdeg(db::DegreeBucketsColPack) = length(db.buckets) - 1
-maxdeg(db::DegreeBucketsFast) = length(db.bucket_low) - 1
+maxdeg(db::DegreeBucketsSMC) = length(db.bucket_low) - 1
 
-function nonempty_bucket(db::DegreeBucketsFast, d::Integer)
+function nonempty_bucket(db::DegreeBucketsSMC, d::Integer)
     return db.bucket_high[d + 1] >= db.bucket_low[d + 1]
 end
 function nonempty_bucket(db::DegreeBucketsColPack, d::Integer)
@@ -271,7 +271,7 @@ function pop_next_candidate!(db::AbstractDegreeBuckets; direction::Symbol)
 end
 
 function update_bucket!(
-    db::DegreeBucketsFast, v::Integer; degtype::Symbol, direction::Symbol
+    db::DegreeBucketsSMC, v::Integer; degtype::Symbol, direction::Symbol
 )
     (; degrees, bucket_storage, bucket_low, bucket_high, positions) = db
     d, p = degrees[v], positions[v]
@@ -349,7 +349,7 @@ function vertices(
     db = if reproduce_colpack
         DegreeBucketsColPack(T, degrees, max_degrees)
     else
-        DegreeBucketsFast(T, degrees, max_degrees)
+        DegreeBucketsSMC(T, degrees, max_degrees)
     end
     nv = nb_vertices(g)
     π = Vector{T}(undef, nv)
@@ -393,7 +393,7 @@ function vertices(
     db = if reproduce_colpack
         DegreeBucketsColPack(T, degrees, maxd2)
     else
-        DegreeBucketsFast(T, degrees, maxd2)
+        DegreeBucketsSMC(T, degrees, maxd2)
     end
     π = Vector{T}(undef, n)
     index_π = (direction == :low2high) ? (1:n) : (n:-1:1)
