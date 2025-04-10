@@ -426,7 +426,7 @@ $COLPACK_WARNING
 - [`DynamicDegreeBasedOrder`](@ref)
 """
 function IncidenceDegree(; reproduce_colpack::Bool=false)
-    DynamicDegreeBasedOrder{:back,:low2high,reproduce_colpack}()
+    return DynamicDegreeBasedOrder{:back,:low2high,reproduce_colpack}()
 end
 
 """
@@ -441,7 +441,7 @@ $COLPACK_WARNING
 - [`DynamicDegreeBasedOrder`](@ref)
 """
 function SmallestLast(; reproduce_colpack::Bool=false)
-    DynamicDegreeBasedOrder{:back,:high2low,reproduce_colpack}()
+    return DynamicDegreeBasedOrder{:back,:high2low,reproduce_colpack}()
 end
 
 """
@@ -456,7 +456,7 @@ $COLPACK_WARNING
 - [`DynamicDegreeBasedOrder`](@ref)
 """
 function DynamicLargestFirst(; reproduce_colpack::Bool=false)
-    DynamicDegreeBasedOrder{:forward,:low2high,reproduce_colpack}()
+    return DynamicDegreeBasedOrder{:forward,:low2high,reproduce_colpack}()
 end
 
 """
@@ -491,5 +491,7 @@ function all_orders()
         IncidenceDegree(; reproduce_colpack=true),
         DynamicLargestFirst(),
         DynamicLargestFirst(; reproduce_colpack=true),
+        DynamicDegreeBasedOrder{:forward,:high2low}(),
+        DynamicDegreeBasedOrder{:forward,:high2low}(; reproduce_colpack=true),
     ]
 end
