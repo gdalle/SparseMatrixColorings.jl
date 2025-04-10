@@ -106,12 +106,6 @@ function vertices(bg::BipartiteGraph{T}, ::Val{side}, ::LargestFirst) where {T,s
     return sort!(visited; by=criterion, rev=true)
 end
 
-const COLPACK_WARNING = """
-!!! danger
-    The option `reproduce_colpack=true` induces a large slowdown to mirror the original implementation details of ColPack, it should not be used in performance-sensitive applications.
-    This setting is mostly for the purpose of reproducing past research results which rely on implementation details.
-"""
-
 """
     DynamicDegreeBasedOrder{degtype,direction}(; reproduce_colpack=false)
 
@@ -137,9 +131,7 @@ This order works by assigning vertices to buckets based on their dynamic degree,
   - When `reproduce_colpack=false` (the default), we can append and remove vertices either at the start or at the end of a bucket (bilateral).
 
 Allowing modifications on both sides of a bucket enables storage optimization, with a single fixed-size vector for all buckets instead of one dynamically-sized vector per bucket.
-Our implementation is optimized for this bilateral setting, which means we pay a large performance penalty to artificially imitate the unilateral setting.
-
-$COLPACK_WARNING
+As a result, the default setting `reproduce_colpack=false` is slightly more memory-efficient.
 
 # References
 
@@ -419,8 +411,6 @@ end
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic back degree.
 
-$COLPACK_WARNING
-
 # See also
 
 - [`DynamicDegreeBasedOrder`](@ref)
@@ -434,8 +424,6 @@ end
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from highest to lowest using the dynamic back degree.
 
-$COLPACK_WARNING
-
 # See also
 
 - [`DynamicDegreeBasedOrder`](@ref)
@@ -448,8 +436,6 @@ end
     DynamicLargestFirst(; reproduce_colpack=false)
 
 Instance of [`AbstractOrder`](@ref) which sorts vertices from lowest to highest using the dynamic forward degree.
-
-$COLPACK_WARNING
 
 # See also
     
