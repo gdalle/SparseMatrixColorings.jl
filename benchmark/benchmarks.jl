@@ -51,6 +51,7 @@ for structure in [:nonsymmetric, :symmetric],
 end
 
 for structure in [:nonsymmetric, :symmetric],
+    partition in (structure == :nonsymmetric ? [:column, :row] : [:column]),
     order in [LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()],
     n in [10^3, 10^5],
     p in [2 / n, 5 / n, 10 / n]
@@ -66,13 +67,12 @@ for structure in [:nonsymmetric, :symmetric],
         end
     else
         gs = [SMC.BipartiteGraph(A) for A in As]
+        valside = partition == :row ? Val(1) : Val(2)
         bench_ord = @benchmarkable begin
             for g in $gs
-                SMC.vertices(g, Val(1), $order)
-                SMC.vertices(g, Val(2), $order)
+                SMC.vertices(g, $valside, $order)
             end
         end
     end
-
-    SUITE[:order][structure][string(order)]["n=$n"]["p=$p"] = bench_ord
+    SUITE[:order][structure][partition][string(order)]["n=$n"]["p=$p"] = bench_ord
 end
