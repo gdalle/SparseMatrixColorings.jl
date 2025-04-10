@@ -97,6 +97,8 @@ end;
         IncidenceDegree(; reproduce_colpack=true),
         DynamicLargestFirst(),
         DynamicLargestFirst(; reproduce_colpack=true),
+        DynamicDegreeBasedOrder{:forward,:high2low}(),
+        DynamicDegreeBasedOrder{:forward,:high2low}(; reproduce_colpack=true),
     ]
         @testset "AdjacencyGraph" begin
             for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)

@@ -220,31 +220,14 @@ function degree_increasing(; degtype, direction)
     return increasing
 end
 
-function mark_ordered!(db::AbstractDegreeBuckets{T}, v::Integer) where {T}
-    db.degrees[v] = -1
-    db.positions[v] = typemin(T)
-    return nothing
-end
-
-already_ordered(db::AbstractDegreeBuckets, v::Integer) = db.degrees[v] == -1
-
-function pop_next_candidate!(db::AbstractDegreeBuckets; direction::Symbol)
-    dmax = maxdeg(db)
-    if direction == :low2high
-        candidate_degree = dmax + 1
-        for d in dmax:-1:0
-            if nonempty_bucket(db, d)
-                candidate_degree = d
-                break
-            end
-        end
-    else
-        candidate_degree = -1
-        for d in 0:dmax
-            if nonempty_bucket(db, d)
-                candidate_degree = d
-                break
-            end
+function pop_next_candidate!(db::AbstractDegreeBuckets; degree_range::OrdinalRange)
+    (; degrees) = db
+    # degree_range is used to avoid going through the empty parts of 0:dmax
+    candidate_degree = -1
+    for d in degree_range
+        if nonempty_bucket(db, d)
+            candidate_degree = d
+            break
         end
     end
     if db isa DegreeBucketsColPack
@@ -255,21 +238,22 @@ function pop_next_candidate!(db::AbstractDegreeBuckets; direction::Symbol)
         (; bucket_storage, bucket_high) = db
         high = bucket_high[candidate_degree + 1]
         candidate = bucket_storage[high]
-        bucket_storage[high] = -1
         bucket_high[candidate_degree + 1] -= 1
     end
-    mark_ordered!(db, candidate)
-    return candidate
+    # mark as ordered
+    degrees[candidate] = -1
+    # returning candidate degree is useful to update degree_range
+    return candidate, candidate_degree
 end
 
 function update_bucket!(
-    db::DegreeBucketsSMC, v::Integer; degtype::Symbol, direction::Symbol
+    db::DegreeBucketsSMC, v::Integer, d::Integer; degtype::Symbol, direction::Symbol
 )
     (; degrees, bucket_storage, bucket_low, bucket_high, positions) = db
-    d, p = degrees[v], positions[v]
-    low, high = bucket_low[d + 1], bucket_high[d + 1]
+    p = positions[v]
     # select previous or next bucket for the move
     if degree_increasing(; degtype, direction)
+        high = bucket_high[d + 1]
         # move the vertex w located at the end of the current bucket to v's position
         w = bucket_storage[high]
         bucket_storage[p] = w
@@ -279,7 +263,7 @@ function update_bucket!(
         bucket_high[d + 1] -= 1
         # move v to the beginning of the next bucket (!= ColPack)
         d_new = d + 1
-        low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
+        low_new = bucket_low[d_new + 1]
         bucket_storage[low_new - 1] = v
         # grow next bucket to the left
         bucket_low[d_new + 1] -= 1
@@ -287,6 +271,7 @@ function update_bucket!(
         degrees[v] = d_new
         positions[v] = low_new - 1
     else
+        low = bucket_low[d + 1]
         # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
         w = bucket_storage[low]
         bucket_storage[p] = w
@@ -296,7 +281,7 @@ function update_bucket!(
         bucket_low[d + 1] += 1
         # move v to the end of the previous bucket
         d_new = d - 1
-        low_new, high_new = bucket_low[d_new + 1], bucket_high[d_new + 1]
+        high_new = bucket_high[d_new + 1]
         bucket_storage[high_new + 1] = v
         # grow previous bucket to the right
         bucket_high[d_new + 1] += 1
@@ -308,10 +293,10 @@ function update_bucket!(
 end
 
 function update_bucket!(
-    db::DegreeBucketsColPack, v::Integer; degtype::Symbol, direction::Symbol
+    db::DegreeBucketsColPack, v::Integer, d::Integer; degtype::Symbol, direction::Symbol
 )
     (; degrees, buckets, positions) = db
-    d, p = degrees[v], positions[v]
+    p = positions[v]
     bucket = buckets[d + 1]
     # select previous or next bucket for the move
     d_new = degree_increasing(; degtype, direction) ? d + 1 : d - 1
@@ -319,11 +304,11 @@ function update_bucket!(
     # put v at the end of its bucket by swapping
     w = bucket[end]
     bucket[p] = w
-    positions[w] = p
     bucket[end] = v
+    positions[w] = p
     positions[v] = length(bucket)
     # move v from the old bucket to the new one
-    @assert pop!(bucket) == v
+    pop!(bucket)
     push!(bucket_new, v)
     degrees[v] = d_new
     positions[v] = length(bucket_new)
@@ -333,26 +318,35 @@ end
 function vertices(
     g::AdjacencyGraph{T}, ::DynamicDegreeBasedOrder{degtype,direction,reproduce_colpack}
 ) where {T<:Integer,degtype,direction,reproduce_colpack}
-    true_degrees = degrees = T[degree(g, v) for v in vertices(g)]
-    max_degrees = maximum(true_degrees)
+    degrees = T[degree(g, v) for v in vertices(g)]
+    dmax = maximum(degrees)
     if degree_increasing(; degtype, direction)
         fill!(degrees, zero(T))
     end
     db = if reproduce_colpack
-        DegreeBucketsColPack(T, degrees, max_degrees)
+        DegreeBucketsColPack(T, degrees, dmax)
     else
-        DegreeBucketsSMC(T, degrees, max_degrees)
+        DegreeBucketsSMC(T, degrees, dmax)
     end
     nv = nb_vertices(g)
     π = Vector{T}(undef, nv)
-    index_π = (direction == :low2high) ? (1:nv) : (nv:-1:1)
+    index_π = (direction == :low2high) ? (1:nv) : reverse(1:nv)
+    degree_range = (direction == :low2high) ? reverse(0:dmax) : (0:dmax)
     for index in index_π
-        u = pop_next_candidate!(db; direction)
+        u, du = pop_next_candidate!(db; degree_range)
+
         π[index] = u
         for v in neighbors(g, u)
             !has_diagonal(g) || (u == v && continue)
-            already_ordered(db, v) && continue
-            update_bucket!(db, v; degtype, direction)
+            dv = degrees[v]
+            dv == -1 && continue
+            update_bucket!(db, v, dv; degtype, direction)
+        end
+        # no need to look much further than du next time
+        degree_range = if direction == :low2high
+            reverse(0:min(du + 1, dmax))
+        else
+            max(du - 1, 0):dmax
         end
     end
     return π
@@ -366,41 +360,49 @@ function vertices(
     other_side = 3 - side
     # compute dist-2 degrees in an optimized way
     n = nb_vertices(g, Val(side))
-    degrees_dist2 = degrees = zeros(T, n)
+    degrees = zeros(T, n)
     visited = zeros(T, n)
     for v in vertices(g, Val(side))
         for w1 in neighbors(g, Val(side), v)
             for w2 in neighbors(g, Val(other_side), w1)
                 if w2 != v && visited[w2] != v
-                    degrees_dist2[v] += 1
+                    degrees[v] += 1
                     visited[w2] = v
                 end
             end
         end
     end
-    maxd2 = maximum(degrees_dist2)
+    dmax = maximum(degrees)
     if degree_increasing(; degtype, direction)
         fill!(degrees, zero(T))
     end
     db = if reproduce_colpack
-        DegreeBucketsColPack(T, degrees, maxd2)
+        DegreeBucketsColPack(T, degrees, dmax)
     else
-        DegreeBucketsSMC(T, degrees, maxd2)
+        DegreeBucketsSMC(T, degrees, dmax)
     end
     π = Vector{T}(undef, n)
     index_π = (direction == :low2high) ? (1:n) : (n:-1:1)
+    degree_range = (direction == :low2high) ? reverse(0:dmax) : (0:dmax)
     for index in index_π
-        u = pop_next_candidate!(db; direction)
+        u, du = pop_next_candidate!(db; degree_range)
         π[index] = u
         for w in neighbors(g, Val(side), u)
             for v in neighbors(g, Val(other_side), w)
                 if v != u && visited[v] != -u
                     # Use -u such that we don't need to fill "visited" with 0 after the computation of the dist-2 degrees
                     visited[v] = -u
-                    already_ordered(db, v) && continue
-                    update_bucket!(db, v; degtype, direction)
+                    dv = degrees[v]
+                    dv == -1 && continue
+                    update_bucket!(db, v, dv; degtype, direction)
                 end
             end
+        end
+        # no need to look much further than du next time
+        degree_range = if direction == :low2high
+            reverse(0:min(du + 1, dmax))
+        else
+            max(du - 1, 0):dmax
         end
     end
     return π
