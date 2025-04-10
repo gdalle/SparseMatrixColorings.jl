@@ -450,14 +450,9 @@ function TreeSet(
         neighbor_position[k] = neighbor_position[k - 1] + 2 * tree_edge_indices[k]
     end
 
-    # found_in_tree indicates if a given vertex is in each tree
-    found_in_tree = fill(false, nt)
+    # Record the most recent vertex from which each tree is visited
+    visited_trees = zeros(T, nt)
 
-    # Maintain a record of visited trees to efficiently reset found_in_tree
-    visited_trees = Vector{T}(undef, nt)
-
-    # Number of trees visited for each column of S
-    nt_visited = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
         for pos in nzrange(S, j)
@@ -474,13 +469,9 @@ function TreeSet(
                 # Position in tree_vertices where vertex j should be found or inserted
                 vertex_index = vertex_position[index_tree]
 
-                if !found_in_tree[index_tree]
-                    # Mark that vertex j is present in the current tree
-                    found_in_tree[index_tree] = true
-
-                    # This is the first time an edge with vertex j has been found in the tree
-                    nt_visited += 1
-                    visited_trees[nt_visited] = index_tree
+                if visited_trees[index_tree] != j
+                    # Mark the current tree as visited from vertex j
+                    visited_trees[index_tree] = j
 
                     # Insert j into tree_vertices
                     vertex_position[index_tree] += 1
@@ -497,12 +488,6 @@ function TreeSet(
                 tree_neighbor_indices[vertex_index + 1] += 1
             end
         end
-
-        # Reset found_in_tree
-        for t in 1:nt_visited
-            found_in_tree[visited_trees[t]] = false
-        end
-        nt_visited = 0
     end
 
     # Compute a shifted cumulative sum of tree_edge_indices, starting from one
@@ -528,7 +513,7 @@ function TreeSet(
 
     # Determine if each tree in the forest is a star
     # In a star, at most one vertex has a degree strictly greater than one
-    is_star = found_in_tree
+    is_star = Vector{Bool}(undef, nt)
 
     # Number of edges treated
     num_edges_treated = zero(T)
