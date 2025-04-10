@@ -34,16 +34,18 @@ rng = StableRNG(63)
         (:nonsymmetric, :bidirectional, :direct),
         (:nonsymmetric, :bidirectional, :substitution),
     ]
-        @test_opt coloring(
-            A,
-            ColoringProblem(; structure, partition),
-            GreedyColoringAlgorithm(; decompression),
-        )
-        @inferred coloring(
-            A,
-            ColoringProblem(; structure, partition),
-            GreedyColoringAlgorithm(; decompression),
-        )
+        @testset for order in all_orders()
+            @test_opt coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression),
+            )
+            @inferred coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression),
+            )
+        end
     end
 end;
 

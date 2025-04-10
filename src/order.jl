@@ -145,28 +145,50 @@ $COLPACK_WARNING
 
 - [_ColPack: Software for graph coloring and related problems in scientific computing_](https://dl.acm.org/doi/10.1145/2513109.2513110), Gebremedhin et al. (2013), Section 5
 """
-struct DynamicDegreeBasedOrder{degtype,direction} <: AbstractOrder
-    reproduce_colpack::Bool
-end
+struct DynamicDegreeBasedOrder{degtype,direction,reproduce_colpack} <: AbstractOrder end
 
 function DynamicDegreeBasedOrder{degtype,direction}(;
     reproduce_colpack::Bool=false
 ) where {degtype,direction}
-    return DynamicDegreeBasedOrder{degtype,direction}(reproduce_colpack)
+    return DynamicDegreeBasedOrder{degtype,direction,reproduce_colpack}()
 end
 
-struct DegreeBuckets{T}
+abstract type AbstractDegreeBuckets{T} end
+
+struct DegreeBucketsColPack{T} <: AbstractDegreeBuckets{T}
+    degrees::Vector{T}
+    buckets::Vector{Vector{T}}
+    positions::Vector{T}
+end
+
+struct DegreeBucketsFast{T} <: AbstractDegreeBuckets{T}
     degrees::Vector{T}
     bucket_storage::Vector{T}
     bucket_low::Vector{T}
     bucket_high::Vector{T}
     positions::Vector{T}
-    reproduce_colpack::Bool
 end
 
-function DegreeBuckets(
-    ::Type{T}, degrees::Vector{T}, dmax::Integer; reproduce_colpack::Bool
-) where {T}
+function DegreeBucketsColPack(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
+    # number of vertices per degree class
+    deg_count = zeros(T, dmax + 1)
+    for d in degrees
+        deg_count[d + 1] += 1
+    end
+    # one vector per bucket
+    buckets = [Vector{T}(undef, deg_count[d + 1]) for d in 0:dmax]
+    positions = similar(degrees, T)
+    # assign each vertex to the correct local position inside its bucket
+    for v in eachindex(positions, degrees)
+        d = degrees[v]
+        positions[v] = length(buckets[d + 1]) - deg_count[d + 1] + 1
+        buckets[d + 1][positions[v]] = v
+        deg_count[d + 1] -= 1
+    end
+    return DegreeBucketsColPack(degrees, buckets, positions)
+end
+
+function DegreeBucketsFast(::Type{T}, degrees::Vector{T}, dmax::Integer) where {T}
     # number of vertices per degree class
     deg_count = zeros(T, dmax + 1)
     for d in degrees
@@ -177,7 +199,7 @@ function DegreeBuckets(
     bucket_low = similar(bucket_high)
     bucket_low[1] = 1
     bucket_low[2:end] .= @view(bucket_high[1:(end - 1)]) .+ 1
-    # assign each vertex to the correct position inside its degree class
+    # assign each vertex to the correct global position inside its bucket
     bucket_storage = similar(degrees, T)
     positions = similar(degrees, T)
     for v in eachindex(positions, degrees)
@@ -186,12 +208,18 @@ function DegreeBuckets(
         bucket_storage[positions[v]] = v
         deg_count[d + 1] -= 1
     end
-    return DegreeBuckets(
-        degrees, bucket_storage, bucket_low, bucket_high, positions, reproduce_colpack
-    )
+    return DegreeBucketsFast(degrees, bucket_storage, bucket_low, bucket_high, positions)
 end
 
-maxdeg(db::DegreeBuckets) = length(db.bucket_low) - 1
+maxdeg(db::DegreeBucketsColPack) = length(db.buckets) - 1
+maxdeg(db::DegreeBucketsFast) = length(db.bucket_low) - 1
+
+function nonempty_bucket(db::DegreeBucketsFast, d::Integer)
+    return db.bucket_high[d + 1] >= db.bucket_low[d + 1]
+end
+function nonempty_bucket(db::DegreeBucketsColPack, d::Integer)
+    return !isempty(db.buckets[d + 1])
+end
 
 function degree_increasing(; degtype, direction)
     increasing =
@@ -200,21 +228,20 @@ function degree_increasing(; degtype, direction)
     return increasing
 end
 
-function mark_ordered!(db::DegreeBuckets{T}, v::Integer) where {T}
+function mark_ordered!(db::AbstractDegreeBuckets{T}, v::Integer) where {T}
     db.degrees[v] = -1
     db.positions[v] = typemin(T)
     return nothing
 end
 
-already_ordered(db::DegreeBuckets, v::Integer) = db.degrees[v] == -1
+already_ordered(db::AbstractDegreeBuckets, v::Integer) = db.degrees[v] == -1
 
-function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
-    (; bucket_storage, bucket_low, bucket_high) = db
+function pop_next_candidate!(db::AbstractDegreeBuckets; direction::Symbol)
     dmax = maxdeg(db)
     if direction == :low2high
         candidate_degree = dmax + 1
         for d in dmax:-1:0
-            if bucket_high[d + 1] >= bucket_low[d + 1]  # not empty
+            if nonempty_bucket(db, d)
                 candidate_degree = d
                 break
             end
@@ -222,56 +249,31 @@ function pop_next_candidate!(db::DegreeBuckets; direction::Symbol)
     else
         candidate_degree = -1
         for d in 0:dmax
-            if bucket_high[d + 1] >= bucket_low[d + 1]  # not empty
+            if nonempty_bucket(db, d)
                 candidate_degree = d
                 break
             end
         end
     end
-    high = bucket_high[candidate_degree + 1]
-    candidate = bucket_storage[high]
-    bucket_storage[high] = -1
-    bucket_high[candidate_degree + 1] -= 1
+    if db isa DegreeBucketsColPack
+        (; buckets) = db
+        bucket = buckets[candidate_degree + 1]
+        candidate = pop!(bucket)
+    else
+        (; bucket_storage, bucket_high) = db
+        high = bucket_high[candidate_degree + 1]
+        candidate = bucket_storage[high]
+        bucket_storage[high] = -1
+        bucket_high[candidate_degree + 1] -= 1
+    end
     mark_ordered!(db, candidate)
     return candidate
 end
 
-function rotate_bucket_left!(db::DegreeBuckets, d::Integer)
-    (; bucket_storage, bucket_high, bucket_low, positions) = db
-    low, high = bucket_low[d + 1], bucket_high[d + 1]
-    # remember first element v
-    v = bucket_storage[low]
-    # shift everyone else one index down
-    for i in (low + 1):high
-        w = bucket_storage[i]
-        bucket_storage[i - 1] = w
-        positions[w] = i - 1
-    end
-    # put v back at the end
-    bucket_storage[high] = v
-    positions[v] = high
-    return nothing
-end
-
-function rotate_bucket_right!(db::DegreeBuckets, d::Integer)
-    (; bucket_storage, bucket_high, bucket_low, positions) = db
-    low, high = bucket_low[d + 1], bucket_high[d + 1]
-    # remember last element v
-    v = bucket_storage[high]
-    # shift everyone else one index up
-    for i in (high - 1):-1:low
-        w = bucket_storage[i]
-        bucket_storage[i + 1] = w
-        positions[w] = i + 1
-    end
-    # put v back at the start
-    bucket_storage[low] = v
-    positions[v] = low
-    return nothing
-end
-
-function update_bucket!(db::DegreeBuckets, v::Integer; degtype::Symbol, direction::Symbol)
-    (; degrees, bucket_storage, bucket_low, bucket_high, positions, reproduce_colpack) = db
+function update_bucket!(
+    db::DegreeBucketsFast, v::Integer; degtype::Symbol, direction::Symbol
+)
+    (; degrees, bucket_storage, bucket_low, bucket_high, positions) = db
     d, p = degrees[v], positions[v]
     low, high = bucket_low[d + 1], bucket_high[d + 1]
     # select previous or next bucket for the move
@@ -292,27 +294,11 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype::Symbol, directio
         # update v's stats
         degrees[v] = d_new
         positions[v] = low_new - 1
-        if reproduce_colpack
-            # move v from start to end of the next bucket, preserving order
-            rotate_bucket_left!(db, d_new)  # expensive
-        end
     else
-        if reproduce_colpack
-            # move the vertex w located at the end of the current bucket to v's position
-            w = bucket_storage[high]
-            bucket_storage[p] = w
-            positions[w] = p
-            # explicitly put v at the end
-            bucket_storage[high] = v
-            positions[v] = high
-            # move v from end to start of the current bucket, preserving order
-            rotate_bucket_right!(db, d)  # expensive
-        else
-            # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
-            w = bucket_storage[low]
-            bucket_storage[p] = w
-            positions[w] = p
-        end
+        # move the vertex w located at the start of the current bucket to v's position (!= ColPack)
+        w = bucket_storage[low]
+        bucket_storage[p] = w
+        positions[w] = p
         # shrink current bucket from the left
         # morally we put v at the start and then ignore it
         bucket_low[d + 1] += 1
@@ -329,15 +315,42 @@ function update_bucket!(db::DegreeBuckets, v::Integer; degtype::Symbol, directio
     return nothing
 end
 
+function update_bucket!(
+    db::DegreeBucketsColPack, v::Integer; degtype::Symbol, direction::Symbol
+)
+    (; degrees, buckets, positions) = db
+    d, p = degrees[v], positions[v]
+    bucket = buckets[d + 1]
+    # select previous or next bucket for the move
+    d_new = degree_increasing(; degtype, direction) ? d + 1 : d - 1
+    bucket_new = buckets[d_new + 1]
+    # put v at the end of its bucket by swapping
+    w = bucket[end]
+    bucket[p] = w
+    positions[w] = p
+    bucket[end] = v
+    positions[v] = length(bucket)
+    # move v from the old bucket to the new one
+    @assert pop!(bucket) == v
+    push!(bucket_new, v)
+    degrees[v] = d_new
+    positions[v] = length(bucket_new)
+    return nothing
+end
+
 function vertices(
-    g::AdjacencyGraph{T}, order::DynamicDegreeBasedOrder{degtype,direction}
-) where {T<:Integer,degtype,direction}
+    g::AdjacencyGraph{T}, ::DynamicDegreeBasedOrder{degtype,direction,reproduce_colpack}
+) where {T<:Integer,degtype,direction,reproduce_colpack}
     true_degrees = degrees = T[degree(g, v) for v in vertices(g)]
     max_degrees = maximum(true_degrees)
     if degree_increasing(; degtype, direction)
         fill!(degrees, zero(T))
     end
-    db = DegreeBuckets(T, degrees, max_degrees; reproduce_colpack=order.reproduce_colpack)
+    db = if reproduce_colpack
+        DegreeBucketsColPack(T, degrees, max_degrees)
+    else
+        DegreeBucketsFast(T, degrees, max_degrees)
+    end
     nv = nb_vertices(g)
     π = Vector{T}(undef, nv)
     index_π = (direction == :low2high) ? (1:nv) : (nv:-1:1)
@@ -354,8 +367,10 @@ function vertices(
 end
 
 function vertices(
-    g::BipartiteGraph{T}, ::Val{side}, order::DynamicDegreeBasedOrder{degtype,direction}
-) where {T<:Integer,side,degtype,direction}
+    g::BipartiteGraph{T},
+    ::Val{side},
+    ::DynamicDegreeBasedOrder{degtype,direction,reproduce_colpack},
+) where {T<:Integer,side,degtype,direction,reproduce_colpack}
     other_side = 3 - side
     # compute dist-2 degrees in an optimized way
     n = nb_vertices(g, Val(side))
@@ -375,7 +390,11 @@ function vertices(
     if degree_increasing(; degtype, direction)
         fill!(degrees, zero(T))
     end
-    db = DegreeBuckets(T, degrees, maxd2; reproduce_colpack=order.reproduce_colpack)
+    db = if reproduce_colpack
+        DegreeBucketsColPack(T, degrees, maxd2)
+    else
+        DegreeBucketsFast(T, degrees, maxd2)
+    end
     π = Vector{T}(undef, n)
     index_π = (direction == :low2high) ? (1:n) : (n:-1:1)
     for index in index_π
@@ -406,7 +425,9 @@ $COLPACK_WARNING
 
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const IncidenceDegree = DynamicDegreeBasedOrder{:back,:low2high}
+function IncidenceDegree(; reproduce_colpack::Bool=false)
+    DynamicDegreeBasedOrder{:back,:low2high,reproduce_colpack}()
+end
 
 """
     SmallestLast(; reproduce_colpack=false)
@@ -419,7 +440,9 @@ $COLPACK_WARNING
 
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const SmallestLast = DynamicDegreeBasedOrder{:back,:high2low}
+function SmallestLast(; reproduce_colpack::Bool=false)
+    DynamicDegreeBasedOrder{:back,:high2low,reproduce_colpack}()
+end
 
 """
     DynamicLargestFirst(; reproduce_colpack=false)
@@ -432,7 +455,9 @@ $COLPACK_WARNING
     
 - [`DynamicDegreeBasedOrder`](@ref)
 """
-const DynamicLargestFirst = DynamicDegreeBasedOrder{:forward,:low2high}
+function DynamicLargestFirst(; reproduce_colpack::Bool=false)
+    DynamicDegreeBasedOrder{:forward,:low2high,reproduce_colpack}()
+end
 
 """
     PerfectEliminationOrder(elimination_algorithm=CliqueTrees.MCS())
@@ -461,7 +486,10 @@ function all_orders()
         RandomOrder(),
         LargestFirst(),
         SmallestLast(),
+        SmallestLast(; reproduce_colpack=true),
         IncidenceDegree(),
+        IncidenceDegree(; reproduce_colpack=true),
         DynamicLargestFirst(),
+        DynamicLargestFirst(; reproduce_colpack=true),
     ]
 end
