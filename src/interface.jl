@@ -300,7 +300,7 @@ function _coloring(
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
     symmetric_pattern::Bool,
-) where {R}
+)
     S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(S_and_Sᵀ, edge_to_index; has_diagonal=false)
     vertices_in_order = vertices(ag, algo.order)
