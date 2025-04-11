@@ -515,12 +515,14 @@ end
 ## TreeSetColoringResult
 
 function decompress!(
-    A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
-)
+    A::AbstractMatrix{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
     (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
-    R = eltype(A)
     fill!(A, zero(R))
 
     if eltype(buffer) == R
@@ -714,61 +716,184 @@ function decompress!(
     return A
 end
 
-## BicoloringResult
-
-function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::AbstractMatrix)
-    #=
-    Say we have an original matrix `A` of size `(n, m)` and we build an augmented matrix `A_and_Aᵀ = [zeros(n, n) Aᵀ; A zeros(m, m)]`.
-    Its first `1:n` columns have the form `[zeros(n); A[:, j]]` and its following `n+1:n+m` columns have the form `[A[i, :]; zeros(m)]`.
-    The symmetric column coloring is performed on `A_and_Aᵀ` and the column-wise compression of `A_and_Aᵀ` should return a matrix `Br_and_Bc`.
-    But in reality, `Br_and_Bc` is computed as two partial compressions: the row-wise compression `Br` (corresponding to `Aᵀ`) and the columnwise compression `Bc` (corresponding to `A`).
-    Before symmetric decompression, we must reconstruct `Br_and_Bc` from `Br` and `Bc`, knowing that the symmetric colors (those making up `Br_and_Bc`) are present in either a row of `Br`, a column of `Bc`, or both.
-    Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
-    The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
-    The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
-    We use the vectors `symmetric_to_row` and `symmetric_to_column` to map from symmetric colors to row and column colors.
-    =#
-    (; A, symmetric_to_column, symmetric_to_row) = result
-    m, n = size(A)
-    R = Base.promote_eltype(Br, Bc)
-    if eltype(result.Br_and_Bc) == R
-        Br_and_Bc = result.Br_and_Bc
-    else
-        Br_and_Bc = similar(result.Br_and_Bc, R)
-    end
-    fill!(Br_and_Bc, zero(R))
-    for c in axes(Br_and_Bc, 2)
-        if symmetric_to_row[c] > 0  # some rows were colored with the symmetric color c
-            copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
-        end
-        if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
-            copyto!(
-                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
-            )
-        end
-    end
-    return Br_and_Bc
-end
+## StarSetBicoloringResult
 
 function decompress!(
-    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+    A::AbstractMatrix,
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::StarSetBicoloringResult,
 )
-    m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
-    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
-    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    (; S, A_indices, compressed_indices, pos_Bc) = result
+    fill!(A, zero(eltype(A)))
+
+    ind_Bc = 1
+    ind_Br = nnz(S)
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            index_Bc = compressed_indices[ind_Bc]
+            if A_indices[ind_Bc] == k
+                A[i, j] = Bc[index_Bc]
+                if ind_Bc < pos_Bc
+                    ind_Bc += 1
+                end
+            else
+                index_Br = compressed_indices[ind_Br]
+                A[i, j] = Br[index_Br]
+                ind_Br -= 1
+            end
+        end
+    end
     return A
 end
 
 function decompress!(
-    A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+    A::SparseMatrixCSC,
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::StarSetBicoloringResult,
 )
-    (; large_colptr, large_rowval, symmetric_result) = result
+    (; A_indices, compressed_indices, pos_Bc) = result
+    nzA = nonzeros(A)
+    for k in 1:pos_Bc
+        nzA[A_indices[k]] = Bc[compressed_indices[k]]
+    end
+    for k in (pos_Bc + 1):length(nzA)
+        nzA[A_indices[k]] = Br[compressed_indices[k]]
+    end
+    return A
+end
+
+## TreeSetBicoloringResult
+
+function decompress!(
+    A::AbstractMatrix{R},
+    Br::AbstractMatrix{R},
+    Bc::AbstractMatrix{R},
+    result::TreeSetBicoloringResult,
+) where {R<:Real}
+    (;
+        symmetric_color,
+        symmetric_to_row,
+        symmetric_to_column,
+        reverse_bfs_orders,
+        tree_edge_indices,
+        nt,
+        buffer,
+    ) = result
+
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
-    # pretend A is larger
-    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
-    # decompress lower triangle only
-    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    fill!(A, zero(R))
+
+    if eltype(buffer) == R
+        buffer_right_type = buffer
+    else
+        buffer_right_type = similar(buffer, R)
+    end
+
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
+            buffer_right_type[vertex] = zero(R)
+        end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
+
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            cj = symmetric_color[j]
+            if in_triangle(i, j, :L)
+                val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+                A[i - n, j] = val
+            else
+                val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+                A[j - n, i] = val
+            end
+        end
+    end
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    Br::AbstractMatrix{R},
+    Bc::AbstractMatrix{R},
+    result::TreeSetBicoloringResult,
+) where {R<:Real}
+    (;
+        symmetric_color,
+        symmetric_to_column,
+        symmetric_to_row,
+        reverse_bfs_orders,
+        tree_edge_indices,
+        nt,
+        A_indices,
+        buffer,
+    ) = result
+
+    m, n = size(A)
+    nzA = nonzeros(A)
+
+    if eltype(buffer) == R
+        buffer_right_type = buffer
+    else
+        buffer_right_type = similar(buffer, R)
+    end
+
+    # Recover the coefficients of A
+    counter = 0
+
+    # Recover the off-diagonal coefficients of A
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
+            buffer_right_type[vertex] = zero(R)
+        end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
+
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            cj = symmetric_color[j]
+            counter += 1
+
+            #! format: off
+            # A[i,j] is in the lower triangular part of A
+            if in_triangle(i, j, :L)
+                val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+
+                # A[i,j] is stored at index_ij = A_indices[counter] in A.nzval
+                nzind = A_indices[counter]
+                nzA[nzind] = val
+
+            # A[i,j] is in the upper triangular part of A
+            else
+                val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+
+                # A[j,i] is stored at index_ji = A_indices[counter] in A.nzval
+                nzind = A_indices[counter]
+                nzA[nzind] = val
+            end
+            #! format: on
+        end
+    end
     return A
 end
