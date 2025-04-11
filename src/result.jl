@@ -672,7 +672,7 @@ function StarSetBicoloringResult(
         symmetric_to_row,
         A_indices,
         compressed_indices,
-        pos_Bc,
+        T(pos_Bc),
     )
 end
 
