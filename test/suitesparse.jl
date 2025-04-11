@@ -20,11 +20,11 @@ using Test
 
 nbunique(x) = length(unique(x))
 
-_N() = NaturalOrder()
-_LF() = LargestFirst()
-_SL() = SmallestLast(; reproduce_colpack=true)
-_ID() = IncidenceDegree(; reproduce_colpack=true)
-_DLF() = DynamicLargestFirst(; reproduce_colpack=true)
+_N(args...) = vertices(args..., NaturalOrder())
+_LF(args...) = vertices(args..., LargestFirst())
+_SL(args...) = vertices(args..., SmallestLast(; reproduce_colpack=true))
+_ID(args...) = vertices(args..., IncidenceDegree(; reproduce_colpack=true))
+_DLF(args...) = vertices(args..., DynamicLargestFirst(; reproduce_colpack=true))
 
 ## Distance-2 coloring
 
@@ -49,13 +49,17 @@ colpack_table_6_7 = CSV.read(
             @test maximum_degree(bg, Val(2)) == row[:Δ2]
         end
         @testset "Natural" begin
-            @test nbunique(partial_distance2_coloring(bg, Val(1), _N())) == row[:N1]
-            @test nbunique(partial_distance2_coloring(bg, Val(2), _N())) == row[:N2]
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _N(bg, Val(1)))) ==
+                row[:N1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _N(bg, Val(2)))) ==
+                row[:N2]
         end
         yield()
         @testset "LargestFirst" begin
-            @test nbunique(partial_distance2_coloring(bg, Val(1), _LF())) == row[:LF1]
-            @test nbunique(partial_distance2_coloring(bg, Val(2), _LF())) == row[:LF2]
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _LF(bg, Val(1)))) ==
+                row[:LF1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _LF(bg, Val(2)))) ==
+                row[:LF2]
         end
         yield()
         if row[:name] == "af23560"
@@ -67,18 +71,24 @@ colpack_table_6_7 = CSV.read(
             continue
         end
         @testset "SmallestLast" begin
-            @test nbunique(partial_distance2_coloring(bg, Val(1), _SL())) == row[:SL1]
-            @test nbunique(partial_distance2_coloring(bg, Val(2), _SL())) == row[:SL2]
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _SL(bg, Val(1)))) ==
+                row[:SL1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _SL(bg, Val(2)))) ==
+                row[:SL2]
         end
         yield()
         @testset "IncidenceDegree" begin
-            @test nbunique(partial_distance2_coloring(bg, Val(1), _ID())) == row[:ID1]
-            @test nbunique(partial_distance2_coloring(bg, Val(2), _ID())) == row[:ID2]
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _ID(bg, Val(1)))) ==
+                row[:ID1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _ID(bg, Val(2)))) ==
+                row[:ID2]
         end
         yield()
         @testset "DynamicLargestFirst" begin
-            @test nbunique(partial_distance2_coloring(bg, Val(1), _DLF())) == row[:DLF1]
-            @test nbunique(partial_distance2_coloring(bg, Val(2), _DLF())) == row[:DLF2]
+            @test nbunique(partial_distance2_coloring(bg, Val(1), _DLF(bg, Val(1)))) ==
+                row[:DLF1]
+            @test nbunique(partial_distance2_coloring(bg, Val(2), _DLF(bg, Val(2)))) ==
+                row[:DLF2]
         end
         yield()
     end
@@ -105,7 +115,8 @@ what_table_31_32 = CSV.read(
         @test maximum_degree(bg, Val(1)) == row[:ρmax]
         @test minimum_degree(bg, Val(2)) == row[:κmin]
         @test maximum_degree(bg, Val(2)) == row[:κmax]
-        color_Nb = partial_distance2_coloring(bg, Val(2), NaturalOrder())
+        vertices_in_order = vertices(bg, Val(2), NaturalOrder())
+        color_Nb = partial_distance2_coloring(bg, Val(2), vertices_in_order)
         if length(unique(color_Nb)) == row[:K]
             @test length(unique(color_Nb)) == row[:K]
         else
@@ -133,7 +144,8 @@ what_table_41_42 = CSV.read(
         @test maximum_degree(ag) == row[:Δ]
         @test minimum_degree(ag) == row[:δ]
         postprocessing = false
-        color_N, _ = star_coloring(ag, NaturalOrder(), postprocessing)
+        vertices_in_order = vertices(ag, NaturalOrder())
+        color_N, _ = star_coloring(ag, vertices_in_order, postprocessing)
         @test_skip row[:KS1] <= length(unique(color_N)) <= row[:KS2]  # TODO: find better
         yield()
     end

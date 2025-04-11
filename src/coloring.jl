@@ -1,11 +1,11 @@
 """
-    partial_distance2_coloring(bg::BipartiteGraph, ::Val{side}, order::AbstractOrder)
+    partial_distance2_coloring(bg::BipartiteGraph, ::Val{side}, vertices_in_order::AbstractVector)
 
 Compute a distance-2 coloring of the given `side` (`1` or `2`) in the bipartite graph `bg` and return a vector of integer colors.
 
 A _distance-2 coloring_ is such that two vertices have different colors if they are at distance at most 2.
 
-The vertices are colored in a greedy fashion, following the `order` supplied.
+The vertices are colored in a greedy fashion, following the order supplied.
 
 # See also
 
@@ -17,11 +17,10 @@ The vertices are colored in a greedy fashion, following the `order` supplied.
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005), Algorithm 3.2
 """
 function partial_distance2_coloring(
-    bg::BipartiteGraph{T}, ::Val{side}, order::AbstractOrder
+    bg::BipartiteGraph{T}, ::Val{side}, vertices_in_order::AbstractVector{<:Integer}
 ) where {T,side}
     color = Vector{T}(undef, nb_vertices(bg, Val(side)))
     forbidden_colors = Vector{T}(undef, nb_vertices(bg, Val(side)))
-    vertices_in_order = vertices(bg, Val(side), order)
     partial_distance2_coloring!(color, forbidden_colors, bg, Val(side), vertices_in_order)
     return color
 end
@@ -54,7 +53,7 @@ function partial_distance2_coloring!(
 end
 
 """
-    star_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
+    star_coloring(g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool)
 
 Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
 
@@ -63,7 +62,7 @@ Compute a star coloring of all vertices in the adjacency graph `g` and return a 
 
 A _star coloring_ is a distance-1 coloring such that every path on 4 vertices uses at least 3 colors.
 
-The vertices are colored in a greedy fashion, following the `order` supplied.
+The vertices are colored in a greedy fashion, following the order supplied.
 
 If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
@@ -77,7 +76,7 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 function star_coloring(
-    g::AdjacencyGraph{T}, order::AbstractOrder, postprocessing::Bool
+    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -88,7 +87,6 @@ function star_coloring(
     treated = zeros(T, nv)
     star = Vector{T}(undef, ne)
     hub = T[]  # one hub for each star, including the trivial ones
-    vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
@@ -206,7 +204,7 @@ struct StarSet{T}
 end
 
 """
-    acyclic_coloring(g::AdjacencyGraph, order::AbstractOrder, postprocessing::Bool)
+    acyclic_coloring(g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -215,7 +213,7 @@ Compute an acyclic coloring of all vertices in the adjacency graph `g` and retur
 
 An _acyclic coloring_ is a distance-1 coloring with the further restriction that every cycle uses at least 3 colors.
 
-The vertices are colored in a greedy fashion, following the `order` supplied.
+The vertices are colored in a greedy fashion, following the order supplied.
 
 If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
@@ -229,7 +227,7 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(
-    g::AdjacencyGraph{T}, order::AbstractOrder, postprocessing::Bool
+    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -239,7 +237,6 @@ function acyclic_coloring(
     first_neighbor = fill((zero(T), zero(T), zero(T)), nv)  # at first no neighbors have been encountered
     first_visit_to_tree = fill((zero(T), zero(T)), ne)
     forest = Forest{T}(ne)
-    vertices_in_order = vertices(g, order)
 
     for v in vertices_in_order
         for w in neighbors(g, v)
@@ -527,8 +524,8 @@ function TreeSet(
         # Positions of the first and last vertices in the current tree
         # Note: tree_edge_indices contains the positions of the first and last edges,
         # so we add to add an offset k-1 between edge indices and vertex indices
-        first_vertex = tree_edge_indices[k] + (k-1)
-        last_vertex = tree_edge_indices[k + 1] + (k-1)
+        first_vertex = tree_edge_indices[k] + (k - 1)
+        last_vertex = tree_edge_indices[k + 1] + (k - 1)
 
         # compute the degree of each vertex in the tree
         for index_vertex in first_vertex:last_vertex
