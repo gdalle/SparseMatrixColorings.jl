@@ -282,7 +282,7 @@ function _coloring(
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
-) where {R}
+) where {R<:Real}
     ag = AdjacencyGraph(A; has_diagonal=true)
     vertices_in_order = vertices(ag, algo.order)
     color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
@@ -298,19 +298,18 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
-    decompression_eltype::Type{R},
+    decompression_eltype::Type,
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(S_and_Sᵀ, edge_to_index; has_diagonal=false)
     vertices_in_order = vertices(ag, algo.order)
-    color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+    symmetric_color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        return StarSetBicoloringResult(A, S, ag, symmetric_color, star_set)
     else
         row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+            eltype(ag), symmetric_color, maximum(symmetric_color), size(A)...
         )
         return row_color, column_color
     end
@@ -324,16 +323,15 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    ag = AdjacencyGraph(S_and_Sᵀ, edge_to_index; has_diagonal=false)
     vertices_in_order = vertices(ag, algo.order)
-    color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    symmetric_color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(A, ag, symmetric_result, R)
+        return TreeSetBicoloringResult(A, S, ag, symmetric_color, tree_set, R)
     else
         row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+            eltype(ag), symmetric_color, maximum(symmetric_color), size(A)...
         )
         return row_color, column_color
     end
