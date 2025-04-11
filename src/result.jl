@@ -623,8 +623,8 @@ function StarSetBicoloringResult(
     row_color, column_color, symmetric_to_row, symmetric_to_column = remap_colors(
         T, symmetric_color, num_sym_colors, m, n
     )
-    column_group = group_by_color(column_color)
-    row_group = group_by_color(row_color)
+    column_group = group_by_color(T, column_color)
+    row_group = group_by_color(T, row_color)
     num_row_colors = length(row_group)
 
     rv = rowvals(S)
@@ -737,8 +737,8 @@ function TreeSetBicoloringResult(
     row_color, column_color, symmetric_to_row, symmetric_to_column = remap_colors(
         T, symmetric_color, num_sym_colors, m, n
     )
-    column_group = group_by_color(column_color)
-    row_group = group_by_color(row_color)
+    column_group = group_by_color(T, column_color)
+    row_group = group_by_color(T, row_color)
 
     rv = rowvals(S)
     nnzA = nnz(S)
