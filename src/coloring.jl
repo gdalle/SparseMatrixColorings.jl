@@ -38,14 +38,15 @@ function partial_distance2_coloring!(
     for v in vertices_in_order
         for w in neighbors(bg, Val(side), v)
             for x in neighbors(bg, Val(other_side), w)
-                if !iszero(color[x])
-                    forbidden_colors[color[x]] = v
+                @inbounds c = color[x]
+                if !iszero(c)
+                    @inbounds forbidden_colors[c] = v
                 end
             end
         end
         for i in eachindex(forbidden_colors)
             if forbidden_colors[i] != v
-                color[v] = i
+                @inbounds color[v] = i
                 break
             end
         end
