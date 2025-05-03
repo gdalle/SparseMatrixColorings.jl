@@ -27,6 +27,7 @@ using LinearAlgebra:
     ldiv!,
     parent,
     transpose
+using PrecompileTools: @compile_workload
 using Random: Random, AbstractRNG, default_rng, randperm
 using SparseArrays:
     SparseArrays,
@@ -39,6 +40,7 @@ using SparseArrays:
     nzrange,
     rowvals,
     sparse,
+    sprand,
     spzeros
 
 include("graph.jl")
@@ -54,6 +56,8 @@ include("decompression.jl")
 include("check.jl")
 include("examples.jl")
 include("show_colors.jl")
+
+include("precompile.jl")
 
 export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
