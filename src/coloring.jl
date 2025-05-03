@@ -38,8 +38,9 @@ function partial_distance2_coloring!(
     for v in vertices_in_order
         for w in neighbors(bg, Val(side), v)
             for x in neighbors(bg, Val(other_side), w)
-                if !iszero(color[x])
-                    forbidden_colors[color[x]] = v
+                color_x = color[x]
+                if !iszero(color_x)
+                    forbidden_colors[color_x] = v
                 end
             end
         end
@@ -91,9 +92,10 @@ function star_coloring(
     for v in vertices_in_order
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
             !has_diagonal(g) || (v == w && continue)
-            iszero(color[w]) && continue
-            forbidden_colors[color[w]] = v
-            (p, q, _) = first_neighbor[color[w]]
+            color_w = color[w]
+            iszero(color_w) && continue
+            forbidden_colors[color_w] = v
+            (p, q, _) = first_neighbor[color_w]
             if p == v  # Case 1
                 if treated[q] != v
                     # forbid colors of neighbors of q
@@ -105,9 +107,10 @@ function star_coloring(
                 first_neighbor[color[w]] = (v, w, index_vw)
                 for (x, index_wx) in neighbors_with_edge_indices(g, w)
                     !has_diagonal(g) || (w == x && continue)
-                    (x == v || iszero(color[x])) && continue
+                    color_x = color[x]
+                    (x == v || iszero(color_x)) && continue
                     if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
-                        forbidden_colors[color[x]] = v
+                        forbidden_colors[color_x] = v
                     end
                 end
             end
@@ -141,8 +144,9 @@ function _treat!(
 )
     for x in neighbors(g, w)
         !has_diagonal(g) || (w == x && continue)
-        iszero(color[x]) && continue
-        forbidden_colors[color[x]] = v
+        color_x = color[x]
+        iszero(color_x) && continue
+        forbidden_colors[color_x] = v
     end
     treated[w] = v
     return nothing
@@ -160,7 +164,8 @@ function _update_stars!(
 )
     for (w, index_vw) in neighbors_with_edge_indices(g, v)
         !has_diagonal(g) || (v == w && continue)
-        iszero(color[w]) && continue
+        color_w = color[w]
+        iszero(color_w) && continue
         x_exists = false
         for (x, index_wx) in neighbors_with_edge_indices(g, w)
             !has_diagonal(g) || (w == x && continue)
@@ -173,7 +178,7 @@ function _update_stars!(
             end
         end
         if !x_exists
-            (p, q, index_pq) = first_neighbor[color[w]]
+            (p, q, index_pq) = first_neighbor[color_w]
             if p == v && q != w  # vw, vq ∈ E and color[w] = color[q]
                 star_vq = star[index_pq]
                 hub[star_vq] = v  # this may already be true
@@ -241,22 +246,24 @@ function acyclic_coloring(
     for v in vertices_in_order
         for w in neighbors(g, v)
             !has_diagonal(g) || (v == w && continue)
-            iszero(color[w]) && continue
-            forbidden_colors[color[w]] = v
+            color_w = color[w]
+            iszero(color_w) && continue
+            forbidden_colors[color_w] = v
         end
         for w in neighbors(g, v)
             !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
                 !has_diagonal(g) || (w == x && continue)
-                iszero(color[x]) && continue
-                if forbidden_colors[color[x]] != v
+                color_x = color[x]
+                iszero(color_x) && continue
+                if forbidden_colors[color_x] != v
                     _prevent_cycle!(
                         v,
                         w,
                         x,
                         index_wx,
-                        color,
+                        color_x,
                         first_visit_to_tree,
                         forbidden_colors,
                         forest,
@@ -272,16 +279,18 @@ function acyclic_coloring(
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
             !has_diagonal(g) || (v == w && continue)
-            iszero(color[w]) && continue
-            _grow_star!(v, w, index_vw, color, first_neighbor, forest)
+            color_w = color[w]
+            iszero(color_w) && continue
+            _grow_star!(v, w, index_vw, color_w, first_neighbor, forest)
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
             !has_diagonal(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
                 !has_diagonal(g) || (w == x && continue)
-                (x == v || iszero(color[x])) && continue
-                if color[x] == color[v]
+                color_x = color[x]
+                (x == v || iszero(color_x)) && continue
+                if color_x == color[v]
                     _merge_trees!(v, w, x, index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
@@ -305,7 +314,7 @@ function _prevent_cycle!(
     w::Integer,
     x::Integer,
     index_wx::Integer,
-    color::AbstractVector{<:Integer},
+    color_x::Integer,
     # modified
     first_visit_to_tree::AbstractVector{<:Tuple},
     forbidden_colors::AbstractVector{<:Integer},
@@ -316,7 +325,7 @@ function _prevent_cycle!(
     if p != v  # T is being visited from vertex v for the first time
         first_visit_to_tree[root_wx] = (v, w)
     elseif q != w  # T is connected to vertex v via at least two edges
-        forbidden_colors[color[x]] = v
+        forbidden_colors[color_x] = v
     end
     return nothing
 end
@@ -326,15 +335,15 @@ function _grow_star!(
     v::Integer,
     w::Integer,
     index_vw::Integer,
-    color::AbstractVector{<:Integer},
+    color_w::Integer,
     # modified
     first_neighbor::AbstractVector{<:Tuple},
     forest::Forest{<:Integer},
 )
     # Create a new tree T_{vw} consisting only of edge vw
-    (p, q, index_pq) = first_neighbor[color[w]]
+    (p, q, index_pq) = first_neighbor[color_w]
     if p != v  # a neighbor of v with color[w] encountered for the first time
-        first_neighbor[color[w]] = (v, w, index_vw)
+        first_neighbor[color_w] = (v, w, index_vw)
     else  # merge T_{vw} with a two-colored star being grown around v
         root_vw = find_root!(forest, index_vw)
         root_pq = find_root!(forest, index_pq)
