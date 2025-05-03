@@ -6,7 +6,7 @@ for (structure, partition, decompression) in [
     (:nonsymmetric, :bidirectional, :direct),
     (:nonsymmetric, :bidirectional, :substitution),
 ]
-    A = sparse([1 0; 0 1])
+    A = sparse(Bool[1 0; 0 1])
     problem = ColoringProblem(; structure, partition)
     algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
     result = coloring(A, problem, algo)
