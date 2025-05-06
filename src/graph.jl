@@ -100,7 +100,8 @@ end
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
 function bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
-    bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
+    S = SparsityPatternCSC(SparseMatrixCSC(A))
+    bidirectional_pattern(S; symmetric_pattern)
 end
 
 function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool) where {T}
@@ -172,7 +173,7 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
 
     # Create the SparsityPatternCSC of the augmented adjacency matrix
     S_and_Sᵀ = SparsityPatternCSC{T}(p, p, colptr, rowval)
-    return S_and_Sᵀ, edge_to_index
+    return S, S_and_Sᵀ, edge_to_index
 end
 
 function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
