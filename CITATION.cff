@@ -28,3 +28,23 @@ keywords:
   - automatic differentiation
   - julia programming language
 license: MIT
+preferred-citation:
+  authors:
+    - given-names: Alexis
+      family-names: Montoison
+      orcid: 'https://orcid.org/0000-0002-3403-5450'
+    - given-names: Guillaume
+      family-names: Dalle
+      orcid: 'https://orcid.org/0000-0003-4866-1687'
+    - given-names: Assefaw
+      family-names: Gebremedhin
+      orcid: 'https://orcid.org/0000-0001-5383-8032'
+  title: "Revisiting Sparse Matrix Coloring and Bicoloring"
+  year: 2025
+  type: article
+  url: 'https://arxiv.org/abs/2505.07308'
+  identifiers:
+    - type: doi
+      value: 10.48550/arXiv.2505.07308
+      description: Arxiv
+  abstract: "Sparse matrix coloring and bicoloring are fundamental building blocks of sparse automatic differentiation. Bicoloring is particularly advantageous for rectangular Jacobian matrices with at least one dense row and column. Indeed, in such cases, unidirectional row or column coloring demands a number of colors equal to the number of rows or columns. We introduce a new strategy for bicoloring that encompasses both direct and substitution-based decompression approaches. Our method reformulates the two variants of bicoloring as star and acyclic colorings of an augmented symmetric matrix. We extend the concept of neutral colors, previously exclusive to bicoloring, to symmetric colorings, and we propose a post-processing routine that neutralizes colors to further reduce the overall color count. We also present the Julia package SparseMatrixColorings, which includes these new bicoloring algorithms alongside all standard coloring methods for sparse derivative matrix computation. Compared to ColPack, the Julia package also offers enhanced implementations for star and acyclic coloring, vertex ordering, as well as decompression."
