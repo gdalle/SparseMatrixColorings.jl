@@ -13,8 +13,8 @@ makedocs(;
     format=Documenter.HTML(),
     pages=[
         "Home" => "index.md",
+        "tutorial.md",
         "api.md",
-        "Tutorials" => "tutorials.md",
         "Developer Documentation" => ["dev.md", "vis.md"],
     ],
     plugins=[links],

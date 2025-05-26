@@ -116,6 +116,9 @@ The in-place alternative is [`decompress!`](@ref).
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
 
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
+
 # Example
 
 ```jldoctest
@@ -196,6 +199,9 @@ It is done by calling [`compress`](@ref).
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
 
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
+
 # Example
 
 ```jldoctest
@@ -260,6 +266,9 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
+
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
 
 # Example
 
