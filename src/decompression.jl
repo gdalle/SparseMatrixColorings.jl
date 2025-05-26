@@ -47,7 +47,11 @@ function compress end
 function compress(A, result::AbstractColoringResult{structure,:column}) where {structure}
     group = column_groups(result)
     if isempty(group)
-        B = similar(A, size(A, 1), 0)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        B_model = stack([Int[]]; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
+        B = similar(B_model, size(A, 1), 0)
     else
         B = stack(group; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
@@ -59,7 +63,11 @@ end
 function compress(A, result::AbstractColoringResult{structure,:row}) where {structure}
     group = row_groups(result)
     if isempty(group)
-        B = similar(A, 0, size(A, 2))
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        B_model = stack([Int[]]; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
+        B = similar(B_model, 0, size(A, 2))
     else
         B = stack(group; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
@@ -74,14 +82,22 @@ function compress(
     row_group = row_groups(result)
     column_group = column_groups(result)
     if isempty(row_group)
-        Br = similar(A, 0, size(A, 2))
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        Br_model = stack([Int[]]; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
+        Br = similar(Br_model, 0, size(A, 2))
     else
         Br = stack(row_group; dims=1) do g
             dropdims(sum(A[g, :]; dims=1); dims=1)
         end
     end
     if isempty(column_group)
-        Bc = similar(A, size(A, 1), 0)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        Bc_model = stack([Int[]]; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
+        Bc = similar(Bc_model, size(A, 1), 0)
     else
         Bc = stack(column_group; dims=2) do g
             dropdims(sum(A[:, g]; dims=2); dims=2)
@@ -415,25 +431,17 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; color, star_set) = result
-    (; star, hub, spokes) = star_set
-    S = result.ag.S
+    (; ag, compressed_indices) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
-        end
-    end
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        cj = color[j]
-        for i in spokes[s]
+
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
             if in_triangle(i, j, uplo)
-                A[i, j] = B[i, cj]
-            end
-            if in_triangle(j, i, uplo)
-                A[j, i] = B[i, cj]
+                A[i, j] = B[compressed_indices[k]]
             end
         end
     end
@@ -447,24 +455,29 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
-    (; color, group, star_set) = result
-    (; hub, spokes) = star_set
-    S = result.ag.S
+    (; ag, compressed_indices, group) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
-    for i in axes(A, 1)
-        if !iszero(S[i, i]) && color[i] == c
-            A[i, i] = b[i]
-        end
-    end
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        if color[j] == c
-            for i in spokes[s]
-                if in_triangle(i, j, uplo)
-                    A[i, j] = b[i]
-                end
-                if in_triangle(j, i, uplo)
-                    A[j, i] = b[i]
+
+    lower_index = (c - 1) * S.n + 1
+    upper_index = c * S.n
+    rvS = rowvals(S)
+    for j in group[c]
+        for k in nzrange(S, j)
+            # Check if the color c is used to recover A[i,j] / A[j,i]
+            if lower_index <= compressed_indices[k] <= upper_index
+                i = rvS[k]
+                if i == j
+                    # Recover the diagonal coefficients of A
+                    A[i, i] = b[i]
+                else
+                    # Recover the off-diagonal coefficients of A
+                    if in_triangle(i, j, uplo)
+                        A[i, j] = b[i]
+                    end
+                    if in_triangle(j, i, uplo)
+                        A[j, i] = b[i]
+                    end
                 end
             end
         end
@@ -475,8 +488,8 @@ end
 function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    (; compressed_indices) = result
-    S = result.ag.S
+    (; ag, compressed_indices) = result
+    (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -495,7 +508,6 @@ function decompress!(
                 end
             end
         end
-        @assert l == length(nonzeros(A))
     end
     return A
 end
@@ -505,8 +517,8 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    S = result.ag.S
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -518,21 +530,34 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
+    if has_diagonal(ag)
+        for i in axes(S, 1)
+            if !iszero(S[i, i])
+                A[i, i] = B[i, color[i]]
+            end
         end
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
-        for vertex in vertices_by_tree[k]
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
 
-        for (i, j) in reverse_bfs_orders[k]
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
+
             if in_triangle(i, j, uplo)
                 A[i, j] = val
             end
@@ -551,16 +576,18 @@ function decompress!(
     uplo::Symbol=:F,
 ) where {R<:Real}
     (;
+        ag,
         color,
-        vertices_by_tree,
         reverse_bfs_orders,
+        tree_edge_indices,
+        nt,
         diagonal_indices,
         diagonal_nzind,
         lower_triangle_offsets,
         upper_triangle_offsets,
         buffer,
     ) = result
-    S = result.ag.S
+    (; S) = ag
     A_colptr = A.colptr
     nzA = nonzeros(A)
     uplo == :F && check_same_pattern(A, S)
@@ -572,22 +599,24 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if uplo == :L
-        for i in diagonal_indices
-            # A[i, i] is the first element in column i
-            nzind = A_colptr[i]
-            nzA[nzind] = B[i, color[i]]
-        end
-    elseif uplo == :U
-        for i in diagonal_indices
-            # A[i, i] is the last element in column i
-            nzind = A_colptr[i + 1] - 1
-            nzA[nzind] = B[i, color[i]]
-        end
-    else  # uplo == :F
-        for (k, i) in enumerate(diagonal_indices)
-            nzind = diagonal_nzind[k]
-            nzA[nzind] = B[i, color[i]]
+    if has_diagonal(ag)
+        if uplo == :L
+            for i in diagonal_indices
+                # A[i, i] is the first element in column i
+                nzind = A_colptr[i]
+                nzA[nzind] = B[i, color[i]]
+            end
+        elseif uplo == :U
+            for i in diagonal_indices
+                # A[i, i] is the last element in column i
+                nzind = A_colptr[i + 1] - 1
+                nzA[nzind] = B[i, color[i]]
+            end
+        else  # uplo == :F
+            for (k, i) in enumerate(diagonal_indices)
+                nzind = diagonal_nzind[k]
+                nzA[nzind] = B[i, color[i]]
+            end
         end
     end
 
@@ -595,12 +624,22 @@ function decompress!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
-        for vertex in vertices_by_tree[k]
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
 
-        for (i, j) in reverse_bfs_orders[k]
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
             counter += 1
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
@@ -652,12 +691,12 @@ function decompress!(
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
 )
-    (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) = result
+    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
-    strict_upper_nonzeros_A = T_factorization \ vec(B)
+    strict_upper_nonzeros_A = M_factorization \ vec(B)
     fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
@@ -687,9 +726,9 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
     The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
     The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
-    We use the dictionaries `col_color_ind` and `row_color_ind` to map from symmetric colors to row/column colors.
+    We use the vectors `symmetric_to_row` and `symmetric_to_column` to map from symmetric colors to row and column colors.
     =#
-    (; A, col_color_ind, row_color_ind) = result
+    (; A, symmetric_to_column, symmetric_to_row) = result
     m, n = size(A)
     R = Base.promote_eltype(Br, Bc)
     if eltype(result.Br_and_Bc) == R
@@ -699,11 +738,13 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
     end
     fill!(Br_and_Bc, zero(R))
     for c in axes(Br_and_Bc, 2)
-        if haskey(row_color_ind, c)  # some rows were colored with symmetric color c
-            copyto!(view(Br_and_Bc, 1:n, c), view(Br, row_color_ind[c], :))
+        if symmetric_to_row[c] > 0  # some rows were colored with the symmetric color c
+            copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
         end
-        if haskey(col_color_ind, c)  # some columns were colored with symmetric c
-            copyto!(view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, col_color_ind[c]))
+        if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
+            copyto!(
+                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
+            )
         end
     end
     return Br_and_Bc

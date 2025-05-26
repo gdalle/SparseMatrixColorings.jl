@@ -19,7 +19,7 @@ end
 
 @testset "Distance-2 coloring" begin
     test_noallocs_distance2_coloring(1000)
-end;
+end
 
 function test_noallocs_sparse_decompression(
     n::Integer; structure::Symbol, partition::Symbol, decompression::Symbol
@@ -121,7 +121,7 @@ end
     ]
         test_noallocs_sparse_decompression(1000; structure, partition, decompression)
     end
-end;
+end
 
 @testset "Structured decompression" begin
     @testset "$structure - $partition - $decompression" for (
@@ -130,5 +130,31 @@ end;
         (:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)
     ]
         test_noallocs_structured_decompression(1000; structure, partition, decompression)
+    end
+end
+
+@testset "Single precision" begin
+    n, p = 10_000, 0.001
+    A64 = sparse(Symmetric(sprand(rng, Float32, 100, 100, 0.1)))
+    A32 = convert(SparseMatrixCSC{Float32,Int32}, A64)
+    @testset "$structure - $partition - $decompression" for (
+        structure, partition, decompression
+    ) in [
+        (:nonsymmetric, :column, :direct),
+        (:nonsymmetric, :row, :direct),
+        (:symmetric, :column, :direct),
+        (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
+    ]
+        @testset for order in
+                     (NaturalOrder(), RandomOrder(), LargestFirst(), DynamicLargestFirst())
+            problem = ColoringProblem(; structure, partition)
+            algo = GreedyColoringAlgorithm(order; decompression)
+            b64 = @b fast_coloring(A64, problem, algo)
+            b32 = @b fast_coloring(A32, problem, algo)
+            # check that we allocate no more than 50% + epsilon with Int32
+            @test b32.bytes < 0.6 * b64.bytes
+        end
     end
 end;

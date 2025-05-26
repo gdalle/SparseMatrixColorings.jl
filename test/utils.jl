@@ -1,5 +1,6 @@
 using ArrayInterface: ArrayInterface
 using BandedMatrices: BandedMatrix
+using Base: promote_eltype
 using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
 using SparseMatrixColorings
@@ -20,6 +21,7 @@ function test_coloring_decompression(
     algo::GreedyColoringAlgorithm{decompression};
     B0=nothing,
     color0=nothing,
+    test_fast=false,
 ) where {structure,partition,decompression}
     color_vec = Vector{Int}[]
     @testset "$(typeof(A))" for A in matrix_versions(A0)
@@ -41,10 +43,15 @@ function test_coloring_decompression(
 
         B = compress(A, result)
 
-        if partition == :column
-            @test ncolors(result) == size(B, 2)
-        elseif partition == :row
-            @test ncolors(result) == size(B, 1)
+        @testset "Coherence" begin
+            if partition == :column
+                @test ncolors(result) == size(B, 2)
+            elseif partition == :row
+                @test ncolors(result) == size(B, 1)
+            end
+            if test_fast
+                @test color == fast_coloring(A, problem, algo; symmetric_pattern=false)
+            end
         end
 
         @testset "Reference" begin
@@ -77,13 +84,13 @@ function test_coloring_decompression(
         @testset "Full decompression" begin
             @test decompress(B, result) ≈ A0
             @test decompress(B, result) ≈ A0  # check result wasn't modified
-            @test decompress!(respectful_similar(A), B, result) ≈ A0
-            @test decompress!(respectful_similar(A), B, result) ≈ A0
+            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
         end
 
         @testset "Single-color decompression" begin
             if decompression == :direct  # TODO: implement for :substitution too
-                A2 = respectful_similar(A)
+                A2 = respectful_similar(A, eltype(B))
                 A2 .= zero(eltype(A2))
                 for c in unique(color)
                     c == 0 && continue
@@ -99,9 +106,9 @@ function test_coloring_decompression(
 
         @testset "Triangle decompression" begin
             if structure == :symmetric
-                A3upper = respectful_similar(triu(A))
-                A3lower = respectful_similar(tril(A))
-                A3both = respectful_similar(A)
+                A3upper = respectful_similar(triu(A), eltype(B))
+                A3lower = respectful_similar(tril(A), eltype(B))
+                A3both = respectful_similar(A, eltype(B))
                 A3upper .= zero(eltype(A))
                 A3lower .= zero(eltype(A))
                 A3both .= zero(eltype(A))
@@ -118,9 +125,9 @@ function test_coloring_decompression(
 
         @testset "Single-color triangle decompression" begin
             if structure == :symmetric && decompression == :direct
-                A4upper = respectful_similar(triu(A))
-                A4lower = respectful_similar(tril(A))
-                A4both = respectful_similar(A)
+                A4upper = respectful_similar(triu(A), eltype(B))
+                A4lower = respectful_similar(tril(A), eltype(B))
+                A4both = respectful_similar(A, eltype(B))
                 A4upper .= zero(eltype(A))
                 A4lower .= zero(eltype(A))
                 A4both .= zero(eltype(A))
@@ -144,7 +151,9 @@ function test_coloring_decompression(
                 linresult = LinearSystemColoringResult(A, ag, color, Float64)
                 @test sparsity_pattern(result) === A  # identity of objects
                 @test decompress(float.(B), linresult) ≈ A0
-                @test decompress!(respectful_similar(float.(A)), float.(B), linresult) ≈ A0
+                @test decompress!(
+                    respectful_similar(A, float(eltype(B))), float.(B), linresult
+                ) ≈ A0
             end
         end
     end
@@ -161,6 +170,7 @@ function test_bicoloring_decompression(
     A0::AbstractMatrix,
     problem::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{decompression};
+    test_fast=false,
 ) where {decompression}
     @testset "$(typeof(A))" for A in matrix_versions(A0)
         yield()
@@ -173,9 +183,16 @@ function test_bicoloring_decompression(
         end
         Br, Bc = compress(A, result)
         row_color, column_color = row_colors(result), column_colors(result)
-        @test size(Br, 1) == length(unique(row_color[row_color .> 0]))
-        @test size(Bc, 2) == length(unique(column_color[column_color .> 0]))
-        @test ncolors(result) == size(Br, 1) + size(Bc, 2)
+
+        @testset "Coherence" begin
+            @test size(Br, 1) == length(unique(row_color[row_color .> 0]))
+            @test size(Bc, 2) == length(unique(column_color[column_color .> 0]))
+            @test ncolors(result) == size(Br, 1) + size(Bc, 2)
+            if test_fast
+                @test (row_color, column_color) ==
+                    fast_coloring(A, problem, algo; symmetric_pattern=false)
+            end
+        end
 
         if decompression == :direct
             @testset "Recoverability" begin
@@ -185,8 +202,12 @@ function test_bicoloring_decompression(
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
-            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
-            @test decompress!(respectful_similar(A), Br, Bc, result) ≈ A0
+            @test decompress!(
+                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
+            ) ≈ A0
+            @test decompress!(
+                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
+            ) ≈ A0
         end
     end
 end

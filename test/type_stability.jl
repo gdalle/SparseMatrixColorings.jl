@@ -3,7 +3,7 @@ using JET
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: matrix_versions, respectful_similar
+using SparseMatrixColorings: matrix_versions, respectful_similar, all_orders
 using StableRNGs
 using Test
 
@@ -11,19 +11,17 @@ rng = StableRNG(63)
 
 @testset "Sparse coloring" begin
     n = 10
-    A = sprand(rng, n, n, 5 / n)
+    A = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
 
     # ADTypes
     @testset "ADTypes" begin
-        @test_opt target_modules = (SparseMatrixColorings,) column_coloring(
-            A, GreedyColoringAlgorithm()
-        )
-        @test_opt target_modules = (SparseMatrixColorings,) row_coloring(
-            A, GreedyColoringAlgorithm()
-        )
-        @test_opt target_modules = (SparseMatrixColorings,) symmetric_coloring(
-            Symmetric(A), GreedyColoringAlgorithm()
-        )
+        @test_opt column_coloring(A, GreedyColoringAlgorithm())
+        @test_opt row_coloring(A, GreedyColoringAlgorithm())
+        @test_opt symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
+
+        @inferred column_coloring(A, GreedyColoringAlgorithm())
+        @inferred row_coloring(A, GreedyColoringAlgorithm())
+        @inferred symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
     end
 
     @testset "$structure - $partition - $decompression" for (
@@ -36,11 +34,18 @@ rng = StableRNG(63)
         (:nonsymmetric, :bidirectional, :direct),
         (:nonsymmetric, :bidirectional, :substitution),
     ]
-        @test_opt target_modules = (SparseMatrixColorings,) coloring(
-            A,
-            ColoringProblem(; structure, partition),
-            GreedyColoringAlgorithm(; decompression),
-        )
+        @testset for order in all_orders()
+            @test_opt coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression),
+            )
+            @inferred coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression),
+            )
+        end
     end
 end;
 
@@ -55,7 +60,12 @@ end;
         (structure, partition, decompression) in
         [(:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)]
 
-        @test_opt target_modules = (SparseMatrixColorings,) coloring(
+        @test_opt coloring(
+            A,
+            ColoringProblem(; structure, partition),
+            GreedyColoringAlgorithm(; decompression),
+        )
+        @inferred coloring(
             A,
             ColoringProblem(; structure, partition),
             GreedyColoringAlgorithm(; decompression),
@@ -88,15 +98,21 @@ end;
                 Br, Bc = compress(A, result)
                 @testset "Full decompression" begin
                     @test_opt compress(A, result)
-                    @test_opt decompress(Br, Bc, result) ≈ A0
+                    @test_opt decompress(Br, Bc, result)
                     @test_opt decompress!(respectful_similar(A), Br, Bc, result)
+
+                    @inferred compress(A, result)
+                    @inferred decompress(Br, Bc, result)
                 end
             else
                 B = compress(A, result)
                 @testset "Full decompression" begin
                     @test_opt compress(A, result)
-                    @test_opt decompress(B, result) ≈ A0
+                    @test_opt decompress(B, result)
                     @test_opt decompress!(respectful_similar(A), B, result)
+
+                    @inferred compress(A, result)
+                    @inferred decompress(B, result)
                 end
                 @testset "Single-color decompression" begin
                     if decompression == :direct
@@ -145,5 +161,46 @@ end;
         )
         B = compress(A, result)
         @test_opt decompress(B, result)
+        @inferred decompress(B, result)
     end
 end;
+
+@testset "Single precision" begin
+    A = convert(
+        SparseMatrixCSC{Float32,Int32},
+        sparse(Symmetric(sprand(rng, Float32, 100, 100, 0.1))),
+    )
+    @testset "$structure - $partition - $decompression" for (
+        structure, partition, decompression
+    ) in [
+        (:nonsymmetric, :column, :direct),
+        (:nonsymmetric, :row, :direct),
+        (:symmetric, :column, :direct),
+        (:symmetric, :column, :substitution),
+        (:nonsymmetric, :bidirectional, :direct),
+        (:nonsymmetric, :bidirectional, :substitution),
+    ]
+        @testset for order in all_orders()
+            result = coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm(order; decompression);
+            )
+            if partition in (:column, :bidirectional)
+                @test eltype(column_colors(result)) == Int32
+                @test eltype(column_groups(result)[1]) == Int32
+            end
+            if partition in (:row, :bidirectional)
+                @test eltype(row_colors(result)) == Int32
+                @test eltype(row_groups(result)[1]) == Int32
+            end
+            if partition == :bidirectional
+                Br, Bc = compress(A, result)
+                @test decompress(Br, Bc, result) isa SparseMatrixCSC{Float32,Int32}
+            else
+                B = compress(A, result)
+                @test decompress(B, result) isa SparseMatrixCSC{Float32,Int32}
+            end
+        end
+    end
+end

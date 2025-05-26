@@ -1,3 +1,5 @@
+using CliqueTrees: CliqueTrees
+using BandedMatrices
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
@@ -7,6 +9,7 @@ using SparseMatrixColorings:
     LargestFirst,
     NaturalOrder,
     RandomOrder,
+    PerfectEliminationOrder,
     degree_dist2,
     nb_vertices,
     valid_dynamic_order,
@@ -32,7 +35,7 @@ rng = StableRNG(63)
 end;
 
 @testset "RandomOrder" begin
-    A = sprand(rng, Bool, 10, 10, 0.5)
+    A = sparse(Symmetric(sprand(rng, Bool, 10, 10, 0.5)))
     ag = AdjacencyGraph(A)
     @test sort(vertices(ag, RandomOrder(rng))) == 1:10
     @test sort(vertices(ag, RandomOrder())) == 1:10
@@ -58,14 +61,16 @@ end;
 end;
 
 @testset "LargestFirst" begin
-    A = sparse([
-        0 1 0
-        1 0 0
-        0 1 0
-    ])
-    ag = AdjacencyGraph(A)
-
-    @test vertices(ag, LargestFirst()) == [2, 1, 3]
+    for has_diagonal in (false, true)
+        A = sparse([
+            0 1 0 0
+            1 0 1 1
+            0 1 0 1
+            0 1 1 0
+        ])
+        ag = AdjacencyGraph(A; has_diagonal)
+        @test vertices(ag, LargestFirst()) == [2, 3, 4, 1]
+    end
 
     A = sparse([
         1 1 0 0
@@ -85,8 +90,16 @@ end;
 end;
 
 @testset "Dynamic degree-based orders" begin
-    @testset "$order" for order in
-                          [SmallestLast(), IncidenceDegree(), DynamicLargestFirst()]
+    @testset "$order" for order in [
+        SmallestLast(),
+        SmallestLast(; reproduce_colpack=true),
+        IncidenceDegree(),
+        IncidenceDegree(; reproduce_colpack=true),
+        DynamicLargestFirst(),
+        DynamicLargestFirst(; reproduce_colpack=true),
+        DynamicDegreeBasedOrder{:forward,:high2low}(),
+        DynamicDegreeBasedOrder{:forward,:high2low}(; reproduce_colpack=true),
+    ]
         @testset "AdjacencyGraph" begin
             for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
                 yield()
@@ -110,3 +123,26 @@ end;
         end
     end
 end;
+
+@testset "PerfectEliminationOrder" begin
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    substitution_algo = GreedyColoringAlgorithm(
+        PerfectEliminationOrder(); decompression=:substitution
+    )
+
+    # band graphs
+    for (n, m) in ((800, 80), (400, 40), (200, 20), (100, 10))
+        perm = randperm(rng, n)
+        matrix = permute!(sparse(Symmetric(brand(n, n, m, 0), :L)), perm, perm)
+        π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
+        @test isperm(π)
+        @test ncolors(coloring(matrix, problem, substitution_algo)) == m + 1
+    end
+
+    # random graphs
+    for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
+        matrix = sparse(Symmetric(sprand(rng, Bool, n, n, p)))
+        π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
+        @test isperm(π)
+    end
+end

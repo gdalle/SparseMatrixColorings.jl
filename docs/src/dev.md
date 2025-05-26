@@ -16,16 +16,17 @@ SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 transpose
+SparseMatrixColorings.bidirectional_pattern
 ```
 
 ## Low-level coloring
 
 ```@docs
 SparseMatrixColorings.partial_distance2_coloring
-SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
+SparseMatrixColorings.Forest
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
 ```

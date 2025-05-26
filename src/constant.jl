@@ -14,7 +14,7 @@ Indeed, for symmetric coloring problems, we need more than just the vector of co
 
 - `partition::Symbol`: either `:row` or `:column`.
 - `matrix_template::AbstractMatrix`: matrix for which the vector of colors was precomputed (the algorithm will only accept matrices of the exact same size).
-- `color::Vector{Int}`: vector of integer colors, one for each row or column (depending on `partition`).
+- `color::Vector{<:Integer}`: vector of integer colors, one for each row or column (depending on `partition`).
 
 !!! warning
     The second constructor (based on keyword arguments) is type-unstable.
@@ -65,33 +65,36 @@ julia> column_colors(result)
 - [`ADTypes.row_coloring`](@extref ADTypes.row_coloring)
 """
 struct ConstantColoringAlgorithm{
-    partition,M<:AbstractMatrix,R<:AbstractColoringResult{:nonsymmetric,partition,:direct}
+    partition,
+    M<:AbstractMatrix,
+    T<:Integer,
+    R<:AbstractColoringResult{:nonsymmetric,partition,:direct},
 } <: ADTypes.AbstractColoringAlgorithm
     matrix_template::M
-    color::Vector{Int}
+    color::Vector{T}
     result::R
 end
 
 function ConstantColoringAlgorithm{:column}(
-    matrix_template::AbstractMatrix, color::Vector{Int}
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}
 )
     bg = BipartiteGraph(matrix_template)
     result = ColumnColoringResult(matrix_template, bg, color)
-    M, R = typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:column,M,R}(matrix_template, color, result)
+    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
+    return ConstantColoringAlgorithm{:column,M,T,R}(matrix_template, color, result)
 end
 
 function ConstantColoringAlgorithm{:row}(
-    matrix_template::AbstractMatrix, color::Vector{Int}
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}
 )
     bg = BipartiteGraph(matrix_template)
     result = RowColoringResult(matrix_template, bg, color)
-    M, R = typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:row,M,R}(matrix_template, color, result)
+    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
+    return ConstantColoringAlgorithm{:row,M,T,R}(matrix_template, color, result)
 end
 
 function ConstantColoringAlgorithm(
-    matrix_template::AbstractMatrix, color::Vector{Int}; partition=:column
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}; partition::Symbol=:column
 )
     return ConstantColoringAlgorithm{partition}(matrix_template, color)
 end

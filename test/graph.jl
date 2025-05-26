@@ -4,6 +4,7 @@ using SparseMatrixColorings:
     SparsityPatternCSC,
     AdjacencyGraph,
     BipartiteGraph,
+    bidirectional_pattern,
     degree,
     degree_dist2,
     nb_vertices,
@@ -14,13 +15,49 @@ using Test
 ## SparsityPatternCSC
 
 @testset "SparsityPatternCSC" begin
+    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
-        @test all(1:1000) do _
-            A = sprand(rand(100:1000), rand(100:1000), 0.1)
+        for _ in 1:1000
+            m, n = rand(100:1000), rand(100:1000)
+            p = 0.05 * rand()
+            A = sprand(m, n, p)
             S = SparsityPatternCSC(A)
             Sᵀ = transpose(S)
             Sᵀ_true = SparsityPatternCSC(sparse(transpose(A)))
-            Sᵀ.colptr == Sᵀ_true.colptr && Sᵀ.rowval == Sᵀ_true.rowval
+            @test Sᵀ.colptr == Sᵀ_true.colptr
+            @test Sᵀ.rowval == Sᵀ_true.rowval
+        end
+    end
+    @testset "Bidirectional" begin
+        @testset "symmetric_pattern = false" begin
+            for _ in 1:1000
+                m, n = rand(100:1000), rand(100:1000)
+                p = 0.05 * rand()
+                A = sprand(Bool, m, n, p)
+                A_and_Aᵀ = [spzeros(Bool, n, n) transpose(A); A spzeros(Bool, m, m)]
+                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=false)
+                @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
+                @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+                M = SparseMatrixCSC(
+                    m + n, m + n, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
+                )
+                @test issymmetric(M)
+            end
+        end
+        @testset "symmetric_pattern = true" begin
+            for _ in 1:1000
+                m = rand(100:1000)
+                p = 0.05 * rand()
+                A = sparse(Symmetric(sprand(Bool, m, m, p)))
+                A_and_Aᵀ = [spzeros(Bool, m, m) transpose(A); A spzeros(Bool, m, m)]
+                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=true)
+                @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
+                @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
+                M = SparseMatrixCSC(
+                    2 * m, 2 * m, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
+                )
+                @test issymmetric(M)
+            end
         end
     end
     @testset "size" begin
@@ -54,6 +91,7 @@ end
     ])
 
     bg = BipartiteGraph(A; symmetric_pattern=false)
+    @test eltype(bg) == Int
     @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 8
@@ -106,15 +144,36 @@ end;
         0 0 0 1 1 1 1 0
     ])
 
-    B = transpose(A) * A
-    g = AdjacencyGraph(B - Diagonal(B))
+    g = AdjacencyGraph(transpose(A) * A)
+    @test eltype(g) == Int
     @test nb_vertices(g) == 8
-    @test collect(neighbors(g, 1)) == [6, 7, 8]
-    @test collect(neighbors(g, 2)) == [5, 7, 8]
-    @test collect(neighbors(g, 3)) == [5, 6, 8]
-    @test collect(neighbors(g, 4)) == [5, 6, 7]
-    @test collect(neighbors(g, 5)) == [2, 3, 4, 6, 7, 8]
-    @test collect(neighbors(g, 6)) == [1, 3, 4, 5, 7, 8]
-    @test collect(neighbors(g, 7)) == [1, 2, 4, 5, 6, 8]
-    @test collect(neighbors(g, 8)) == [1, 2, 3, 5, 6, 7]
+    # wrong neighbors, it's okay they are filtered after
+    @test collect(neighbors(g, 1)) == sort(vcat(1, [6, 7, 8]))
+    @test collect(neighbors(g, 2)) == sort(vcat(2, [5, 7, 8]))
+    @test collect(neighbors(g, 3)) == sort(vcat(3, [5, 6, 8]))
+    @test collect(neighbors(g, 4)) == sort(vcat(4, [5, 6, 7]))
+    @test collect(neighbors(g, 5)) == sort(vcat(5, [2, 3, 4, 6, 7, 8]))
+    @test collect(neighbors(g, 6)) == sort(vcat(6, [1, 3, 4, 5, 7, 8]))
+    @test collect(neighbors(g, 7)) == sort(vcat(7, [1, 2, 4, 5, 6, 8]))
+    @test collect(neighbors(g, 8)) == sort(vcat(8, [1, 2, 3, 5, 6, 7]))
+    # right degree
+    @test degree(g, 1) == 3
+    @test degree(g, 2) == 3
+    @test degree(g, 3) == 3
+    @test degree(g, 4) == 3
+    @test degree(g, 5) == 6
+    @test degree(g, 6) == 6
+    @test degree(g, 7) == 6
+    @test degree(g, 8) == 6
+
+    g = AdjacencyGraph(transpose(A) * A; has_diagonal=false)
+    # wrong degree
+    @test degree(g, 1) == 4
+    @test degree(g, 2) == 4
+    @test degree(g, 3) == 4
+    @test degree(g, 4) == 4
+    @test degree(g, 5) == 7
+    @test degree(g, 6) == 7
+    @test degree(g, 7) == 7
+    @test degree(g, 8) == 7
 end

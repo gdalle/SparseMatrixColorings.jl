@@ -27,7 +27,7 @@ using Test
     color0 = [1, 1, 2]
     @test structurally_orthogonal_columns(A0, color0)
     @test directly_recoverable_columns(A0, color0)
-    test_coloring_decompression(A0, problem, algo; B0, color0)
+    test_coloring_decompression(A0, problem, algo; B0, color0, test_fast=true)
 end;
 
 @testset "Row coloring & decompression" begin
@@ -45,7 +45,7 @@ end;
     color0 = [1, 1, 2]
     @test structurally_orthogonal_columns(transpose(A0), color0)
     @test directly_recoverable_columns(transpose(A0), color0)
-    test_coloring_decompression(A0, problem, algo; B0, color0)
+    test_coloring_decompression(A0, problem, algo; B0, color0, test_fast=true)
 end;
 
 @testset "Symmetric coloring & direct decompression" begin
@@ -57,7 +57,7 @@ end;
         A0, B0, color0 = example.A, example.B, example.color
         @test symmetrically_orthogonal_columns(A0, color0)
         @test directly_recoverable_columns(A0, color0)
-        test_coloring_decompression(A0, problem, algo; B0, color0)
+        test_coloring_decompression(A0, problem, algo; B0, color0, test_fast=true)
     end
 
     @testset "Fig 1 from 'Efficient computation of sparse hessians using coloring and AD'" begin
@@ -65,7 +65,7 @@ end;
         A0, B0, color0 = example.A, example.B, example.color
         @test symmetrically_orthogonal_columns(A0, color0)
         @test directly_recoverable_columns(A0, color0)
-        test_coloring_decompression(A0, problem, algo; B0, color0)
+        test_coloring_decompression(A0, problem, algo; B0, color0, test_fast=true)
     end
 end;
 
@@ -77,13 +77,13 @@ end;
         example = what_fig_61()
         A0, B0, color0 = example.A, example.B, example.color
         # our coloring doesn't give the color0 from the example, but that's okay
-        test_coloring_decompression(A0, problem, algo)
+        test_coloring_decompression(A0, problem, algo; test_fast=true)
     end
 
     @testset "Fig 4 from 'Efficient computation of sparse hessians using coloring and AD'" begin
         example = efficient_fig_4()
         A0, B0, color0 = example.A, example.B, example.color
-        test_coloring_decompression(A0, problem, algo; B0, color0)
+        test_coloring_decompression(A0, problem, algo; B0, color0, test_fast=true)
     end
 end;
 
@@ -180,5 +180,19 @@ end;
                 A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
             ),
         )
+
+        test_bicoloring_decompression(
+            A,
+            problem,
+            GreedyColoringAlgorithm{:direct}(order; postprocessing=true);
+            test_fast=true,
+        )
+
+        test_bicoloring_decompression(
+            A,
+            problem,
+            GreedyColoringAlgorithm{:substitution}(order; postprocessing=true);
+            test_fast=true,
+        )
     end
-end
+end;

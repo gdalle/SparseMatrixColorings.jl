@@ -74,11 +74,12 @@ problem_bi = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional
 algo_bi = GreedyColoringAlgorithm(RandomOrder(StableRNG(0)); postprocessing=true, decompression=:direct)
 result_bi = coloring(S, problem_bi, algo_bi)
 
-A_img, Br_img, Bc_img = show_colors(
+Arc_img, Ar_img, Ac_img, Br_img, Bc_img = show_colors(
     result_bi;
     colorscheme=ColorSchemes.progress,
-    background=RGB(1, 1, 1),  # white
+    background_color=RGB(1, 1, 1),  # white
     scale=10,
+    border=1,
     pad=2
 )
 ```
@@ -86,10 +87,20 @@ A_img, Br_img, Bc_img = show_colors(
 In the bidirectional case, columns and rows can both get colors:
 
 ```@example img
-A_img
+Ar_img
 ```
 
-And there are two compression results, one by row and one by column:
+```@example img
+Ac_img
+```
+
+Together, this yields:
+
+```@example img
+Arc_img
+```
+
+And there are two associated compression results, one by row and one by column:
 
 ```@example img
 Br_img
