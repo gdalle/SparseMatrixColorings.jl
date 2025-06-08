@@ -146,18 +146,23 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct ColumnColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:BipartiteGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
 } <: AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
     A::M
     "bipartite graph that was used for coloring"
     bg::G
     "one integer color for each column or row (depending on `partition`)"
-    color::Vector{T}
+    color::CT
     "color groups for columns or rows (depending on `partition`)"
     group::GT
-    "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
-    compressed_indices::Vector{T}
+    "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A`. When `A isa SparseMatrixCSC`, they satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`."
+    compressed_indices::VT
 end
 
 function ColumnColoringResult(
@@ -195,13 +200,18 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct RowColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:BipartiteGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
 } <: AbstractColoringResult{:nonsymmetric,:row,:direct}
     A::M
     bg::G
-    color::Vector{T}
+    color::CT
     group::GT
-    compressed_indices::Vector{T}
+    compressed_indices::VT
 end
 
 function RowColoringResult(
@@ -239,13 +249,18 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct StarSetColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:AdjacencyGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
 } <: AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
-    color::Vector{T}
+    color::CT
     group::GT
-    compressed_indices::Vector{T}
+    compressed_indices::VT
 end
 
 function StarSetColoringResult(

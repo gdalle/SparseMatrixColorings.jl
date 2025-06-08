@@ -100,7 +100,7 @@ end
 Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
 """
 function bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
-    bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
+    return bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
 end
 
 function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool) where {T}
@@ -344,6 +344,8 @@ struct BipartiteGraph{T<:Integer}
 end
 
 Base.eltype(::BipartiteGraph{T}) where {T} = T
+
+Base.transpose(bg::BipartiteGraph) = BipartiteGraph(bg.S2, bg.S1)
 
 function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
     return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)
