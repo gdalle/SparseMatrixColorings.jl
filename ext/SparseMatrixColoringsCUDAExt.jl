@@ -2,7 +2,7 @@ module SparseMatrixColoringsCUDAExt
 
 import SparseMatrixColorings as SMC
 using SparseArrays: SparseMatrixCSC, rowvals, nnz, nzrange
-using CUDA: CuVector, CuMatrix
+using CUDA: CuVector, CuMatrix, CuRef
 using CUDA.CUSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
 
 SMC.matrix_versions(A::AbstractCuSparseMatrix) = (A,)
@@ -56,14 +56,14 @@ end
 function SMC.decompress!(
     A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.ColumnColoringResult{<:CuSparseMatrixCSC}
 )
-    A.nzVal .= getindex.(Ref(B), result.compressed_indices)
+    A.nzVal .= getindex.(CuRef(B), result.compressed_indices)
     return A
 end
 
 function SMC.decompress!(
     A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.RowColoringResult{<:CuSparseMatrixCSC}
 )
-    A.nzVal .= getindex.(Ref(B), result.compressed_indices)
+    A.nzVal .= getindex.(CuRef(B), result.compressed_indices)
     return A
 end
 
@@ -72,7 +72,7 @@ function SMC.decompress!(
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSC},
 )
-    A.nzVal .= getindex.(Ref(B), result.compressed_indices)
+    A.nzVal .= getindex.(CuRef(B), result.compressed_indices)
     return A
 end
 
