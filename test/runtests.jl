@@ -86,7 +86,12 @@ include("utils.jl")
     end
     @testset verbose = true "GPU" begin
         @testset "CUDA" begin
-            include("cuda.jl")
+            using CUDA
+            if CUDA.functional()
+                include("cuda.jl")
+            else
+                @test_broken CUDA.functional()
+            end
         end
     end
 end
