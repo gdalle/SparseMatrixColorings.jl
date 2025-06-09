@@ -84,4 +84,9 @@ include("utils.jl")
             include("allocations.jl")
         end
     end
+    @testset verbose = true "GPU" begin
+        @testset "CUDA" begin
+            include("cuda.jl")
+        end
+    end
 end
