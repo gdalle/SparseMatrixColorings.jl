@@ -98,6 +98,7 @@ end
 
 ## Decompression
 
+# COV_EXCL_START
 function update_nzval_from_matrix!(
     nzVal::AbstractVector, B::AbstractMatrix, compressed_indices::AbstractVector{<:Integer}
 )
@@ -108,6 +109,7 @@ function update_nzval_from_matrix!(
     end
     return nothing
 end
+# COV_EXCL_STOP
 
 for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
     # loop to avoid method ambiguity
