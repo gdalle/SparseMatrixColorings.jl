@@ -2,8 +2,7 @@ module SparseMatrixColoringsCUDAExt
 
 import SparseMatrixColorings as SMC
 using SparseArrays: SparseMatrixCSC, rowvals, nnz, nzrange
-using CUDA:
-    @cuda, CuVector, CuMatrix, blockIdx, blockDim, gridDim, threadIdx, launch_configuration
+using CUDA: CuVector, CuMatrix
 using CUDA.CUSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
 
 SMC.matrix_versions(A::AbstractCuSparseMatrix) = (A,)
@@ -98,33 +97,13 @@ end
 
 ## Decompression
 
-# COV_EXCL_START
-function update_nzval_from_matrix!(
-    nzVal::AbstractVector, B::AbstractMatrix, compressed_indices::AbstractVector{<:Integer}
-)
-    index = (blockIdx().x - 1) * blockDim().x + threadIdx().x
-    stride = gridDim().x * blockDim().x
-    for k in index:stride:length(nzVal)
-        nzVal[k] = B[compressed_indices[k]]
-    end
-    return nothing
-end
-# COV_EXCL_STOP
-
 for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
     # loop to avoid method ambiguity
     @eval function SMC.decompress!(
         A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSC}
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csc
-        A.nnz == 0 && return A
-        kernel = @cuda launch = false update_nzval_from_matrix!(
-            A.nzVal, B, compressed_indices
-        )
-        config = launch_configuration(kernel.fun)
-        threads = min(A.nnz, config.threads)
-        blocks = cld(A.nnz, threads)
-        kernel(A.nzVal, B, compressed_indices; threads, blocks)
+        map!(Base.Fix1(getindex, B), A.nzVal, compressed_indices)
         return A
     end
 
@@ -132,14 +111,7 @@ for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
         A::CuSparseMatrixCSR, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSR}
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csr
-        A.nnz == 0 && return A
-        kernel = @cuda launch = false update_nzval_from_matrix!(
-            A.nzVal, B, compressed_indices
-        )
-        config = launch_configuration(kernel.fun)
-        threads = min(A.nnz, config.threads)
-        blocks = cld(A.nnz, threads)
-        kernel(A.nzVal, B, compressed_indices; threads, blocks)
+        map!(Base.Fix1(getindex, B), A.nzVal, compressed_indices)
         return A
     end
 end
