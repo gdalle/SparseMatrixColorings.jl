@@ -5,6 +5,8 @@ using SparseMatrixColorings
 using StableRNGs
 using Test
 
+include("utils.jl")
+
 rng = StableRNG(63)
 
 asymmetric_params = vcat(
@@ -19,10 +21,10 @@ symmetric_params = vcat(
     [(100, p) for p in (0.01:0.02:0.05)],
 )
 
-@testset "Column coloring & decompression" begin
+@testset verbose = true "Column coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC,)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
             test_coloring_decompression(A0, problem, algo; gpu=true)
@@ -30,10 +32,10 @@ symmetric_params = vcat(
     end
 end;
 
-@testset "Row coloring & decompression" begin
+@testset verbose = true "Row coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC,)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
             test_coloring_decompression(A0, problem, algo; gpu=true)
@@ -41,10 +43,10 @@ end;
     end
 end;
 
-@testset "Symmetric coloring & direct decompression" begin
+@testset verbose = true "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC,)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = T(sparse(Symmetric(sprand(rng, n, n, p))))
             test_coloring_decompression(A0, problem, algo; gpu=true)

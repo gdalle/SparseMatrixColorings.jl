@@ -345,8 +345,6 @@ end
 
 Base.eltype(::BipartiteGraph{T}) where {T} = T
 
-Base.transpose(bg::BipartiteGraph) = BipartiteGraph(bg.S2, bg.S1)
-
 function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
     return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)
 end
