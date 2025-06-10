@@ -17,10 +17,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: self-hosted
-    env:
-      CUDA_VISIBLE_DEVICES: 1
-      JULIA_DEPOT_PATH: /scratch/github-actions/julia_depot_smc
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         julia-version: ['1.10', '1']
