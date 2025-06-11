@@ -100,16 +100,36 @@ end
 for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
     # loop to avoid method ambiguity
     @eval function SMC.decompress!(
-        A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSC}
+        A::CuSparseMatrixCSC,
+        B::CuMatrix,
+        result::SMC.$R{<:CuSparseMatrixCSC},
+        uplo::Symbol=:F,
     )
+        if uplo != :F
+            throw(
+                SMC.UnsupportedDecompressionError(
+                    "Single-triangle decompression is not supported on GPU matrices"
+                ),
+            )
+        end
         compressed_indices = result.additional_info.compressed_indices_gpu_csc
         copyto!(A.nzVal, view(B, compressed_indices))
         return A
     end
 
     @eval function SMC.decompress!(
-        A::CuSparseMatrixCSR, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSR}
+        A::CuSparseMatrixCSR,
+        B::CuMatrix,
+        result::SMC.$R{<:CuSparseMatrixCSR},
+        uplo::Symbol=:F,
     )
+        if uplo != :F
+            throw(
+                SMC.UnsupportedDecompressionError(
+                    "Single-triangle decompression is not supported on GPU matrices"
+                ),
+            )
+        end
         compressed_indices = result.additional_info.compressed_indices_gpu_csr
         copyto!(A.nzVal, view(B, compressed_indices))
         return A
