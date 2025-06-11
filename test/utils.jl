@@ -22,6 +22,7 @@ function test_coloring_decompression(
     B0=nothing,
     color0=nothing,
     test_fast=false,
+    gpu=false,
 ) where {structure,partition,decompression}
     color_vec = Vector{Int}[]
     @testset "$(typeof(A))" for A in matrix_versions(A0)
@@ -60,6 +61,17 @@ function test_coloring_decompression(
             !isnothing(B0) && @test B == B0
         end
 
+        @testset "Full decompression" begin
+            @test decompress(B, result) ≈ A0
+            @test decompress(B, result) ≈ A0  # check result wasn't modified
+            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+        end
+
+        if gpu
+            continue
+        end
+
         @testset "Recoverability" begin
             # TODO: find tests for recoverability for substitution decompression
             if decompression == :direct
@@ -79,13 +91,6 @@ function test_coloring_decompression(
                     end
                 end
             end
-        end
-
-        @testset "Full decompression" begin
-            @test decompress(B, result) ≈ A0
-            @test decompress(B, result) ≈ A0  # check result wasn't modified
-            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
-            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
         end
 
         @testset "Single-color decompression" begin
@@ -194,11 +199,6 @@ function test_bicoloring_decompression(
             end
         end
 
-        if decompression == :direct
-            @testset "Recoverability" begin
-                @test structurally_biorthogonal(A0, row_color, column_color)
-            end
-        end
         @testset "Full decompression" begin
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
@@ -208,6 +208,12 @@ function test_bicoloring_decompression(
             @test decompress!(
                 respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
             ) ≈ A0
+        end
+
+        if decompression == :direct
+            @testset "Recoverability" begin
+                @test structurally_biorthogonal(A0, row_color, column_color)
+            end
         end
     end
 end

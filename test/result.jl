@@ -1,4 +1,4 @@
-using SparseMatrixColorings: group_by_color
+using SparseMatrixColorings: group_by_color, UnsupportedDecompressionError
 using Test
 
 @testset "Group by color" begin
@@ -30,4 +30,9 @@ end
     algo = ConstantColoringAlgorithm(A, color; partition=:row)
     B = compress(A, coloring(A, problem, algo))
     @test size(B, 1) == 0
+end
+
+@testset "Errors" begin
+    e = SparseMatrixColorings.UnsupportedDecompressionError("hello")
+    @test sprint(showerror, e) == "UnsupportedDecompressionError: hello"
 end
