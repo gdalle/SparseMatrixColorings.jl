@@ -103,7 +103,7 @@ for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
         A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSC}
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csc
-        map!(Base.Fix1(getindex, B), A.nzVal, compressed_indices)
+        copyto!(A.nzVal, view(B, compressed_indices))
         return A
     end
 
@@ -111,7 +111,7 @@ for R in (:ColumnColoringResult, :RowColoringResult, :StarSetColoringResult)
         A::CuSparseMatrixCSR, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSR}
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csr
-        map!(Base.Fix1(getindex, B), A.nzVal, compressed_indices)
+        copyto!(A.nzVal, view(B, compressed_indices))
         return A
     end
 end
