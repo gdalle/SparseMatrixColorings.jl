@@ -146,25 +146,38 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct ColumnColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:BipartiteGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
+    A,
 } <: AbstractColoringResult{:nonsymmetric,:column,:direct}
     "matrix that was colored"
     A::M
     "bipartite graph that was used for coloring"
     bg::G
     "one integer color for each column or row (depending on `partition`)"
-    color::Vector{T}
+    color::CT
     "color groups for columns or rows (depending on `partition`)"
     group::GT
     "flattened indices mapping the compressed matrix `B` to the uncompressed matrix `A` when `A isa SparseMatrixCSC`. They satisfy `nonzeros(A)[k] = vec(B)[compressed_indices[k]]`"
-    compressed_indices::Vector{T}
+    compressed_indices::VT
+    "optional data used for decompressing into specific matrix types"
+    additional_info::A
 end
 
 function ColumnColoringResult(
     A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
 ) where {T<:Integer}
-    S = bg.S2
     group = group_by_color(T, color)
+    compressed_indices = column_csc_indices(bg, color)
+    return ColumnColoringResult(A, bg, color, group, compressed_indices, nothing)
+end
+
+function column_csc_indices(bg::BipartiteGraph{T}, color::Vector{<:Integer}) where {T}
+    S = bg.S2
     n = size(S, 1)
     rv = rowvals(S)
     compressed_indices = zeros(T, nnz(S))
@@ -176,7 +189,23 @@ function ColumnColoringResult(
             compressed_indices[k] = (c - 1) * n + i
         end
     end
-    return ColumnColoringResult(A, bg, color, group, compressed_indices)
+    return compressed_indices
+end
+
+function column_csr_indices(bg::BipartiteGraph{T}, color::Vector{<:Integer}) where {T}
+    Sᵀ = bg.S1  # CSC storage of transpose(A)
+    n = size(Sᵀ, 2)
+    rv = rowvals(Sᵀ)
+    compressed_indices = zeros(T, nnz(Sᵀ))
+    for i in axes(Sᵀ, 2)
+        for k in nzrange(Sᵀ, i)
+            j = rv[k]
+            c = color[j]
+            # A[i, j] = B[i, c]
+            compressed_indices[k] = (c - 1) * n + i
+        end
+    end
+    return compressed_indices
 end
 
 """
@@ -195,21 +224,33 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct RowColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:BipartiteGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:BipartiteGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
+    A,
 } <: AbstractColoringResult{:nonsymmetric,:row,:direct}
     A::M
     bg::G
-    color::Vector{T}
+    color::CT
     group::GT
-    compressed_indices::Vector{T}
+    compressed_indices::VT
+    additional_info::A
 end
 
 function RowColoringResult(
     A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
 ) where {T<:Integer}
-    S = bg.S2
     group = group_by_color(T, color)
-    C = length(group)  # ncolors
+    compressed_indices = row_csc_indices(bg, color)
+    return RowColoringResult(A, bg, color, group, compressed_indices, nothing)
+end
+
+function row_csc_indices(bg::BipartiteGraph{T}, color::Vector{<:Integer}) where {T}
+    S = bg.S2
+    C = maximum(color)  # ncolors
     rv = rowvals(S)
     compressed_indices = zeros(T, nnz(S))
     for j in axes(S, 2)
@@ -220,7 +261,23 @@ function RowColoringResult(
             compressed_indices[k] = (j - 1) * C + c
         end
     end
-    return RowColoringResult(A, bg, color, group, compressed_indices)
+    return compressed_indices
+end
+
+function row_csr_indices(bg::BipartiteGraph{T}, color::Vector{<:Integer}) where {T}
+    Sᵀ = bg.S1  # CSC storage of transpose(A)
+    C = maximum(color)  # ncolors
+    rv = rowvals(Sᵀ)
+    compressed_indices = zeros(T, nnz(Sᵀ))
+    for i in axes(Sᵀ, 2)
+        for k in nzrange(Sᵀ, i)
+            j = rv[k]
+            c = color[i]
+            # A[i, j] = B[c, j]
+            compressed_indices[k] = (j - 1) * C + c
+        end
+    end
+    return compressed_indices
 end
 
 """
@@ -239,13 +296,20 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct StarSetColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:AdjacencyGraph{T},
+    CT<:AbstractVector{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
+    A,
 } <: AbstractColoringResult{:symmetric,:column,:direct}
     A::M
     ag::G
-    color::Vector{T}
+    color::CT
     group::GT
-    compressed_indices::Vector{T}
+    compressed_indices::VT
+    additional_info::A
 end
 
 function StarSetColoringResult(
@@ -254,11 +318,18 @@ function StarSetColoringResult(
     color::Vector{<:Integer},
     star_set::StarSet{<:Integer},
 ) where {T<:Integer}
+    group = group_by_color(T, color)
+    compressed_indices = star_csc_indices(ag, color, star_set)
+    return StarSetColoringResult(A, ag, color, group, compressed_indices, nothing)
+end
+
+function star_csc_indices(
+    ag::AdjacencyGraph{T}, color::Vector{<:Integer}, star_set
+) where {T}
     (; star, hub) = star_set
     S = pattern(ag)
     edge_to_index = edge_indices(ag)
     n = S.n
-    group = group_by_color(T, color)
     rvS = rowvals(S)
     compressed_indices = zeros(T, nnz(S))  # needs to be independent from the storage in the graph, in case the graph gets reused
     for j in axes(S, 2)
@@ -287,8 +358,7 @@ function StarSetColoringResult(
             end
         end
     end
-
-    return StarSetColoringResult(A, ag, color, group, compressed_indices)
+    return compressed_indices
 end
 
 """

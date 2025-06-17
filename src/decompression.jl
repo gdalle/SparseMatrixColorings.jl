@@ -106,6 +106,14 @@ function compress(
     return Br, Bc
 end
 
+struct UnsupportedDecompressionError
+    msg::String
+end
+
+function Base.showerror(io::IO, err::UnsupportedDecompressionError)
+    return print(io, "UnsupportedDecompressionError: $(err.msg)")
+end
+
 """
     decompress(B::AbstractMatrix, result::AbstractColoringResult{_,:column/:row})
     decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
