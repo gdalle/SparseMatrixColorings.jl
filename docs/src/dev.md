@@ -1,4 +1,4 @@
-# Dev docs
+# Internals
 
 ```@meta
 CollapsedDocStrings = true
@@ -16,16 +16,17 @@ SparseMatrixColorings.BipartiteGraph
 SparseMatrixColorings.vertices
 SparseMatrixColorings.neighbors
 transpose
+SparseMatrixColorings.bidirectional_pattern
 ```
 
 ## Low-level coloring
 
 ```@docs
 SparseMatrixColorings.partial_distance2_coloring
-SparseMatrixColorings.symmetric_coefficient
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
+SparseMatrixColorings.Forest
 SparseMatrixColorings.StarSet
 SparseMatrixColorings.TreeSet
 ```
@@ -38,6 +39,8 @@ SparseMatrixColorings.RowColoringResult
 SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
+SparseMatrixColorings.BicoloringResult
+SparseMatrixColorings.remap_colors
 ```
 
 ## Testing
@@ -46,6 +49,8 @@ SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.directly_recoverable_columns
 SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
+SparseMatrixColorings.structurally_biorthogonal
+SparseMatrixColorings.valid_dynamic_order
 ```
 
 ## Matrix handling
@@ -54,6 +59,12 @@ SparseMatrixColorings.structurally_orthogonal_columns
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
 SparseMatrixColorings.same_pattern
+```
+
+## Visualization
+
+```@docs
+SparseMatrixColorings.show_colors
 ```
 
 ## Examples

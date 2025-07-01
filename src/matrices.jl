@@ -10,7 +10,7 @@ Return various versions of the same matrix:
 
 Used for internal testing.
 """
-function matrix_versions(A)
+function matrix_versions(A::AbstractMatrix)
     A_dense = Matrix(A)
     A_sparse = sparse(A)
     versions = [

@@ -9,9 +9,6 @@ Compress `A` given a coloring `result` of the sparsity pattern of `A`.
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is undone by calling [`decompress`](@ref) or [`decompress!`](@ref).
 
-!!! warning
-    At the moment, `:bidirectional` partitions are not implemented.
-
 # Example
 
 ```jldoctest
@@ -26,7 +23,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -49,28 +46,86 @@ function compress end
 
 function compress(A, result::AbstractColoringResult{structure,:column}) where {structure}
     group = column_groups(result)
-    B = stack(group; dims=2) do g
-        dropdims(sum(A[:, g]; dims=2); dims=2)
+    if isempty(group)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        B_model = stack([Int[]]; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
+        B = similar(B_model, size(A, 1), 0)
+    else
+        B = stack(group; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
     end
     return B
 end
 
 function compress(A, result::AbstractColoringResult{structure,:row}) where {structure}
     group = row_groups(result)
-    B = stack(group; dims=1) do g
-        dropdims(sum(A[g, :]; dims=1); dims=1)
+    if isempty(group)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        B_model = stack([Int[]]; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
+        B = similar(B_model, 0, size(A, 2))
+    else
+        B = stack(group; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
     end
     return B
 end
 
-"""
-    decompress(B::AbstractMatrix, result::AbstractColoringResult)
+function compress(
+    A, result::AbstractColoringResult{structure,:bidirectional}
+) where {structure}
+    row_group = row_groups(result)
+    column_group = column_groups(result)
+    if isempty(row_group)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        Br_model = stack([Int[]]; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
+        Br = similar(Br_model, 0, size(A, 2))
+    else
+        Br = stack(row_group; dims=1) do g
+            dropdims(sum(A[g, :]; dims=1); dims=1)
+        end
+    end
+    if isempty(column_group)
+        # ensure we get a Matrix and not a SparseMatrixCSC
+        Bc_model = stack([Int[]]; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
+        Bc = similar(Bc_model, size(A, 1), 0)
+    else
+        Bc = stack(column_group; dims=2) do g
+            dropdims(sum(A[:, g]; dims=2); dims=2)
+        end
+    end
+    return Br, Bc
+end
 
-Decompress `B` into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
+struct UnsupportedDecompressionError
+    msg::String
+end
+
+function Base.showerror(io::IO, err::UnsupportedDecompressionError)
+    return print(io, "UnsupportedDecompressionError: $(err.msg)")
+end
+
+"""
+    decompress(B::AbstractMatrix, result::AbstractColoringResult{_,:column/:row})
+    decompress(Br::AbstractMatrix, Bc::AbstractMatrix, result::AbstractColoringResult{_,:bidirectional})
+
+Decompress `B` (or the tuple `(Br,Bc)`) into a new matrix `A`, given a coloring `result` of the sparsity pattern of `A`.
 The in-place alternative is [`decompress!`](@ref).
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
+
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
 
 # Example
 
@@ -86,7 +141,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -120,13 +175,27 @@ function decompress(B::AbstractMatrix, result::AbstractColoringResult)
     return decompress!(A, B, result)
 end
 
+function decompress(
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::AbstractColoringResult{structure,:bidirectional},
+) where {structure}
+    A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
+    return decompress!(A, Br, Bc, result)
+end
+
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult, [uplo=:F]
+        result::AbstractColoringResult{_,:column/:row}, [uplo=:F]
     )
 
-Decompress `B` in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
+    decompress!(
+        A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix
+        result::AbstractColoringResult{_,:bidirectional}
+    )
+
+Decompress `B` (or the tuple `(Br,Bc)`) in-place into `A`, given a coloring `result` of the sparsity pattern of `A`.
 The out-of-place alternative is [`decompress`](@ref).
 
 !!! note
@@ -137,6 +206,9 @@ It is done by calling [`compress`](@ref).
 
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
+
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
 
 # Example
 
@@ -152,7 +224,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -203,6 +275,9 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
 When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
 
+!!! warning
+    For some coloring variants, the `result` object is mutated during decompression.
+
 # Example
 
 ```jldoctest
@@ -217,7 +292,7 @@ julia> A = sparse([
 
 julia> result = coloring(A, ColoringProblem(), GreedyColoringAlgorithm());
 
-julia> column_groups(result)
+julia> collect.(column_groups(result))
 3-element Vector{Vector{Int64}}:
  [1, 2, 4]
  [3, 5]
@@ -264,7 +339,7 @@ end
 ## ColumnColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColoringResult)
-    @compat (; color) = result
+    (; color) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
@@ -282,7 +357,7 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
@@ -296,7 +371,7 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
-    @compat (; compressed_indices) = result
+    (; compressed_indices) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
@@ -309,7 +384,7 @@ end
 function decompress_single_color!(
     A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     rvS = rowvals(S)
@@ -326,7 +401,7 @@ end
 ## RowColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringResult)
-    @compat (; color) = result
+    (; color) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
@@ -344,7 +419,7 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::RowColoringResult
 )
-    @compat (; group) = result
+    (; group) = result
     S, Sᵀ = result.bg.S2, result.bg.S1
     check_same_pattern(A, S)
     rvSᵀ = rowvals(Sᵀ)
@@ -358,7 +433,7 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
-    @compat (; compressed_indices) = result
+    (; compressed_indices) = result
     S = result.bg.S2
     check_same_pattern(A, S)
     nzA = nonzeros(A)
@@ -373,25 +448,17 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; color, star_set) = result
-    @compat (; star, hub, spokes) = star_set
-    S = result.ag.S
+    (; ag, compressed_indices) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
-        end
-    end
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        cj = color[j]
-        for i in spokes[s]
+
+    rvS = rowvals(S)
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
             if in_triangle(i, j, uplo)
-                A[i, j] = B[i, cj]
-            end
-            if in_triangle(j, i, uplo)
-                A[j, i] = B[i, cj]
+                A[i, j] = B[compressed_indices[k]]
             end
         end
     end
@@ -405,24 +472,29 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
-    @compat (; color, group, star_set) = result
-    @compat (; hub, spokes) = star_set
-    S = result.ag.S
+    (; ag, compressed_indices, group) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
-    for i in axes(A, 1)
-        if !iszero(S[i, i]) && color[i] == c
-            A[i, i] = b[i]
-        end
-    end
-    for s in eachindex(hub, spokes)
-        j = abs(hub[s])
-        if color[j] == c
-            for i in spokes[s]
-                if in_triangle(i, j, uplo)
-                    A[i, j] = b[i]
-                end
-                if in_triangle(j, i, uplo)
-                    A[j, i] = b[i]
+
+    lower_index = (c - 1) * S.n + 1
+    upper_index = c * S.n
+    rvS = rowvals(S)
+    for j in group[c]
+        for k in nzrange(S, j)
+            # Check if the color c is used to recover A[i,j] / A[j,i]
+            if lower_index <= compressed_indices[k] <= upper_index
+                i = rvS[k]
+                if i == j
+                    # Recover the diagonal coefficients of A
+                    A[i, i] = b[i]
+                else
+                    # Recover the off-diagonal coefficients of A
+                    if in_triangle(i, j, uplo)
+                        A[i, j] = b[i]
+                    end
+                    if in_triangle(j, i, uplo)
+                        A[j, i] = b[i]
+                    end
                 end
             end
         end
@@ -433,8 +505,8 @@ end
 function decompress!(
     A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; compressed_indices) = result
-    S = result.ag.S
+    (; ag, compressed_indices) = result
+    (; S) = ag
     nzA = nonzeros(A)
     if uplo == :F
         check_same_pattern(A, S)
@@ -453,20 +525,17 @@ function decompress!(
                 end
             end
         end
-        @assert l == length(nonzeros(A))
     end
     return A
 end
 
 ## TreeSetColoringResult
 
-# TODO: add method for A::SparseMatrixCSC
-
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    @compat (; color, vertices_by_tree, reverse_bfs_orders, buffer) = result
-    S = result.ag.S
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
+    (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
     fill!(A, zero(R))
@@ -478,27 +547,154 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    for i in axes(A, 1)
-        if !iszero(S[i, i])
-            A[i, i] = B[i, color[i]]
+    if has_diagonal(ag)
+        for i in axes(S, 1)
+            if !iszero(S[i, i])
+                A[i, i] = B[i, color[i]]
+            end
         end
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in eachindex(vertices_by_tree, reverse_bfs_orders)
-        for vertex in vertices_by_tree[k]
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
 
-        for (i, j) in reverse_bfs_orders[k]
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
+
             if in_triangle(i, j, uplo)
                 A[i, j] = val
             end
             if in_triangle(j, i, uplo)
                 A[j, i] = val
             end
+        end
+    end
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
+    (;
+        ag,
+        color,
+        reverse_bfs_orders,
+        tree_edge_indices,
+        nt,
+        diagonal_indices,
+        diagonal_nzind,
+        lower_triangle_offsets,
+        upper_triangle_offsets,
+        buffer,
+    ) = result
+    (; S) = ag
+    A_colptr = A.colptr
+    nzA = nonzeros(A)
+    uplo == :F && check_same_pattern(A, S)
+
+    if eltype(buffer) == R
+        buffer_right_type = buffer
+    else
+        buffer_right_type = similar(buffer, R)
+    end
+
+    # Recover the diagonal coefficients of A
+    if has_diagonal(ag)
+        if uplo == :L
+            for i in diagonal_indices
+                # A[i, i] is the first element in column i
+                nzind = A_colptr[i]
+                nzA[nzind] = B[i, color[i]]
+            end
+        elseif uplo == :U
+            for i in diagonal_indices
+                # A[i, i] is the last element in column i
+                nzind = A_colptr[i + 1] - 1
+                nzA[nzind] = B[i, color[i]]
+            end
+        else  # uplo == :F
+            for (k, i) in enumerate(diagonal_indices)
+                nzind = diagonal_nzind[k]
+                nzA[nzind] = B[i, color[i]]
+            end
+        end
+    end
+
+    # Index of offsets in lower_triangle_offsets and upper_triangle_offsets
+    counter = 0
+
+    # Recover the off-diagonal coefficients of A
+    for k in 1:nt
+        # Positions of the first and last edges of the tree
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+
+        # Reset the buffer to zero for all vertices in the tree (except the root)
+        for pos in first:last
+            (vertex, _) = reverse_bfs_orders[pos]
+            buffer_right_type[vertex] = zero(R)
+        end
+        # Reset the buffer to zero for the root vertex
+        (_, root) = reverse_bfs_orders[last]
+        buffer_right_type[root] = zero(R)
+
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            val = B[i, color[j]] - buffer_right_type[i]
+            buffer_right_type[j] = buffer_right_type[j] + val
+
+            #! format: off
+            # A[i,j] is in the lower triangular part of A
+            if in_triangle(i, j, :L)
+                # uplo = :L or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
+                if uplo != :U
+                    nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+
+                # uplo = :U or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
+                if uplo != :L
+                    nzind = A_colptr[i] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+
+            # A[i,j] is in the upper triangular part of A
+            else
+                # uplo = :U or uplo = :F
+                # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
+                if uplo != :L
+                    nzind = A_colptr[j] + upper_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+
+                # uplo = :L or uplo = :F
+                # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
+                if uplo != :U
+                    nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
+                    nzA[nzind] = val
+                end
+            end
+            #! format: on
         end
     end
     return A
@@ -512,13 +708,12 @@ function decompress!(
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
 )
-    @compat (; color, strict_upper_nonzero_inds, T_factorization, strict_upper_nonzeros_A) =
-        result
+    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
-    strict_upper_nonzeros_A = T_factorization \ vec(B)
+    strict_upper_nonzeros_A = M_factorization \ vec(B)
     fill!(A, zero(eltype(A)))
     for i in axes(A, 1)
         if !iszero(S[i, i])
@@ -533,5 +728,64 @@ function decompress!(
             A[j, i] = strict_upper_nonzeros_A[l]
         end
     end
+    return A
+end
+
+## BicoloringResult
+
+function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::AbstractMatrix)
+    #=
+    Say we have an original matrix `A` of size `(n, m)` and we build an augmented matrix `A_and_Aᵀ = [zeros(n, n) Aᵀ; A zeros(m, m)]`.
+    Its first `1:n` columns have the form `[zeros(n); A[:, j]]` and its following `n+1:n+m` columns have the form `[A[i, :]; zeros(m)]`.
+    The symmetric column coloring is performed on `A_and_Aᵀ` and the column-wise compression of `A_and_Aᵀ` should return a matrix `Br_and_Bc`.
+    But in reality, `Br_and_Bc` is computed as two partial compressions: the row-wise compression `Br` (corresponding to `Aᵀ`) and the columnwise compression `Bc` (corresponding to `A`).
+    Before symmetric decompression, we must reconstruct `Br_and_Bc` from `Br` and `Bc`, knowing that the symmetric colors (those making up `Br_and_Bc`) are present in either a row of `Br`, a column of `Bc`, or both.
+    Therefore, the column indices in `Br_and_Bc` don't necessarily match with the row indices in `Br` or the column indices in `Bc` since some colors may be missing in the partial compressions.
+    The columns of the top part of `Br_and_Bc` (rows `1:n`) are the rows of `Br`, interlaced with zero columns whenever the current color hasn't been used to color any row.
+    The columns of the bottom part of `Br_and_Bc` (rows `n+1:n+m`) are the columns of `Bc`, interlaced with zero columns whenever the current color hasn't been used to color any column.
+    We use the vectors `symmetric_to_row` and `symmetric_to_column` to map from symmetric colors to row and column colors.
+    =#
+    (; A, symmetric_to_column, symmetric_to_row) = result
+    m, n = size(A)
+    R = Base.promote_eltype(Br, Bc)
+    if eltype(result.Br_and_Bc) == R
+        Br_and_Bc = result.Br_and_Bc
+    else
+        Br_and_Bc = similar(result.Br_and_Bc, R)
+    end
+    fill!(Br_and_Bc, zero(R))
+    for c in axes(Br_and_Bc, 2)
+        if symmetric_to_row[c] > 0  # some rows were colored with the symmetric color c
+            copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
+        end
+        if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
+            copyto!(
+                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
+            )
+        end
+    end
+    return Br_and_Bc
+end
+
+function decompress!(
+    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    m, n = size(A)
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
+    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
+    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    return A
+end
+
+function decompress!(
+    A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+)
+    (; large_colptr, large_rowval, symmetric_result) = result
+    m, n = size(A)
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
+    # pretend A is larger
+    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
+    # decompress lower triangle only
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     return A
 end

@@ -15,6 +15,7 @@ SparseMatrixColorings
 
 ```@docs
 coloring
+fast_coloring
 ColoringProblem
 GreedyColoringAlgorithm
 ConstantColoringAlgorithm
@@ -26,6 +27,7 @@ ConstantColoringAlgorithm
 AbstractColoringResult
 column_colors
 row_colors
+ncolors
 column_groups
 row_groups
 sparsity_pattern
@@ -47,4 +49,9 @@ AbstractOrder
 NaturalOrder
 RandomOrder
 LargestFirst
+SmallestLast
+IncidenceDegree
+DynamicLargestFirst
+DynamicDegreeBasedOrder
+PerfectEliminationOrder
 ```

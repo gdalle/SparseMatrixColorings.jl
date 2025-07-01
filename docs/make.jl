@@ -11,8 +11,15 @@ makedocs(;
     authors="Guillaume Dalle and Alexis Montoison",
     sitename="SparseMatrixColorings.jl",
     format=Documenter.HTML(),
-    pages=["Home" => "index.md", "api.md", "dev.md"],
+    pages=[
+        "Home" => "index.md",
+        "tutorial.md",
+        "api.md",
+        "Developer Documentation" => ["dev.md", "vis.md"],
+    ],
     plugins=[links],
 )
 
-deploydocs(; repo="github.com/gdalle/SparseMatrixColorings.jl", devbranch="main")
+deploydocs(;
+    repo="github.com/gdalle/SparseMatrixColorings.jl", push_preview=true, devbranch="main"
+)
