@@ -5,7 +5,7 @@ Coloring algorithm which leverages specific matrix structures to produce optimal
 
 The following matrix types are supported:
 
-- From the standard library `LinearAlgebra`: [`Diagonal`](@extref LinearAlgebra.Diagonal), [`Bidiagonal`](@extref LinearAlgebra.Bidiagonal), [`Tridiagonal`](@extref LinearAlgebra.Tridiagonal)
+- From the standard library `LinearAlgebra`: `Diagonal`, `Bidiagonal`, `Tridiagonal`
 - From [BandedMatrices.jl](https://github.com/JuliaLinearAlgebra/BandedMatrices.jl): [`BandedMatrix`](@extref BandedMatrices.BandedMatrix)
 
 !!! warning
