@@ -231,10 +231,7 @@ function test_structured_coloring_decompression(A::AbstractMatrix)
     @test D == A
     @test nameof(typeof(D)) == nameof(typeof(A))
     @test structurally_orthogonal_columns(A, color)
-    if VERSION >= v"1.10" || A isa Union{Diagonal,Bidiagonal,Tridiagonal}
-        # banded matrices not supported by ArrayInterface on Julia 1.6
-        @test color == ArrayInterface.matrix_colors(A)
-    end
+    @test color == ArrayInterface.matrix_colors(A)
 
     # Row
     result = coloring(A, row_problem, algo)
