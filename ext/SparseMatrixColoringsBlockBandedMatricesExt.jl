@@ -1,46 +1,24 @@
 module SparseMatrixColoringsBlockBandedMatricesExt
 
-if isdefined(Base, :get_extension)
-    using BlockArrays: blockaxes, blockfirsts, blocklasts, blocksize, blocklengths
-    using BlockBandedMatrices:
-        BandedBlockBandedMatrix,
-        BlockBandedMatrix,
-        blockbandrange,
-        blockbandwidths,
-        blocklengths,
-        blocksize,
-        subblockbandwidths
-    using SparseMatrixColorings:
-        BipartiteGraph,
-        ColoringProblem,
-        ColumnColoringResult,
-        GreedyColoringAlgorithm,
-        RowColoringResult,
-        column_colors,
-        cycle_range,
-        row_colors
-    import SparseMatrixColorings as SMC
-else
-    using ..BlockArrays: blockaxes, blockfirsts, blocklasts, blocksize, blocklengths
-    using ..BlockBandedMatrices:
-        BandedBlockBandedMatrix,
-        BlockBandedMatrix,
-        blockbandrange,
-        blockbandwidths,
-        blocklengths,
-        blocksize,
-        subblockbandwidths
-    using ..SparseMatrixColorings:
-        BipartiteGraph,
-        ColoringProblem,
-        ColumnColoringResult,
-        GreedyColoringAlgorithm,
-        RowColoringResult,
-        column_colors,
-        cycle_range,
-        row_colors
-    import ..SparseMatrixColorings as SMC
-end
+using BlockArrays: blockaxes, blockfirsts, blocklasts, blocksize, blocklengths
+using BlockBandedMatrices:
+    BandedBlockBandedMatrix,
+    BlockBandedMatrix,
+    blockbandrange,
+    blockbandwidths,
+    blocklengths,
+    blocksize,
+    subblockbandwidths
+using SparseMatrixColorings:
+    BipartiteGraph,
+    ColoringProblem,
+    ColumnColoringResult,
+    GreedyColoringAlgorithm,
+    RowColoringResult,
+    column_colors,
+    cycle_range,
+    row_colors
+import SparseMatrixColorings as SMC
 
 #=
 This code is partly taken from ArrayInterface.jl and FiniteDiff.jl

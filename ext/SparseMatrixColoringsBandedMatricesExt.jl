@@ -1,30 +1,16 @@
 module SparseMatrixColoringsBandedMatricesExt
 
-if isdefined(Base, :get_extension)
-    using BandedMatrices: BandedMatrix, bandrange, bandwidths, colrange, rowrange
-    using SparseMatrixColorings:
-        BipartiteGraph,
-        ColoringProblem,
-        ColumnColoringResult,
-        GreedyColoringAlgorithm,
-        RowColoringResult,
-        column_colors,
-        cycle_range,
-        row_colors
-    import SparseMatrixColorings as SMC
-else
-    using ..BandedMatrices: BandedMatrix, bandrange, bandwidths, colrange, rowrange
-    using ..SparseMatrixColorings:
-        BipartiteGraph,
-        ColoringProblem,
-        ColumnColoringResult,
-        GreedyColoringAlgorithm,
-        RowColoringResult,
-        column_colors,
-        cycle_range,
-        row_colors
-    import ..SparseMatrixColorings as SMC
-end
+using BandedMatrices: BandedMatrix, bandrange, bandwidths, colrange, rowrange
+using SparseMatrixColorings:
+    BipartiteGraph,
+    ColoringProblem,
+    ColumnColoringResult,
+    GreedyColoringAlgorithm,
+    RowColoringResult,
+    column_colors,
+    cycle_range,
+    row_colors
+import SparseMatrixColorings as SMC
 
 #=
 This code is partly taken from ArrayInterface.jl and FiniteDiff.jl
