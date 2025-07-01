@@ -66,7 +66,7 @@ export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export PerfectEliminationOrder
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
-export ConstantColoringAlgorithm
+export ConstantColoringAlgorithm, StructuredColoringAlgorithm
 export coloring, fast_coloring
 export column_colors, row_colors, ncolors
 export column_groups, row_groups

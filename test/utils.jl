@@ -218,10 +218,11 @@ function test_bicoloring_decompression(
     end
 end
 
-function test_structured_coloring_decompression(A::AbstractMatrix)
+function test_structured_coloring_decompression(
+    A::AbstractMatrix, algo=StructuredColoringAlgorithm()
+)
     column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
-    algo = GreedyColoringAlgorithm()
 
     # Column
     result = coloring(A, column_problem, algo)
@@ -231,7 +232,9 @@ function test_structured_coloring_decompression(A::AbstractMatrix)
     @test D == A
     @test nameof(typeof(D)) == nameof(typeof(A))
     @test structurally_orthogonal_columns(A, color)
-    @test color == ArrayInterface.matrix_colors(A)
+    if algo isa StructuredColoringAlgorithm
+        @test color == ArrayInterface.matrix_colors(A)
+    end
 
     # Row
     result = coloring(A, row_problem, algo)

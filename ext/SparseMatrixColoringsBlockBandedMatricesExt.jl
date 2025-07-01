@@ -13,7 +13,7 @@ using SparseMatrixColorings:
     BipartiteGraph,
     ColoringProblem,
     ColumnColoringResult,
-    GreedyColoringAlgorithm,
+    StructuredColoringAlgorithm,
     RowColoringResult,
     column_colors,
     cycle_range,
@@ -75,7 +75,7 @@ end
 function SMC.coloring(
     A::Union{BlockBandedMatrix,BandedBlockBandedMatrix},
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = blockbanded_coloring(A, 2)
@@ -86,7 +86,7 @@ end
 function SMC.coloring(
     A::Union{BlockBandedMatrix,BandedBlockBandedMatrix},
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = blockbanded_coloring(A, 1)

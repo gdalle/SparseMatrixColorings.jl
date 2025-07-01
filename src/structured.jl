@@ -1,3 +1,21 @@
+"""
+    StructuredColoringAlgorithm  <: ADTypes.AbstractColoringAlgorithm
+
+Coloring algorithm which leverages specific matrix structures to produce optimal or near-optimal solutions.
+
+The following matrix types are supported:
+
+- From the standard library `LinearAlgebra`: [`Diagonal`](@extref LinearAlgebra.Diagonal), [`Bidiagonal`](@extref LinearAlgebra.Bidiagonal), [`Tridiagonal`](@extref LinearAlgebra.Tridiagonal)
+- From [BandedMatrices.jl](https://github.com/JuliaLinearAlgebra/BandedMatrices.jl): [`BandedMatrix`](@extref BandedMatrices.BandedMatrix)
+
+!!! warning
+    Only `:nonsymmetric` structures with `:row` or `:column` partitions (aka unidirectional Jacobian colorings) are supported by this algorithm at the moment.
+
+!!! tip
+    To request support for a new type of structured matrix, open an issue on the SparseMatrixColorings.jl GitHub repository!
+"""
+struct StructuredColoringAlgorithm <: ADTypes.AbstractColoringAlgorithm end
+
 #=
 This code is partly taken from ArrayInterface.jl
 https://github.com/JuliaArrays/ArrayInterface.jl
@@ -21,7 +39,7 @@ end
 function coloring(
     A::Diagonal,
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = fill(1, size(A, 2))
@@ -32,7 +50,7 @@ end
 function coloring(
     A::Diagonal,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = fill(1, size(A, 1))
@@ -61,7 +79,7 @@ end
 function coloring(
     A::Bidiagonal,
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = cycle_range(2, size(A, 2))
@@ -72,7 +90,7 @@ end
 function coloring(
     A::Bidiagonal,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = cycle_range(2, size(A, 1))
@@ -113,7 +131,7 @@ end
 function coloring(
     A::Tridiagonal,
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = cycle_range(3, size(A, 2))
@@ -124,7 +142,7 @@ end
 function coloring(
     A::Tridiagonal,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     color = cycle_range(3, size(A, 1))

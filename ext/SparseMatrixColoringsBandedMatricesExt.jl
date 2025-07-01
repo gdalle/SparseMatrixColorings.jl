@@ -5,7 +5,7 @@ using SparseMatrixColorings:
     BipartiteGraph,
     ColoringProblem,
     ColumnColoringResult,
-    GreedyColoringAlgorithm,
+    StructuredColoringAlgorithm,
     RowColoringResult,
     column_colors,
     cycle_range,
@@ -21,7 +21,7 @@ https://github.com/JuliaDiff/FiniteDiff.jl
 function SMC.coloring(
     A::BandedMatrix,
     ::ColoringProblem{:nonsymmetric,:column},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     width = length(bandrange(A))
@@ -33,7 +33,7 @@ end
 function SMC.coloring(
     A::BandedMatrix,
     ::ColoringProblem{:nonsymmetric,:row},
-    algo::GreedyColoringAlgorithm;
+    ::StructuredColoringAlgorithm;
     kwargs...,
 )
     width = length(bandrange(A))

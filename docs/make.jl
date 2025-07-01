@@ -2,7 +2,11 @@ using Documenter
 using DocumenterInterLinks
 using SparseMatrixColorings
 
-links = InterLinks("ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/")
+links = InterLinks(
+    "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
+    "BandedMatrices" => "https://julialinearalgebra.github.io/BandedMatrices.jl/stable/",
+    "LinearAlgebra" => "https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/",
+)
 
 cp(joinpath(@__DIR__, "..", "README.md"), joinpath(@__DIR__, "src", "index.md"); force=true)
 
