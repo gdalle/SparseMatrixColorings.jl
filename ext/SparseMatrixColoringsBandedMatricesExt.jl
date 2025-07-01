@@ -42,26 +42,4 @@ function SMC.coloring(
     return RowColoringResult(A, bg, color)
 end
 
-function SMC.decompress!(A::BandedMatrix, B::AbstractMatrix, result::ColumnColoringResult)
-    color = column_colors(result)
-    for j in axes(A, 2)
-        c = color[j]
-        for i in colrange(A, j)
-            A[i, j] = B[i, c]
-        end
-    end
-    return A
-end
-
-function SMC.decompress!(A::BandedMatrix, B::AbstractMatrix, result::RowColoringResult)
-    color = row_colors(result)
-    for i in axes(A, 1)
-        c = color[i]
-        for j in rowrange(A, i)
-            A[i, j] = B[c, j]
-        end
-    end
-    return A
-end
-
 end
