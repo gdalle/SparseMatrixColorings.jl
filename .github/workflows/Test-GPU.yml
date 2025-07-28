@@ -31,7 +31,7 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
           arch: x64
-      - uses: julia-actions/julia-downgrade-compat@v1
+      - uses: julia-actions/julia-downgrade-compat@v2
         if: ${{ matrix.version == '1.10' }}
         with:
           skip: LinearAlgebra, Random, SparseArrays
