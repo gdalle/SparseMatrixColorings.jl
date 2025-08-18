@@ -62,10 +62,10 @@ function test_coloring_decompression(
         end
 
         @testset "Full decompression" begin
-            @test decompress(B, result) ≈ A0
-            @test decompress(B, result) ≈ A0  # check result wasn't modified
-            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
-            @test decompress!(respectful_similar(A, eltype(B)), B, result) ≈ A0
+            @test collect(decompress(B, result)) ≈ collect(A0)
+            @test collect(decompress(B, result)) ≈ collect(A0)  # check result wasn't modified
+            @test collect(decompress!(respectful_similar(A, eltype(B)), B, result)) ≈ collect(A0)
+            @test collect(decompress!(respectful_similar(A, eltype(B)), B, result)) ≈ collect(A0)
         end
 
         if gpu
