@@ -106,7 +106,7 @@ function compress(
     return Br, Bc
 end
 
-struct UnsupportedDecompressionError
+struct UnsupportedDecompressionError <: Exception
     msg::String
 end
 
