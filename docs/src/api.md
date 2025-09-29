@@ -17,8 +17,14 @@ SparseMatrixColorings
 coloring
 fast_coloring
 ColoringProblem
+```
+
+## Coloring algorithms
+
+```@docs
 GreedyColoringAlgorithm
 ConstantColoringAlgorithm
+StructuredColoringAlgorithm
 ```
 
 ## Result analysis
