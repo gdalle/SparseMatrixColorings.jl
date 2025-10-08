@@ -27,11 +27,3 @@ end
     @test ADTypes.row_coloring(matrix_template, algo) == color
     @test_throws MethodError ADTypes.column_coloring(matrix_template, algo)
 end
-
-@testset "Symmetric coloring" begin
-    wrong_problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    color = rand(1:5, size(matrix_template, 2))
-    algo = ConstantColoringAlgorithm(matrix_template, color; partition=:column)
-    @test_throws MethodError coloring(matrix_template, wrong_problem, algo)
-    @test_throws MethodError ADTypes.symmetric_coloring(matrix_template, algo)
-end

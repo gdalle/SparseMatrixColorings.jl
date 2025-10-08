@@ -99,6 +99,17 @@ function ConstantColoringAlgorithm(
     return ConstantColoringAlgorithm{partition}(matrix_template, color)
 end
 
+function check_template(algo::ConstantColoringAlgorithm, A::AbstractMatrix)
+    (; matrix_template) = algo
+    if size(A) != size(matrix_template)
+        throw(
+            DimensionMismatch(
+                "`ConstantColoringAlgorithm` expected matrix of size $(size(matrix_template)) but got matrix of size $(size(A))",
+            ),
+        )
+    end
+end
+
 function coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,partition},
@@ -106,28 +117,18 @@ function coloring(
     decompression_eltype::Type=Float64,
     symmetric_pattern::Bool=false,
 ) where {partition}
-    (; matrix_template, result) = algo
-    if size(A) != size(matrix_template)
-        throw(
-            DimensionMismatch(
-                "`ConstantColoringAlgorithm` expected matrix of size $(size(matrix_template)) but got matrix of size $(size(A))",
-            ),
-        )
-    else
-        return result
-    end
+    check_template(algo, A)
+    return algo.result
 end
 
 function ADTypes.column_coloring(
     A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column}
 )
-    problem = ColoringProblem{:nonsymmetric,:column}()
-    result = coloring(A, problem, algo)
-    return column_colors(result)
+    check_template(algo, A)
+    return column_colors(algo.result)
 end
 
-function ADTypes.row_coloring(A::AbstractMatrix, algo::ConstantColoringAlgorithm)
-    problem = ColoringProblem{:nonsymmetric,:row}()
-    result = coloring(A, problem, algo)
-    return row_colors(result)
+function ADTypes.row_coloring(A::AbstractMatrix, algo::ConstantColoringAlgorithm{:row})
+    check_template(algo, A)
+    return row_colors(algo.result)
 end
