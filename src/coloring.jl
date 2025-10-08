@@ -1,11 +1,16 @@
 """
-    partial_distance2_coloring(bg::BipartiteGraph, ::Val{side}, vertices_in_order::AbstractVector)
+    partial_distance2_coloring(
+        bg::BipartiteGraph, ::Val{side}, vertices_in_order::AbstractVector;
+        forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing
+    )
 
 Compute a distance-2 coloring of the given `side` (`1` or `2`) in the bipartite graph `bg` and return a vector of integer colors.
 
 A _distance-2 coloring_ is such that two vertices have different colors if they are at distance at most 2.
 
 The vertices are colored in a greedy fashion, following the order supplied.
+
+The optional `forced_colors` keyword argument is used to enforce predefined vertex colors (e.g. coming from another optimization algorithm) but still run the distance-2 coloring procedure to verify correctness.
 
 # See also
 
@@ -17,11 +22,16 @@ The vertices are colored in a greedy fashion, following the order supplied.
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005), Algorithm 3.2
 """
 function partial_distance2_coloring(
-    bg::BipartiteGraph{T}, ::Val{side}, vertices_in_order::AbstractVector{<:Integer}
+    bg::BipartiteGraph{T},
+    ::Val{side},
+    vertices_in_order::AbstractVector{<:Integer};
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {T,side}
     color = Vector{T}(undef, nb_vertices(bg, Val(side)))
     forbidden_colors = Vector{T}(undef, nb_vertices(bg, Val(side)))
-    partial_distance2_coloring!(color, forbidden_colors, bg, Val(side), vertices_in_order)
+    partial_distance2_coloring!(
+        color, forbidden_colors, bg, Val(side), vertices_in_order; forced_colors
+    )
     return color
 end
 
@@ -30,7 +40,8 @@ function partial_distance2_coloring!(
     forbidden_colors::AbstractVector{<:Integer},
     bg::BipartiteGraph,
     ::Val{side},
-    vertices_in_order::AbstractVector{<:Integer},
+    vertices_in_order::AbstractVector{<:Integer};
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {side}
     color .= 0
     forbidden_colors .= 0
@@ -44,17 +55,25 @@ function partial_distance2_coloring!(
                 end
             end
         end
-        for i in eachindex(forbidden_colors)
-            if forbidden_colors[i] != v
-                color[v] = i
-                break
+        if isnothing(forced_colors)
+            for i in eachindex(forbidden_colors)
+                if forbidden_colors[i] != v
+                    color[v] = i
+                    break
+                end
             end
+        else
+            @assert forbidden_colors[forced_colors[v]] != v
+            color[v] = forced_colors[v]
         end
     end
 end
 
 """
-    star_coloring(g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool)
+    star_coloring(
+        g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool;
+        forced_colors::Union{AbstractVector,Nothing}=nothing
+    )
 
 Compute a star coloring of all vertices in the adjacency graph `g` and return a tuple `(color, star_set)`, where
 
@@ -67,6 +86,8 @@ The vertices are colored in a greedy fashion, following the order supplied.
 
 If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
+The optional `forced_colors` keyword argument is used to enforce predefined vertex colors (e.g. coming from another optimization algorithm) but still run the star coloring procedure to verify correctness and build auxiliary data structures, useful during decompression.
+
 # See also
 
 - [`AdjacencyGraph`](@ref)
@@ -77,7 +98,10 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 4.1
 """
 function star_coloring(
-    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
+    g::AdjacencyGraph{T},
+    vertices_in_order::AbstractVector{<:Integer},
+    postprocessing::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -115,11 +139,16 @@ function star_coloring(
                 end
             end
         end
-        for i in eachindex(forbidden_colors)
-            if forbidden_colors[i] != v
-                color[v] = i
-                break
+        if isnothing(forced_colors)
+            for i in eachindex(forbidden_colors)
+                if forbidden_colors[i] != v
+                    color[v] = i
+                    break
+                end
             end
+        else
+            @assert forbidden_colors[forced_colors[v]] != v
+            color[v] = forced_colors[v]
         end
         _update_stars!(star, hub, g, v, color, first_neighbor)
     end
@@ -209,7 +238,10 @@ struct StarSet{T}
 end
 
 """
-    acyclic_coloring(g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool)
+    acyclic_coloring(
+        g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool;
+        forced_colors::Union{AbstractVector,Nothing}=nothing
+    )
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -222,6 +254,8 @@ The vertices are colored in a greedy fashion, following the order supplied.
 
 If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
+The optional `forced_colors` keyword argument is used to enforce predefined vertex colors (e.g. coming from another optimization algorithm) but still run the acyclic coloring procedure to verify correctness and build auxiliary data structures, useful during decompression.
+
 # See also
 
 - [`AdjacencyGraph`](@ref)
@@ -232,7 +266,10 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(
-    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
+    g::AdjacencyGraph{T},
+    vertices_in_order::AbstractVector{<:Integer},
+    postprocessing::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -271,11 +308,16 @@ function acyclic_coloring(
                 end
             end
         end
-        for i in eachindex(forbidden_colors)
-            if forbidden_colors[i] != v
-                color[v] = i
-                break
+        if isnothing(forced_colors)
+            for i in eachindex(forbidden_colors)
+                if forbidden_colors[i] != v
+                    color[v] = i
+                    break
+                end
             end
+        else
+            @assert forbidden_colors[forced_colors[v]] != v
+            color[v] = forced_colors[v]
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
             !has_diagonal(g) || (v == w && continue)
