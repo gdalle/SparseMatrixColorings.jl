@@ -1,4 +1,4 @@
-using SparseMatrixColor
+using SparseMatrixColorings
 using SparseMatrixColorings: group_by_color, UnsupportedDecompressionError
 using Test
 
