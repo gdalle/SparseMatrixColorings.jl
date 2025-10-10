@@ -15,6 +15,10 @@ using SparseMatrixColorings:
     structurally_biorthogonal
 using Test
 
+const _ALL_ORDERS = (
+    NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
+)
+
 function test_coloring_decompression(
     A0::AbstractMatrix,
     problem::ColoringProblem{structure,partition},
@@ -169,6 +173,17 @@ function test_coloring_decompression(
             @show color_vec
         end
     end
+
+    @testset "More orders is better" begin
+        if algo.orders ⊆ _ALL_ORDERS
+            better_algo = GreedyColoringAlgorithm{decompression}(
+                _ALL_ORDERS; algo.postprocessing
+            )
+            result = coloring(A0, problem, algo)
+            better_result = coloring(A0, problem, better_algo)
+            @test ncolors(result) >= ncolors(better_result)
+        end
+    end
 end
 
 function test_bicoloring_decompression(
@@ -214,6 +229,17 @@ function test_bicoloring_decompression(
             @testset "Recoverability" begin
                 @test structurally_biorthogonal(A0, row_color, column_color)
             end
+        end
+    end
+
+    @testset "More orders is better" begin
+        if algo.orders ⊆ _ALL_ORDERS
+            better_algo = GreedyColoringAlgorithm{decompression}(
+                _ALL_ORDERS; algo.postprocessing
+            )
+            result = coloring(A0, problem, algo)
+            better_result = coloring(A0, problem, better_algo)
+            @test ncolors(result) >= ncolors(better_result)
         end
     end
 end
