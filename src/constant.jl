@@ -4,20 +4,24 @@
 Coloring algorithm which always returns the same precomputed vector of colors.
 Useful when the optimal coloring of a matrix can be determined a priori due to its specific structure (e.g. banded).
 
-It is passed as an argument to the main function [`coloring`](@ref), but will only work if the associated `problem` has `:nonsymmetric` structure.
-Indeed, for symmetric coloring problems, we need more than just the vector of colors to allow fast decompression.
+It is passed as an argument to the main function [`coloring`](@ref), but will only work if the associated `problem` has a `:column` or `:row` partition.
 
 # Constructors
 
     ConstantColoringAlgorithm{partition}(matrix_template, color)
-    ConstantColoringAlgorithm(matrix_template, color; partition=:column)
+    ConstantColoringAlgorithm{partition,structure}(matrix_template, color)
+    ConstantColoringAlgorithm(
+        matrix_template, color;
+        structure=:nonsymmetric, partition=:column
+    )
 
 - `partition::Symbol`: either `:row` or `:column`.
+- `structure::Symbol`: either `:nonsymmetric` or `:symmetric`.
 - `matrix_template::AbstractMatrix`: matrix for which the vector of colors was precomputed (the algorithm will only accept matrices of the exact same size).
 - `color::Vector{<:Integer}`: vector of integer colors, one for each row or column (depending on `partition`).
 
 !!! warning
-    The second constructor (based on keyword arguments) is type-unstable.
+    The constructor based on keyword arguments is type-unstable if these arguments are not compile-time constants.
 
 We do not necessarily verify consistency between the matrix template and the vector of colors, this is the responsibility of the user.
 
@@ -63,71 +67,68 @@ julia> column_colors(result)
 
 - [`ADTypes.column_coloring`](@extref ADTypes.column_coloring)
 - [`ADTypes.row_coloring`](@extref ADTypes.row_coloring)
+- [`ADTypes.symmetric_coloring`](@extref ADTypes.symmetric_coloring)
 """
-struct ConstantColoringAlgorithm{
-    partition,
-    M<:AbstractMatrix,
-    T<:Integer,
-    R<:AbstractColoringResult{:nonsymmetric,partition,:direct},
-} <: ADTypes.AbstractColoringAlgorithm
+struct ConstantColoringAlgorithm{partition,structure,M<:AbstractMatrix,T<:Integer} <:
+       ADTypes.AbstractColoringAlgorithm
     matrix_template::M
     color::Vector{T}
-    result::R
+
+    function ConstantColoringAlgorithm{partition,structure}(
+        matrix_template::AbstractMatrix, color::Vector{<:Integer}
+    ) where {partition,structure}
+        check_valid_problem(structure, partition)
+        return new{partition,structure,typeof(matrix_template),eltype(color)}(
+            matrix_template, color
+        )
+    end
 end
 
-function ConstantColoringAlgorithm{:column}(
+function ConstantColoringAlgorithm{partition}(
     matrix_template::AbstractMatrix, color::Vector{<:Integer}
-)
-    bg = BipartiteGraph(matrix_template)
-    result = ColumnColoringResult(matrix_template, bg, color)
-    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:column,M,T,R}(matrix_template, color, result)
-end
-
-function ConstantColoringAlgorithm{:row}(
-    matrix_template::AbstractMatrix, color::Vector{<:Integer}
-)
-    bg = BipartiteGraph(matrix_template)
-    result = RowColoringResult(matrix_template, bg, color)
-    T, M, R = eltype(bg), typeof(matrix_template), typeof(result)
-    return ConstantColoringAlgorithm{:row,M,T,R}(matrix_template, color, result)
+) where {partition}
+    return ConstantColoringAlgorithm{partition,:nonsymmetric}(matrix_template, color)
 end
 
 function ConstantColoringAlgorithm(
-    matrix_template::AbstractMatrix, color::Vector{<:Integer}; partition::Symbol=:column
+    matrix_template::AbstractMatrix,
+    color::Vector{<:Integer};
+    structure::Symbol=:nonsymmetric,
+    partition::Symbol=:column,
 )
-    return ConstantColoringAlgorithm{partition}(matrix_template, color)
+    return ConstantColoringAlgorithm{partition,structure}(matrix_template, color)
 end
 
-function coloring(
-    A::AbstractMatrix,
-    ::ColoringProblem{:nonsymmetric,partition},
-    algo::ConstantColoringAlgorithm{partition};
-    decompression_eltype::Type=Float64,
-    symmetric_pattern::Bool=false,
-) where {partition}
-    (; matrix_template, result) = algo
+function check_template(algo::ConstantColoringAlgorithm, A::AbstractMatrix)
+    (; matrix_template) = algo
     if size(A) != size(matrix_template)
         throw(
             DimensionMismatch(
                 "`ConstantColoringAlgorithm` expected matrix of size $(size(matrix_template)) but got matrix of size $(size(A))",
             ),
         )
-    else
-        return result
     end
 end
 
 function ADTypes.column_coloring(
-    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column}
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column,:nonsymmetric}
 )
-    problem = ColoringProblem{:nonsymmetric,:column}()
-    result = coloring(A, problem, algo)
-    return column_colors(result)
+    check_template(algo, A)
+    return algo.color
 end
 
-function ADTypes.row_coloring(A::AbstractMatrix, algo::ConstantColoringAlgorithm)
-    problem = ColoringProblem{:nonsymmetric,:row}()
-    result = coloring(A, problem, algo)
-    return row_colors(result)
+function ADTypes.row_coloring(
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:row,:nonsymmetric}
+)
+    check_template(algo, A)
+    return algo.color
 end
+
+function ADTypes.symmetric_coloring(
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column,:symmetric}
+)
+    check_template(algo, A)
+    return algo.color
+end
+
+# TODO: handle bidirectional once https://github.com/SciML/ADTypes.jl/issues/69 is done

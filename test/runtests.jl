@@ -58,6 +58,9 @@ include("utils.jl")
             @testset "Constant coloring" begin
                 include("constant.jl")
             end
+            @testset "Optimal coloring" begin
+                include("optimal.jl")
+            end
             @testset "ADTypes coloring algorithms" begin
                 include("adtypes.jl")
             end
