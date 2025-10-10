@@ -1,3 +1,5 @@
+struct InvalidColoringError <: Exception end
+
 """
     partial_distance2_coloring(
         bg::BipartiteGraph, ::Val{side}, vertices_in_order::AbstractVector;
@@ -63,8 +65,11 @@ function partial_distance2_coloring!(
                 end
             end
         else
-            @assert forbidden_colors[forced_colors[v]] != v
-            color[v] = forced_colors[v]
+            if forbidden_colors[forced_colors[v]] == v
+                throw(InvalidColoringError())
+            else
+                color[v] = forced_colors[v]
+            end
         end
     end
 end
@@ -147,8 +152,11 @@ function star_coloring(
                 end
             end
         else
-            @assert forbidden_colors[forced_colors[v]] != v
-            color[v] = forced_colors[v]
+            if forbidden_colors[forced_colors[v]] == v
+                throw(InvalidColoringError())
+            else
+                color[v] = forced_colors[v]
+            end
         end
         _update_stars!(star, hub, g, v, color, first_neighbor)
     end
@@ -316,8 +324,11 @@ function acyclic_coloring(
                 end
             end
         else
-            @assert forbidden_colors[forced_colors[v]] != v
-            color[v] = forced_colors[v]
+            if forbidden_colors[forced_colors[v]] == v
+                throw(InvalidColoringError())
+            else
+                color[v] = forced_colors[v]
+            end
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
             !has_diagonal(g) || (v == w && continue)

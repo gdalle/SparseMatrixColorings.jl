@@ -14,6 +14,7 @@ function coloring(
         elseif partition == :row
             forced_colors = ADTypes.row_coloring(A, algo)
         else
+            # TODO: improve once https://github.com/SciML/ADTypes.jl/issues/69 is done
             A_and_Aᵀ, _ = bidirectional_pattern(A; symmetric_pattern)
             forced_colors = ADTypes.symmetric_coloring(A_and_Aᵀ, algo)
         end
