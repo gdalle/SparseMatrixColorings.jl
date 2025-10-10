@@ -100,7 +100,7 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
     postprocessing::Bool
 
     function GreedyColoringAlgorithm{decompression}(
-        order_or_orders::Union{AbstractOrder,NTuple}=NaturalOrder();
+        order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
         postprocessing::Bool=false,
     ) where {decompression}
         check_valid_algorithm(decompression)
@@ -114,7 +114,7 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
 end
 
 function GreedyColoringAlgorithm(
-    order_or_orders::Union{AbstractOrder,NTuple}=NaturalOrder();
+    order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
     postprocessing::Bool=false,
     decompression::Symbol=:direct,
 )
