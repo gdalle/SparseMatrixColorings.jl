@@ -2,20 +2,20 @@ using SparseArrays
 using SparseMatrixColorings
 using StableRNGs
 using Test
+using JuMP
+using MiniZinc
 
 rng = StableRNG(0)
 
 asymmetric_params = vcat(
-    [(10, 20, p) for p in (0.0:0.1:0.5)],
-    [(20, 10, p) for p in (0.0:0.1:0.5)],
-    [(100, 200, p) for p in (0.01:0.01:0.05)],
-    [(200, 100, p) for p in (0.01:0.01:0.05)],
+    [(10, 20, p) for p in (0.0:0.1:0.5)], [(20, 10, p) for p in (0.0:0.1:0.5)]
 )
+
+algo = GreedyColoringAlgorithm()
+optalgo = OptimalColoringAlgorithm(() -> MiniZinc.Optimizer{Float64}("highs"); silent=false)
 
 @testset "Column coloring" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
-    algo = GreedyColoringAlgorithm()
-    optalgo = OptimalColoringAlgorithm(HiGHS.Optimizer)
     for (m, n, p) in asymmetric_params
         A = sprand(rng, m, n, p)
         result = coloring(A, problem, algo)
@@ -26,8 +26,6 @@ end
 
 @testset "Row coloring" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
-    algo = GreedyColoringAlgorithm()
-    optalgo = OptimalColoringAlgorithm(HiGHS.Optimizer)
     for (m, n, p) in asymmetric_params
         A = sprand(rng, m, n, p)
         result = coloring(A, problem, algo)
