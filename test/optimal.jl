@@ -4,6 +4,7 @@ using StableRNGs
 using Test
 using JuMP
 using MiniZinc
+using HiGHS
 
 rng = StableRNG(0)
 
