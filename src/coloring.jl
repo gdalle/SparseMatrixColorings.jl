@@ -65,10 +65,14 @@ function partial_distance2_coloring!(
                 end
             end
         else
-            if forbidden_colors[forced_colors[v]] == v
+            f = forced_colors[v]
+            if (
+                (f == 0 && length(neighbors(bg, Val(side), v)) > 0) ||
+                (f > 0 && forbidden_colors[f] == v)
+            )
                 throw(InvalidColoringError())
             else
-                color[v] = forced_colors[v]
+                color[v] = f
             end
         end
     end
@@ -152,7 +156,7 @@ function star_coloring(
                 end
             end
         else
-            if forbidden_colors[forced_colors[v]] == v
+            if forbidden_colors[forced_colors[v]] == v  # TODO: handle forced_colors[v] == 0
                 throw(InvalidColoringError())
             else
                 color[v] = forced_colors[v]
@@ -324,7 +328,7 @@ function acyclic_coloring(
                 end
             end
         else
-            if forbidden_colors[forced_colors[v]] == v
+            if forbidden_colors[forced_colors[v]] == v  # TODO: handle forced_colors[v] == 0
                 throw(InvalidColoringError())
             else
                 color[v] = forced_colors[v]

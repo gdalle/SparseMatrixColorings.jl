@@ -1,3 +1,4 @@
+using SparseMatrixColor
 using SparseMatrixColorings: group_by_color, UnsupportedDecompressionError
 using Test
 
@@ -20,7 +21,7 @@ using Test
 end
 
 @testset "Empty compression" begin
-    A = rand(10, 10)
+    A = zeros(Bool, 10, 10)
     color = zeros(Int, 10)
     problem = ColoringProblem{:nonsymmetric,:column}()
     algo = ConstantColoringAlgorithm(A, color; partition=:column)
