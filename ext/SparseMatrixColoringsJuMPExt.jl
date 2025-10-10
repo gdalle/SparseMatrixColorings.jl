@@ -21,7 +21,7 @@ function optimal_distance2_coloring(
     n = nb_vertices(bg, Val(side))
     model = Model(optimizer)
     silent && set_silent(model)
-    @variable(model, 1 <= color[i=1:n] <= i, Int)
+    @variable(model, 1 <= color[i = 1:n] <= i, Int)
     @variable(model, ncolors, Int)
     @constraint(model, [ncolors; color] in MOI.CountDistinct(n + 1))
     for i in vertices(bg, Val(other_side))
