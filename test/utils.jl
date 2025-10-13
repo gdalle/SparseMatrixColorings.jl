@@ -175,14 +175,19 @@ function test_coloring_decompression(
     end
 
     @testset "More orders is better" begin
-        if algo.orders ⊆ _ALL_ORDERS
-            better_algo = GreedyColoringAlgorithm{decompression}(
-                _ALL_ORDERS; algo.postprocessing
-            )
-            result = coloring(A0, problem, algo)
-            better_result = coloring(A0, problem, better_algo)
-            @test ncolors(result) >= ncolors(better_result)
-        end
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
     end
 end
 
@@ -233,14 +238,19 @@ function test_bicoloring_decompression(
     end
 
     @testset "More orders is better" begin
-        if algo.orders ⊆ _ALL_ORDERS
-            better_algo = GreedyColoringAlgorithm{decompression}(
-                _ALL_ORDERS; algo.postprocessing
-            )
-            result = coloring(A0, problem, algo)
-            better_result = coloring(A0, problem, better_algo)
-            @test ncolors(result) >= ncolors(better_result)
-        end
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
     end
 end
 
