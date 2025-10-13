@@ -34,3 +34,13 @@ end
         @test ncolors(result) >= ncolors(optresult)
     end
 end
+
+@testset "Too big" begin
+    A = sprand(rng, Bool, 100, 100, 0.1)
+    optalgo_timelimit = OptimalColoringAlgorithm(
+        optimizer_with_attributes(HiGHS.Optimizer, "time_limit" => 10.0); # 1 second
+        silent=false,
+        assert_solved=false,
+    )
+    @test_throws AssertionError coloring(A, ColoringProblem(), optalgo_timelimit)
+end
