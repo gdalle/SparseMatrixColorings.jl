@@ -320,18 +320,21 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
-    color_and_star_set_by_order = map(algo.orders) do order
+    outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return star_coloring(ag, vertices_in_order, algo.postprocessing)
+        color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+        row_color, column_color, _ = remap_colors(
+            eltype(ag), color, maximum(color), size(A)...
+        )
+        return (; color, star_set, row_color, column_color)
     end
-    color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
+    (; color, star_set, row_color, column_color) = argmin(
+        t -> maximum(t.row_color) + maximum(t.column_color), outputs_by_order
+    )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
         return BicoloringResult(A, ag, symmetric_result, R)
     else
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
-        )
         return row_color, column_color
     end
 end
@@ -346,18 +349,21 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
-    color_and_tree_set_by_order = map(algo.orders) do order
+    outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        row_color, column_color, _ = remap_colors(
+            eltype(ag), color, maximum(color), size(A)...
+        )
+        return (; color, tree_set, row_color, column_color)
     end
-    color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
+    (; color, tree_set, row_color, column_color) = argmin(
+        t -> maximum(t.row_color) + maximum(t.column_color), outputs_by_order
+    )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
         return BicoloringResult(A, ag, symmetric_result, R)
     else
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
-        )
         return row_color, column_color
     end
 end
