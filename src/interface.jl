@@ -72,7 +72,7 @@ It is passed as an argument to the main function [`coloring`](@ref).
     GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false)
     GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, decompression=:direct)
 
-- `order::Union{AbstractOrder,NTuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
+- `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
