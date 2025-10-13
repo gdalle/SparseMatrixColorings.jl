@@ -322,14 +322,14 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+        _color, _star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+        _row_color, _column_color, _ = remap_colors(
+            eltype(ag), _color, maximum(_color), size(A)...
         )
-        return (; color, star_set, row_color, column_color)
+        return (_color, _star_set, _row_color, _column_color)
     end
-    (; color, star_set, row_color, column_color) = argmin(
-        t -> maximum(t.row_color) + maximum(t.column_color), outputs_by_order
+    (color, star_set, row_color, column_color) = argmin(
+        t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
@@ -351,14 +351,14 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        _row_color, _column_color, _ = remap_colors(
+            eltype(ag), _color, maximum(_color), size(A)...
         )
-        return (; color, tree_set, row_color, column_color)
+        return (; _color, _tree_set, _row_color, _column_color)
     end
-    (; color, tree_set, row_color, column_color) = argmin(
-        t -> maximum(t.row_color) + maximum(t.column_color), outputs_by_order
+    (color, tree_set, row_color, column_color) = argmin(
+        t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
