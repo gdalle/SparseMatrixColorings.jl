@@ -225,12 +225,13 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:column},
     algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     bg = BipartiteGraph(A; symmetric_pattern)
     vertices_in_order = vertices(bg, Val(2), algo.order)
-    color = partial_distance2_coloring(bg, Val(2), vertices_in_order)
+    color = partial_distance2_coloring(bg, Val(2), vertices_in_order; forced_colors)
     if speed_setting isa WithResult
         return ColumnColoringResult(A, bg, color)
     else
@@ -244,12 +245,13 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:row},
     algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     bg = BipartiteGraph(A; symmetric_pattern)
     vertices_in_order = vertices(bg, Val(1), algo.order)
-    color = partial_distance2_coloring(bg, Val(1), vertices_in_order)
+    color = partial_distance2_coloring(bg, Val(1), vertices_in_order; forced_colors)
     if speed_setting isa WithResult
         return RowColoringResult(A, bg, color)
     else
@@ -263,11 +265,14 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     ag = AdjacencyGraph(A; has_diagonal=true)
     vertices_in_order = vertices(ag, algo.order)
-    color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+    color, star_set = star_coloring(
+        ag, vertices_in_order, algo.postprocessing; forced_colors
+    )
     if speed_setting isa WithResult
         return StarSetColoringResult(A, ag, color, star_set)
     else
@@ -281,11 +286,14 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     ag = AdjacencyGraph(A; has_diagonal=true)
     vertices_in_order = vertices(ag, algo.order)
-    color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    color, tree_set = acyclic_coloring(
+        ag, vertices_in_order, algo.postprocessing; forced_colors
+    )
     if speed_setting isa WithResult
         return TreeSetColoringResult(A, ag, color, tree_set, R)
     else
@@ -299,12 +307,15 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     vertices_in_order = vertices(ag, algo.order)
-    color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+    color, star_set = star_coloring(
+        ag, vertices_in_order, algo.postprocessing; forced_colors
+    )
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
         return BicoloringResult(A, ag, symmetric_result, R)
@@ -322,12 +333,15 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     vertices_in_order = vertices(ag, algo.order)
-    color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    color, tree_set = acyclic_coloring(
+        ag, vertices_in_order, algo.postprocessing; forced_colors
+    )
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
         return BicoloringResult(A, ag, symmetric_result, R)
