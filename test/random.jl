@@ -81,10 +81,10 @@ end;
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     @testset for algo in (
         GreedyColoringAlgorithm(
-            RandomOrder(rng); postprocessing=false, decompression=:direct
+            RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:direct
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(rng); postprocessing=true, decompression=:direct
+            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:direct
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
@@ -102,10 +102,10 @@ end;
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     @testset for algo in (
         GreedyColoringAlgorithm(
-            RandomOrder(rng); postprocessing=false, decompression=:substitution
+            RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:substitution
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(rng); postprocessing=true, decompression=:substitution
+            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:substitution
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
