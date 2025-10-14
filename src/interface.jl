@@ -72,7 +72,7 @@ It is passed as an argument to the main function [`coloring`](@ref).
     GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false)
     GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, decompression=:direct)
 
-- `order::AbstractOrder`: the order in which the columns or rows are colored, which can impact the number of colors.
+- `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
@@ -94,26 +94,31 @@ See their respective docstrings for details.
 - [`AbstractOrder`](@ref)
 - [`decompress`](@ref)
 """
-struct GreedyColoringAlgorithm{decompression,O<:AbstractOrder} <:
+struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
        ADTypes.AbstractColoringAlgorithm
-    order::O
+    orders::O
     postprocessing::Bool
-end
 
-function GreedyColoringAlgorithm{decompression}(
-    order::AbstractOrder=NaturalOrder(); postprocessing::Bool=false
-) where {decompression}
-    check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
+    function GreedyColoringAlgorithm{decompression}(
+        order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
+        postprocessing::Bool=false,
+    ) where {decompression}
+        check_valid_algorithm(decompression)
+        if order_or_orders isa AbstractOrder
+            orders = (order_or_orders,)
+        else
+            orders = order_or_orders
+        end
+        return new{decompression,length(orders),typeof(orders)}(orders, postprocessing)
+    end
 end
 
 function GreedyColoringAlgorithm(
-    order::AbstractOrder=NaturalOrder();
+    order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
     postprocessing::Bool=false,
     decompression::Symbol=:direct,
 )
-    check_valid_algorithm(decompression)
-    return GreedyColoringAlgorithm{decompression,typeof(order)}(order, postprocessing)
+    return GreedyColoringAlgorithm{decompression}(order_or_orders; postprocessing)
 end
 
 ## Coloring
@@ -229,8 +234,11 @@ function _coloring(
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     bg = BipartiteGraph(A; symmetric_pattern)
-    vertices_in_order = vertices(bg, Val(2), algo.order)
-    color = partial_distance2_coloring(bg, Val(2), vertices_in_order)
+    color_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(bg, Val(2), order)
+        return partial_distance2_coloring(bg, Val(2), vertices_in_order)
+    end
+    color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult
         return ColumnColoringResult(A, bg, color)
     else
@@ -248,8 +256,11 @@ function _coloring(
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     bg = BipartiteGraph(A; symmetric_pattern)
-    vertices_in_order = vertices(bg, Val(1), algo.order)
-    color = partial_distance2_coloring(bg, Val(1), vertices_in_order)
+    color_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(bg, Val(1), order)
+        return partial_distance2_coloring(bg, Val(1), vertices_in_order)
+    end
+    color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult
         return RowColoringResult(A, bg, color)
     else
@@ -266,8 +277,11 @@ function _coloring(
     symmetric_pattern::Bool,
 )
     ag = AdjacencyGraph(A; has_diagonal=true)
-    vertices_in_order = vertices(ag, algo.order)
-    color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+    color_and_star_set_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(ag, order)
+        return star_coloring(ag, vertices_in_order, algo.postprocessing)
+    end
+    color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
         return StarSetColoringResult(A, ag, color, star_set)
     else
@@ -284,8 +298,11 @@ function _coloring(
     symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A; has_diagonal=true)
-    vertices_in_order = vertices(ag, algo.order)
-    color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    color_and_tree_set_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(ag, order)
+        return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    end
+    color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
         return TreeSetColoringResult(A, ag, color, tree_set, R)
     else
@@ -303,15 +320,37 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
-    vertices_in_order = vertices(ag, algo.order)
-    color, star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+    outputs_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(ag, order)
+        _color, _star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+        (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
+            eltype(ag), _color, maximum(_color), size(A)...
+        )
+        return (
+            _color,
+            _star_set,
+            _row_color,
+            _column_color,
+            _symmetric_to_row,
+            _symmetric_to_column,
+        )
+    end
+    (color, star_set, row_color, column_color, symmetric_to_row, symmetric_to_column) = argmin(
+        t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
+    )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(A, ag, symmetric_result, R)
-    else
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+        return BicoloringResult(
+            A,
+            ag,
+            symmetric_result,
+            row_color,
+            column_color,
+            symmetric_to_row,
+            symmetric_to_column,
+            R,
         )
+    else
         return row_color, column_color
     end
 end
@@ -326,15 +365,37 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
-    vertices_in_order = vertices(ag, algo.order)
-    color, tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+    outputs_by_order = map(algo.orders) do order
+        vertices_in_order = vertices(ag, order)
+        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
+            eltype(ag), _color, maximum(_color), size(A)...
+        )
+        return (
+            _color,
+            _tree_set,
+            _row_color,
+            _column_color,
+            _symmetric_to_row,
+            _symmetric_to_column,
+        )
+    end
+    (color, tree_set, row_color, column_color, symmetric_to_row, symmetric_to_column) = argmin(
+        t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
+    )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
         symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(A, ag, symmetric_result, R)
-    else
-        row_color, column_color, _ = remap_colors(
-            eltype(ag), color, maximum(color), size(A)...
+        return BicoloringResult(
+            A,
+            ag,
+            symmetric_result,
+            row_color,
+            column_color,
+            symmetric_to_row,
+            symmetric_to_column,
+            R,
         )
+    else
         return row_color, column_color
     end
 end
