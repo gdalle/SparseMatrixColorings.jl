@@ -691,11 +691,11 @@ function postprocess!(
                             if neutralized_first == :rows
                                 # j represents a column in the context of bicoloring
                                 hub[s] = j
-                                color_used[j] = true
+                                color_used[color[j]] = true
                             else # neutralized_first == :cols
                                 # i represents a row in the context of bicoloring
                                 hub[s] = i
-                                color_used[i] = true
+                                color_used[color[i]] = true
                             end
                         end
                     end
