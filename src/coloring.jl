@@ -642,7 +642,7 @@ function postprocess!(
         end
 
         # Process the trivial stars (if any)
-        nb_nunknown_hubs = nb_trivial_stars
+        nb_unknown_hubs = nb_trivial_stars
         if nb_trivial_stars > 0
             rvS = rowvals(S)
             for j in axes(S, 2)
@@ -676,7 +676,7 @@ function postprocess!(
         # In the context of bicoloring, if we want to minimize the number of row colors OR the number of column colors,
         # we can have the optimal post-processing by taking as hub the vertices in the other partition.
         # It is optimal because we will never increase the number of colors in the partition specified by `neutralized_first`
-        # in this phase and everything else in the post-processing is deterministed.
+        # in this phase and everything else in the post-processing is deterministic.
         if nb_unknown_hubs > 0
             rvS = rowvals(S)
             for j in axes(S, 2)
