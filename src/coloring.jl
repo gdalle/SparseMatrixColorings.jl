@@ -608,7 +608,8 @@ function postprocess!(
     color::AbstractVector{<:Integer},
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
-    offsets::AbstractVector{<:Integer},
+    offsets::AbstractVector{<:Integer};
+    neutralized_first::Symbol=:rows,
 )
     S = pattern(g)
     edge_to_index = edge_indices(g)
@@ -641,6 +642,7 @@ function postprocess!(
         end
 
         # Process the trivial stars (if any)
+        nb_nunknown_hubs = nb_trivial_stars
         if nb_trivial_stars > 0
             rvS = rowvals(S)
             for j in axes(S, 2)
@@ -653,12 +655,47 @@ function postprocess!(
                         if h < 0
                             h = abs(h)
                             spoke = h == j ? i : j
-                            if color_used[color[spoke]]
-                                # Switch the hub and the spoke to possibly avoid adding one more used color
-                                hub[s] = spoke
+                            if color_used[color[h]]
+                                # The current hub of this trivial star is already a hub in a non-trivial star
+                                hub[s] = h
+                                nb_unknown_hubs -= 1
                             else
-                                # Keep the current hub
-                                color_used[color[h]] = true
+                                if color_used[color[spoke]]
+                                    # The current spoke of this trivial star is also a hub in a non-trivial star
+                                    # Switch the hub and the spoke to avoid adding one more used color
+                                    hub[s] = spoke
+                                    nb_unknown_hubs -= 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        # Only trivial stars where both vertices can be promoted as hub are remaining.
+        # In the context of bicoloring, if we want to minimize the number of row colors OR the number of column colors,
+        # we can have the optimal post-processing by taking as hub the vertices in the other partition.
+        # It is optimal because we will never increase the number of colors in the partition specified by `neutralized_first`
+        # in this phase and everything else in the post-processing is deterministed.
+        if nb_unknown_hubs > 0
+            rvS = rowvals(S)
+            for j in axes(S, 2)
+                for k in nzrange(S, j)
+                    i = rvS[k]
+                    if i > j
+                        index_ij = edge_to_index[k]
+                        s = star[index_ij]
+                        h = hub[s]
+                        # The hub of this trivial star is still unknown
+                        if h < 0
+                            if neutralized_first == :rows
+                                # j represents a column in the context of bicoloring
+                                hub[s] = j
+                                color_used[j] = true
+                            else # neutralized_first == :cols
+                                # i represents a row in the context of bicoloring
+                                hub[s] = i
+                                color_used[i] = true
                             end
                         end
                     end
