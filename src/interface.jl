@@ -237,7 +237,7 @@ function _coloring(
     bg = BipartiteGraph(A; symmetric_pattern)
     color_by_order = map(algo.orders) do order
         vertices_in_order = vertices(bg, Val(2), order)
-        return partial_distance2_coloring(bg, Val(2), vertices_in_order)
+        return partial_distance2_coloring(bg, Val(2), vertices_in_order; forced_colors)
     end
     color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult
@@ -260,7 +260,7 @@ function _coloring(
     bg = BipartiteGraph(A; symmetric_pattern)
     color_by_order = map(algo.orders) do order
         vertices_in_order = vertices(bg, Val(1), order)
-        return partial_distance2_coloring(bg, Val(1), vertices_in_order)
+        return partial_distance2_coloring(bg, Val(1), vertices_in_order; forced_colors)
     end
     color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult
@@ -282,7 +282,7 @@ function _coloring(
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return star_coloring(ag, vertices_in_order, algo.postprocessing)
+        return star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
@@ -298,8 +298,7 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_tree_set_by_order = map(algo.orders) do order
@@ -327,7 +326,7 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        _color, _star_set = star_coloring(ag, vertices_in_order, algo.postprocessing)
+        _color, _star_set = star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
         )
@@ -366,8 +365,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
