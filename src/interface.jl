@@ -326,7 +326,9 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        _color, _star_set = star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
+        _color, _star_set = star_coloring(
+            ag, vertices_in_order, algo.postprocessing; forced_colors
+        )
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
         )
