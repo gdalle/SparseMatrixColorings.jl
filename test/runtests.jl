@@ -24,11 +24,12 @@ include("utils.jl")
             @testset "JET" begin
                 JET.test_package(SparseMatrixColorings; target_defined_modules=true)
             end
-            @testset "JuliaFormatter" begin
-                @test JuliaFormatter.format(
-                    SparseMatrixColorings; verbose=false, overwrite=false
-                )
-            end
+            # @testset "JuliaFormatter" begin
+                # TODO: switch to Runic (temporarily deactivated)
+                # @test JuliaFormatter.format(
+                #     SparseMatrixColorings; verbose=false, overwrite=false
+                # )
+            # end
             @testset "Doctests" begin
                 Documenter.doctest(SparseMatrixColorings)
             end
