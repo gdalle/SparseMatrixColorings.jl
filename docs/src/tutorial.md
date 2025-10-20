@@ -31,7 +31,7 @@ problem = ColoringProblem()
 
 The algorithm defines how you want to solve it. It can be either a [`GreedyColoringAlgorithm`](@ref) or a [`ConstantColoringAlgorithm`](@ref). For `GreedyColoringAlgorithm`, you can select options such as
 
-- the order in which vertices are processed (a subtype of [`AbstractOrder`](@ref SparseMatrixColorings.AbstractOrder))
+- the order in which vertices are processed (a subtype of [`AbstractOrder`](@ref SparseMatrixColorings.AbstractOrder) , or a tuple of such objects)
 - the type of decompression you want (`:direct` or `:substitution`)
 
 ```@example tutorial
