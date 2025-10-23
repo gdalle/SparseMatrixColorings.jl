@@ -181,18 +181,20 @@ end;
             ),
         )
 
-        test_bicoloring_decompression(
-            A,
-            problem,
-            GreedyColoringAlgorithm{:direct}(order; postprocessing=true);
-            test_fast=true,
-        )
+        @testset "postprocessing_minimizes = $target" for target in (:all_colors, :row_colors, :column_colors)
+            test_bicoloring_decompression(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:direct}(order; postprocessing=true, postprocessing_minimizes=target);
+                test_fast=true,
+            )
 
-        test_bicoloring_decompression(
-            A,
-            problem,
-            GreedyColoringAlgorithm{:substitution}(order; postprocessing=true);
-            test_fast=true,
-        )
+            test_bicoloring_decompression(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(order; postprocessing=true, postprocessing_minimizes=target);
+                test_fast=true,
+            )
+        end
     end
 end;

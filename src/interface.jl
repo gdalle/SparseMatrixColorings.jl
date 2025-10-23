@@ -69,11 +69,12 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false)
-    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, decompression=:direct)
+    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors)
+    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct)
 
 - `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
+- `postprocessing_minimizes::Symbol`: either `:all_colors`, `:row_colors` or `:column_colors`. The options `:row_colors` and `:column_colors` are only available for bicoloring. Otherwise, the setting defaults to `:all_colors`.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 !!! warning
@@ -98,10 +99,12 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
        ADTypes.AbstractColoringAlgorithm
     orders::O
     postprocessing::Bool
+    postprocessing_minimizes::Symbol
 
     function GreedyColoringAlgorithm{decompression}(
         order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
         postprocessing::Bool=false,
+        postprocessing_minimizes::Symbol=:all_colors,
     ) where {decompression}
         check_valid_algorithm(decompression)
         if order_or_orders isa AbstractOrder
@@ -109,7 +112,7 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
         else
             orders = order_or_orders
         end
-        return new{decompression,length(orders),typeof(orders)}(orders, postprocessing)
+        return new{decompression,length(orders),typeof(orders)}(orders, postprocessing, postprocessing_minimizes)
     end
 end
 
@@ -117,8 +120,9 @@ function GreedyColoringAlgorithm(
     order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
     postprocessing::Bool=false,
     decompression::Symbol=:direct,
+    postprocessing_minimizes::Symbol=:all_colors,
 )
-    return GreedyColoringAlgorithm{decompression}(order_or_orders; postprocessing)
+    return GreedyColoringAlgorithm{decompression}(order_or_orders; postprocessing, postprocessing_minimizes)
 end
 
 ## Coloring
@@ -282,7 +286,7 @@ function _coloring(
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
+        return star_coloring(ag, vertices_in_order, algo.postprocessing, :all_colors; forced_colors)
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
@@ -303,7 +307,7 @@ function _coloring(
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_tree_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        return acyclic_coloring(ag, vertices_in_order, algo.postprocessing, :all_colors)
     end
     color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
@@ -327,7 +331,7 @@ function _coloring(
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _star_set = star_coloring(
-            ag, vertices_in_order, algo.postprocessing; forced_colors
+            ag, vertices_in_order, algo.postprocessing, algo.postprocessing_minimizes; forced_colors
         )
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
@@ -373,7 +377,7 @@ function _coloring(
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
+        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing, algo.postprocessing_minimizes)
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
         )
