@@ -109,7 +109,8 @@ The optional `forced_colors` keyword argument is used to enforce predefined vert
 function star_coloring(
     g::AdjacencyGraph{T},
     vertices_in_order::AbstractVector{<:Integer},
-    postprocessing::Bool;
+    postprocessing::Bool,
+    postprocessing_minimizes::Symbol;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {T<:Integer}
     # Initialize data structures
@@ -168,7 +169,7 @@ function star_coloring(
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         offsets = forbidden_colors
-        postprocess!(color, star_set, g, offsets)
+        postprocess!(color, star_set, g, offsets, postprocessing_minimizes)
     end
     return color, star_set
 end
@@ -273,7 +274,10 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(
-    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
+    g::AdjacencyGraph{T},
+    vertices_in_order::AbstractVector{<:Integer},
+    postprocessing::Bool,
+    postprocessing_minimizes::Symbol,
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -345,7 +349,7 @@ function acyclic_coloring(
     if postprocessing
         # Reuse the vector forbidden_colors to compute offsets during post-processing
         offsets = forbidden_colors
-        postprocess!(color, tree_set, g, offsets)
+        postprocess!(color, tree_set, g, offsets, postprocessing_minimizes)
     end
     return color, tree_set
 end
