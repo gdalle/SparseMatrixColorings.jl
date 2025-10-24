@@ -143,7 +143,6 @@ what_table_41_42 = CSV.read(
         @test nb_edges(ag) == row[:E]
         @test maximum_degree(ag) == row[:Δ]
         @test minimum_degree(ag) == row[:δ]
-        bicoloring = false
         postprocessing = false
         vertices_in_order = vertices(ag, NaturalOrder())
         color_N, _ = star_coloring(ag, vertices_in_order, postprocessing)
