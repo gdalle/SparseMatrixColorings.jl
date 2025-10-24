@@ -73,8 +73,8 @@ It is passed as an argument to the main function [`coloring`](@ref).
     GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct)
 
 - `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
-- `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices.
-- `postprocessing_minimizes::Symbol`: either `:all_colors`, `:row_colors` or `:column_colors`. The options `:row_colors` and `:column_colors` are only available for bicoloring. Otherwise, the setting defaults to `:all_colors`.
+- `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices. This option does not affect row or column colorings.
+- `postprocessing_minimizes::Symbol`: either `:all_colors`, `:row_colors` or `:column_colors`. This option only applies to star and acyclic bicolorings.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 !!! warning
@@ -284,9 +284,10 @@ function _coloring(
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     ag = AdjacencyGraph(A; augmented_graph=false)
+    bicoloring = false
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return star_coloring(ag, vertices_in_order, algo.postprocessing, :all_colors; forced_colors)
+        return star_coloring(ag, vertices_in_order, bicoloring, algo.postprocessing; forced_colors)
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
@@ -305,9 +306,10 @@ function _coloring(
     symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A; augmented_graph=false)
+    bicoloring = false
     color_and_tree_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        return acyclic_coloring(ag, vertices_in_order, algo.postprocessing, :all_colors)
+        return acyclic_coloring(ag, vertices_in_order, bicoloring, algo.postprocessing)
     end
     color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
@@ -328,10 +330,12 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; augmented_graph=true)
+    bicoloring = true
+    postprocessing_minimizes = algo.postprocessing_minimizes
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _star_set = star_coloring(
-            ag, vertices_in_order, algo.postprocessing, algo.postprocessing_minimizes; forced_colors
+            ag, vertices_in_order, bicoloring, algo.postprocessing; postprocessing_minimizes, forced_colors
         )
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
@@ -375,9 +379,11 @@ function _coloring(
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; augmented_graph=true)
+    bicoloring = true
+    postprocessing_minimizes = algo.postprocessing_minimizes
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
-        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing, algo.postprocessing_minimizes)
+        _color, _tree_set = acyclic_coloring(ag, vertices_in_order, bicoloring, algo.postprocessing; postprocessing_minimizes)
         (_row_color, _column_color, _symmetric_to_row, _symmetric_to_column) = remap_colors(
             eltype(ag), _color, maximum(_color), size(A)...
         )
