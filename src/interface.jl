@@ -283,7 +283,7 @@ function _coloring(
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
-    ag = AdjacencyGraph(A; has_diagonal=true, bicoloring=false, original_size=size(A))
+    ag = AdjacencyGraph(A; has_diagonal=true, original_size=size(A))
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         return star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
@@ -304,7 +304,7 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    ag = AdjacencyGraph(A; has_diagonal=true, bicoloring=false, original_size=size(A))
+    ag = AdjacencyGraph(A; has_diagonal=true, original_size=size(A))
     color_and_tree_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
@@ -327,7 +327,7 @@ function _coloring(
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false, bicoloring=true, original_size=size(A))
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false, original_size=size(A))
     postprocessing_minimizes = algo.postprocessing_minimizes
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
@@ -375,7 +375,7 @@ function _coloring(
     symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false, bicoloring=true, original_size=size(A))
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false, original_size=size(A))
     postprocessing_minimizes = algo.postprocessing_minimizes
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
