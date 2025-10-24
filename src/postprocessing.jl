@@ -5,7 +5,8 @@ function postprocess!(
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
     offsets::AbstractVector{<:Integer},
-    postprocessing_minimizes::Symbol=:all_colors,
+    bicoloring::Bool,
+    postprocessing_minimizes::Symbol,
 )
     # flag which colors are actually used during decompression
     nb_colors = maximum(color)
@@ -21,12 +22,29 @@ function postprocess!(
         end
     end
 
-    if star_or_tree_set isa StarSet
-        # star_or_tree_set is a StarSet
-        postprocess_star_coloring!(g, color_used, color, star_or_tree_set, postprocessing_minimizes)
-    else 
-        # star_or_tree_set is a TreeSet
-        postprocess_acyclic_coloring!(color_used, color, star_or_tree_set, postprocessing_minimizes)
+    if bicoloring
+        row_color_used = zeros(Bool, nb_colors)
+        column_color_used = color_used
+
+        if star_or_tree_set isa StarSet
+            # star_or_tree_set is a StarSet
+            postprocess_star_bicoloring!(g, row_color_used, column_color_used, color, star_or_tree_set, postprocessing_minimizes)
+        else
+            # star_or_tree_set is a TreeSet
+            postprocess_acyclic_bicoloring!(row_color_used, column_color_used, color, star_or_tree_set, postprocessing_minimizes)
+        end
+
+        # Identify colors that are used in either the row or column partition
+        # color_used = row_color_used .| column_color_used
+        color_used .|= row_color_used
+    else
+        if star_or_tree_set isa StarSet
+            # star_or_tree_set is a StarSet
+            postprocess_star_coloring!(g, color_used, color, star_or_tree_set)
+        else
+            # star_or_tree_set is a TreeSet
+            postprocess_acyclic_coloring!(color_used, color, star_or_tree_set)
+        end
     end
 
     # if at least one of the colors is useless, modify the color assignments of vertices
@@ -54,6 +72,7 @@ function postprocess!(
             end
         end
     end
+
     return color
 end
 
@@ -62,7 +81,6 @@ function postprocess_star_coloring!(
     color_used::Vector{Bool},
     color::AbstractVector{<:Integer},
     star_set::StarSet,
-    postprocessing_minimizes::Symbol=:all_colors,
 )
     S = pattern(g)
     edge_to_index = edge_indices(g)
@@ -95,13 +113,109 @@ function postprocess_star_coloring!(
                     h = hub[s]
                     if h < 0
                         h = abs(h)
-                        spoke = h == j ? i : j
                         if color_used[color[h]]
                             # The current hub of this trivial star is already a hub in a non-trivial star
                             hub[s] = h
                             nb_unknown_hubs -= 1
                         else
+                            spoke = h == j ? i : j
                             if color_used[color[spoke]]
+                                # The current spoke of this trivial star is also a hub in a non-trivial star
+                                # Switch the hub and the spoke to avoid adding one more used color
+                                hub[s] = spoke
+                                nb_unknown_hubs -= 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        # Only trivial stars, where both vertices can be promoted as hubs, remain.
+        if nb_unknown_hubs > 0
+            rvS = rowvals(S)
+            for j in axes(S, 2)
+                for k in nzrange(S, j)
+                    i = rvS[k]
+                    if i > j
+                        index_ij = edge_to_index[k]
+                        s = star[index_ij]
+                        h = hub[s]
+                        # The hub of this trivial star is still unknown
+                        if h < 0
+                            h = abs(h)
+                            # We need to decide who is the hub
+                            if !color_used[color[i]] && !color_used[color[j]]
+                                # We don't do anything special
+                                hub[s] = h
+                                color_used[color[h]] = true
+                            else
+                                # Ensure that the hub vertex has a used color for decompression
+                                spoke = h == j ? i : j
+                                if color_used[color[spoke]] && !color_used[color[h]]
+                                    hub[s] = spoke
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return color_used
+end
+
+
+function postprocess_star_bicoloring!(
+    g::AdjacencyGraph,
+    row_color_used::Vector{Bool},
+    column_color_used::Vector{Bool},
+    color::AbstractVector{<:Integer},
+    star_set::StarSet,
+    postprocessing_minimizes::Symbol=:all_colors,
+)
+    S = pattern(g)
+    edge_to_index = edge_indices(g)
+
+    # only the colors of the hubs are used
+    (; star, hub) = star_set
+    nb_trivial_stars = 0
+
+    # Iterate through all non-trivial stars
+    for s in eachindex(hub)
+        h = hub[s]
+        if h > 0
+            if h ≤ n
+                column_color_used[color[h]] = true
+            else
+                row_color_used[color[h]] = true
+            end
+        else
+            nb_trivial_stars += 1
+        end
+    end
+
+    # Process the trivial stars (if any)
+    if nb_trivial_stars > 0
+        nb_unknown_hubs = nb_trivial_stars
+
+        rvS = rowvals(S)
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                if i > j
+                    index_ij = edge_to_index[k]
+                    s = star[index_ij]
+                    h = hub[s]
+                    if h < 0
+                        h = abs(h)
+                        if (h ≤ n ? column_color_used[color[h]] : row_color_used[color[h]])
+                            # The current hub of this trivial star is already a hub in a non-trivial star
+                            hub[s] = h
+                            nb_unknown_hubs -= 1
+                        else
+                            spoke = h == j ? i : j
+                            if (spoke ≤ n ? column_color_used[color[spoke]] : row_color_used[color[spoke]])
                                 # The current spoke of this trivial star is also a hub in a non-trivial star
                                 # Switch the hub and the spoke to avoid adding one more used color
                                 hub[s] = spoke
@@ -129,29 +243,40 @@ function postprocess_star_coloring!(
                         h = hub[s]
                         # The hub of this trivial star is still unknown
                         if h < 0
-                            h = abs(h)
-                            spoke = h == j ? i : j
                             # We need to decide who is the hub
-                            if !color_used[color[i]] && !color_used[color[j]]
+                            if !row_color_used[color[i]] && !column_color_used[color[j]]
                                 if postprocessing_minimizes == :row_colors
                                     # j belongs to a column partition in the context of bicoloring
                                     hub[s] = j
-                                    color_used[color[j]] = true
+                                    column_color_used[color[j]] = true
                                 elseif postprocessing_minimizes == :column_colors
                                     # i belongs to a row partition in the context of bicoloring
                                     hub[s] = i
-                                    color_used[color[i]] = true
+                                    row_color_used[color[i]] = true
                                 elseif postprocessing_minimizes == :all_colors
                                     # We don't do anything special
+                                    h = abs(h)
                                     hub[s] = h
-                                    color_used[color[h]] = true
+                                    if h ≤ n
+                                        column_color_used[color[h]] = true
+                                    else
+                                        row_color_used[color[h]] = true
+                                    end
                                 else
                                     error("The value postprocessing_minimizes = :$postprocessing_minimizes is not supported.")
                                 end
                             else
                                 # Ensure that the hub vertex has a used color for decompression
-                                if color_used[color[spoke]] && !color_used[color[h]]
-                                    hub[s] = spoke
+                                h = abs(h)
+                                spoke = h == j ? i : j
+                                if h ≤ n
+                                    if row_color_used[color[spoke]] && !column_color_used[color[h]]
+                                        hub[s] = spoke
+                                    end
+                                else
+                                    if column_color_used[color[spoke]] && !row_color_used[color[h]]
+                                        hub[s] = spoke
+                                    end
                                 end
                             end
                         end
@@ -160,14 +285,13 @@ function postprocess_star_coloring!(
             end
         end
     end
-    return color_used
+    return row_color_used, column_color_used
 end
 
 function postprocess_acyclic_coloring!(
     color_used::Vector{Bool},
     color::AbstractVector{<:Integer},
     tree_set::TreeSet,
-    postprocessing_minimizes::Symbol=:all_colors,
 )
     # only the colors of non-leaf vertices are used
     (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
@@ -228,6 +352,108 @@ function postprocess_acyclic_coloring!(
         end
 
         # Only trivial trees, where both vertices can be promoted as roots, remain.
+        if nb_unknown_roots > 0
+           for k in 1:nt
+                # Position of the first edge in the tree
+                first = tree_edge_indices[k]
+
+                # Total number of edges in the tree
+                ne_tree = tree_edge_indices[k + 1] - first
+
+                # Check if we have exactly one edge in the tree
+                if ne_tree == 1
+                    (i, j) = reverse_bfs_orders[first]
+                    if !color_used[color[i]] && !color_used[color[j]]
+                        # We don't do anything special
+                        color_used[color[j]] = true
+                    else
+                        # Ensure that the root vertex has a used color for decompression
+                        if color_used[color[i]] && !color_used[color[j]]
+                            reverse_bfs_orders[first] = (j, i)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return color_used
+end
+
+function postprocess_acyclic_bicoloring!(
+    row_color_used::Vector{Bool},
+    column_color_used::Vector{Bool},
+    color::AbstractVector{<:Integer},
+    tree_set::TreeSet,
+    postprocessing_minimizes::Symbol=:all_colors,
+)
+    # only the colors of non-leaf vertices are used
+    (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
+    nb_trivial_trees = 0
+
+    # Iterate through all non-trivial trees
+    for k in 1:nt
+        # Position of the first edge in the tree
+        first = tree_edge_indices[k]
+
+        # Total number of edges in the tree
+        ne_tree = tree_edge_indices[k + 1] - first
+
+        # Check if we have more than one edge in the tree (non-trivial tree)
+        if ne_tree > 1
+            # Determine if the tree is a star
+            if is_star[k]
+                # It is a non-trivial star and only the color of the hub is needed
+                (leaf, hub) = reverse_bfs_orders[first]
+                if hub ≤ leaf
+                    column_color_used[color[hub]] = true
+                else
+                    row_color_used[color[hub]] = true
+                end
+            else
+                # It is not a star and both colors are needed during the decompression
+                (i, j) = reverse_bfs_orders[first]
+                if i < j
+                    column_color_used[color[i]] = true
+                    row_color_used[color[j]] = true
+                else
+                    row_color_used[color[i]] = true
+                    column_color_used[color[j]] = true
+                end
+            end
+        else
+            nb_trivial_trees += 1
+        end
+    end
+
+    # Process the trivial trees (if any)
+    if nb_trivial_trees > 0
+        nb_unknown_roots = nb_trivial_trees
+
+        for k in 1:nt
+            # Position of the first edge in the tree
+            first = tree_edge_indices[k]
+
+            # Total number of edges in the tree
+            ne_tree = tree_edge_indices[k + 1] - first
+
+            # Check if we have exactly one edge in the tree
+            if ne_tree == 1
+                (i, j) = reverse_bfs_orders[first]
+                if (i < j ? row_color_used[color[j]] : column_color_used[color[j]])
+                    # The current root of this trivial tree is already an internal node in a non-trivial tree
+                    nb_unknown_roots -= 1
+                else
+                    if (i < j ? column_color_used[color[i]] : row_color_used[color[i]])
+                        # The current leaf of this trivial tree is also an internal node in a non-trivial tree
+                        # Switch the root and the leaf to avoid adding one more used color
+                        reverse_bfs_orders[first] = (j, i)
+                        nb_unknown_roots -= 1
+                    end
+                end
+            end
+        end
+
+        # Only trivial trees, where both vertices can be promoted as roots, remain.
         # In the context of bicoloring, if we aim to minimize either the number of row colors or the number of column colors,
         # we can achieve optimal post-processing by choosing as roots the vertices from the opposite partition.
         # This is optimal because we never increase the number of colors in the target partition during this phase,
@@ -243,24 +469,28 @@ function postprocess_acyclic_coloring!(
                 # Check if we have exactly one edge in the tree
                 if ne_tree == 1
                     (i, j) = reverse_bfs_orders[first]
-                    if !color_used[color[i]] && !color_used[color[j]]
+                    if (i < j ? !column_color_used[color[i]] && !row_color_used[color[j]] : !row_color_used[color[i]] && !column_color_used[color[j]])
                         if postprocessing_minimizes == :row_colors
                             # v belongs to a column partition in the context of bicoloring
                             v = min(i,j)
-                            color_used[color[v]] = true
+                            column_color_used[color[v]] = true
                         elseif postprocessing_minimizes == :column_colors
                             # v belongs to a row partition in the context of bicoloring
                             v = max(i,j)
-                            color_used[color[v]] = true
+                            row_color_used[color[v]] = true
                         elseif postprocessing_minimizes == :all_colors
                             # We don't do anything special
-                            color_used[color[j]] = true
+                            if i < j
+                                row_color_used[color[j]] = true
+                            else
+                                column_color_used[color[j]] = true
+                            end
                         else
                             error("The value postprocessing_minimizes = :$postprocessing_minimizes is not supported.")
                         end
                     else
-                        # Ensure that the foot vertex has a used color for decompression
-                        if color_used[color[i]] && !color_used[color[j]]
+                        # Ensure that the root vertex has a used color for decompression
+                        if (i < j ? column_color_used[color[i]] && !row_color_used[color[j]] : row_color_used[color[i]] && !column_color_used[color[j]])
                             reverse_bfs_orders[first] = (j, i)
                         end
                     end
@@ -268,5 +498,5 @@ function postprocess_acyclic_coloring!(
             end
         end
     end
-    return color_used
+    return row_color_used, column_color_used
 end
