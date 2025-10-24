@@ -5,7 +5,6 @@ function postprocess!(
     star_or_tree_set::Union{StarSet,TreeSet},
     g::AdjacencyGraph,
     offsets::AbstractVector{<:Integer},
-    bicoloring::Bool,
     postprocessing_minimizes::Symbol,
 )
     # flag which colors are actually used during decompression
@@ -22,7 +21,7 @@ function postprocess!(
         end
     end
 
-    if bicoloring
+    if g.bicoloring
         row_color_used = zeros(Bool, nb_colors)
         column_color_used = color_used
 
@@ -180,6 +179,9 @@ function postprocess_star_bicoloring!(
     # only the colors of the hubs are used
     (; star, hub) = star_set
     nb_trivial_stars = 0
+
+    # size of the original matrix on which we want to perform bicoloring
+    (m, n) = g.original_size
 
     # Iterate through all non-trivial stars
     for s in eachindex(hub)
