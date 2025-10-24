@@ -146,7 +146,7 @@ what_table_41_42 = CSV.read(
         bicoloring = false
         postprocessing = false
         vertices_in_order = vertices(ag, NaturalOrder())
-        color_N, _ = star_coloring(ag, vertices_in_order, bicoloring, postprocessing)
+        color_N, _ = star_coloring(ag, vertices_in_order, postprocessing)
         @test_skip row[:KS1] <= length(unique(color_N)) <= row[:KS2]  # TODO: find better
         yield()
     end
