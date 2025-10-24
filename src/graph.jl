@@ -227,7 +227,6 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 struct AdjacencyGraph{T<:Integer,has_diagonal}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
-    bicoloring::Bool
     original_size::Tuple{Int,Int}
 end
 
@@ -237,18 +236,17 @@ function AdjacencyGraph(
     S::SparsityPatternCSC{T},
     edge_to_index::Vector{T}=build_edge_to_index(S);
     has_diagonal::Bool=true,
-    bicoloring::Bool=false,
     original_size::Tuple{Int,Int}=size(S),
 ) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index, bicoloring, original_size)
+    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index, original_size)
 end
 
-function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true, bicoloring::Bool=false, original_size::Tuple{Int,Int}=size(A))
-    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal, bicoloring, original_size)
+function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true, original_size::Tuple{Int,Int}=size(A))
+    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal, original_size)
 end
 
-function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true, bicoloring::Bool=false, original_size::Tuple{Int,Int}=size(A))
-    return AdjacencyGraph(SparseMatrixCSC(A); has_diagonal, bicoloring, original_size)
+function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true, original_size::Tuple{Int,Int}=size(A))
+    return AdjacencyGraph(SparseMatrixCSC(A); has_diagonal, original_size)
 end
 
 pattern(g::AdjacencyGraph) = g.S

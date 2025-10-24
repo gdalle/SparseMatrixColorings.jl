@@ -19,9 +19,15 @@ function postprocess!(
                 color_used[color[i]] = true
             end
         end
-    end
 
-    if g.bicoloring
+        if star_or_tree_set isa StarSet
+            # star_or_tree_set is a StarSet
+            postprocess_star_coloring!(g, color_used, color, star_or_tree_set)
+        else
+            # star_or_tree_set is a TreeSet
+            postprocess_acyclic_coloring!(color_used, color, star_or_tree_set)
+        end
+    else
         row_color_used = zeros(Bool, nb_colors)
         column_color_used = color_used
 
@@ -36,14 +42,6 @@ function postprocess!(
         # Identify colors that are used in either the row or column partition
         # color_used = row_color_used .| column_color_used
         color_used .|= row_color_used
-    else
-        if star_or_tree_set isa StarSet
-            # star_or_tree_set is a StarSet
-            postprocess_star_coloring!(g, color_used, color, star_or_tree_set)
-        else
-            # star_or_tree_set is a TreeSet
-            postprocess_acyclic_coloring!(color_used, color, star_or_tree_set)
-        end
     end
 
     # if at least one of the colors is useless, modify the color assignments of vertices
@@ -163,7 +161,6 @@ function postprocess_star_coloring!(
     end
     return color_used
 end
-
 
 function postprocess_star_bicoloring!(
     g::AdjacencyGraph,
