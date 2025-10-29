@@ -5,6 +5,7 @@ Coloring algorithm that relies on mathematical programming with [JuMP](https://j
 
 !!! warning
     This algorithm is only available when JuMP is loaded. If you encounter a method error, run `import JuMP` in your REPL and try again.
+    It only works for nonsymmetric, unidirectional colorings problems.
 
 !!! danger
     The coloring problem is NP-hard, so it is unreasonable to expect an optimal solution in reasonable time for large instances.
