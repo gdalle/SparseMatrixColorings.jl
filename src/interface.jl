@@ -276,8 +276,7 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 )
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_star_set_by_order = map(algo.orders) do order
@@ -298,8 +297,7 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_tree_set_by_order = map(algo.orders) do order
@@ -320,7 +318,8 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
