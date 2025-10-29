@@ -276,7 +276,8 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
-    symmetric_pattern::Bool,
+    symmetric_pattern::Bool;
+    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     ag = AdjacencyGraph(A; has_diagonal=true)
     color_and_star_set_by_order = map(algo.orders) do order
