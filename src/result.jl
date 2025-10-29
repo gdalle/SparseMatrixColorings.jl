@@ -686,14 +686,15 @@ function BicoloringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph{T},
     symmetric_result::AbstractColoringResult{:symmetric,:column},
+    row_color::Vector{T},
+    column_color::Vector{T},
+    symmetric_to_row::Vector{T},
+    symmetric_to_column::Vector{T},
     decompression_eltype::Type{R},
 ) where {T,R}
     m, n = size(A)
     symmetric_color = column_colors(symmetric_result)
     num_sym_colors = maximum(symmetric_color)
-    row_color, column_color, symmetric_to_row, symmetric_to_column = remap_colors(
-        T, symmetric_color, num_sym_colors, m, n
-    )
     column_group = group_by_color(T, column_color)
     row_group = group_by_color(T, row_color)
     Br_and_Bc = Matrix{R}(undef, n + m, num_sym_colors)

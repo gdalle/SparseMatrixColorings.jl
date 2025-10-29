@@ -320,18 +320,11 @@ function acyclic_coloring(
                 end
             end
         end
-        if isnothing(forced_colors)
-            for i in eachindex(forbidden_colors)
-                if forbidden_colors[i] != v
-                    color[v] = i
-                    break
-                end
-            end
-        else
-            if forbidden_colors[forced_colors[v]] == v  # TODO: handle forced_colors[v] == 0
-                throw(InvalidColoringError())
-            else
-                color[v] = forced_colors[v]
+        # TODO: handle forced colors
+        for i in eachindex(forbidden_colors)
+            if forbidden_colors[i] != v
+                color[v] = i
+                break
             end
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v

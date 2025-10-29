@@ -15,6 +15,10 @@ using SparseMatrixColorings:
     structurally_biorthogonal
 using Test
 
+const _ALL_ORDERS = (
+    NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
+)
+
 function test_coloring_decompression(
     A0::AbstractMatrix,
     problem::ColoringProblem{structure,partition},
@@ -169,6 +173,22 @@ function test_coloring_decompression(
             @show color_vec
         end
     end
+
+    @testset "More orders is better" begin
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
+    end
 end
 
 function test_bicoloring_decompression(
@@ -215,6 +235,22 @@ function test_bicoloring_decompression(
                 @test structurally_biorthogonal(A0, row_color, column_color)
             end
         end
+    end
+
+    @testset "More orders is better" begin
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
     end
 end
 

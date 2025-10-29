@@ -40,10 +40,20 @@ rng = StableRNG(63)
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm(order; decompression),
             )
+            @test_opt coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
+            )
             @inferred coloring(
                 A,
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm(order; decompression),
+            )
+            @inferred coloring(
+                A,
+                ColoringProblem(; structure, partition),
+                GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
             )
         end
     end
