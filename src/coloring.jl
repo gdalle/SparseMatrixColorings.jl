@@ -250,10 +250,7 @@ struct StarSet{T}
 end
 
 """
-    acyclic_coloring(
-        g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool;
-        forced_colors::Union{AbstractVector,Nothing}=nothing
-    )
+    acyclic_coloring(g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool)
 
 Compute an acyclic coloring of all vertices in the adjacency graph `g` and return a tuple `(color, tree_set)`, where
 
@@ -266,8 +263,6 @@ The vertices are colored in a greedy fashion, following the order supplied.
 
 If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" color) as long as they are not needed during decompression.
 
-The optional `forced_colors` keyword argument is used to enforce predefined vertex colors (e.g. coming from another optimization algorithm) but still run the acyclic coloring procedure to verify correctness and build auxiliary data structures, useful during decompression.
-
 # See also
 
 - [`AdjacencyGraph`](@ref)
@@ -278,10 +273,7 @@ The optional `forced_colors` keyword argument is used to enforce predefined vert
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(
-    g::AdjacencyGraph{T},
-    vertices_in_order::AbstractVector{<:Integer},
-    postprocessing::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)

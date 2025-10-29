@@ -320,8 +320,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
@@ -368,8 +367,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
