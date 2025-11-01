@@ -240,10 +240,10 @@ function test_bicoloring_decompression(
     @testset "More orders is better" begin
         more_orders = (algo.orders..., _ALL_ORDERS...)
         better_algo = GreedyColoringAlgorithm{decompression}(
-            more_orders; algo.postprocessing
+            more_orders; algo.postprocessing, algo.postprocessing_minimizes,
         )
         all_algos = [
-            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing, algo.postprocessing_minimizes) for
             order in more_orders
         ]
         result = coloring(A0, problem, algo)
