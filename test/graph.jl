@@ -166,7 +166,7 @@ end;
     @test degree(g, 7) == 6
     @test degree(g, 8) == 6
 
-    g = AdjacencyGraph(transpose(A) * A; has_diagonal=false)
+    g = AdjacencyGraph(transpose(A) * A; augmented_graph=true)
     # wrong degree
     @test degree(g, 1) == 4
     @test degree(g, 2) == 4

@@ -547,7 +547,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
+    if !augmented_graph(ag)
         for i in axes(S, 1)
             if !iszero(S[i, i])
                 A[i, i] = B[i, color[i]]
@@ -616,7 +616,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
+    if !augmented_graph(ag)
         if uplo == :L
             for i in diagonal_indices
                 # A[i, i] is the first element in column i

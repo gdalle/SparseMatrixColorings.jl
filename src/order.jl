@@ -334,7 +334,7 @@ function vertices(
 
         π[index] = u
         for v in neighbors(g, u)
-            !has_diagonal(g) || (u == v && continue)
+            augmented_graph(g) || (u == v && continue)
             dv = degrees[v]
             dv == -1 && continue
             update_bucket!(db, v, dv; degtype, direction)
