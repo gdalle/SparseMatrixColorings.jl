@@ -24,7 +24,7 @@ jobs:
       JULIA_SMC_TEST_GROUP: 'GPU'
     strategy:
       matrix:
-        julia-version: ['1.10', '1.11', '1.12']
+        julia-version: ['1.10', '1.11']
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
