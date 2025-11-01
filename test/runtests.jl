@@ -8,8 +8,6 @@ using Test
 # Load package extensions to test them with JET
 using Colors: Colors
 
-include("utils.jl")
-
 @testset verbose = true "SparseMatrixColorings" begin
     if get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
         @testset "CUDA" begin
@@ -25,6 +23,7 @@ include("utils.jl")
             end
         end
     else
+        include("utils.jl")
         @testset verbose = true "Code quality" begin
             @testset "Aqua" begin
                 Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
