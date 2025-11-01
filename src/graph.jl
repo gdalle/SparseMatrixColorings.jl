@@ -217,7 +217,7 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 # Fields
 
-- `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, which represents an augmented graph whenever `augmented_graph` is `true`.
+- `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, which represents an augmented graph whenever `augmented_graph` is `true`. Here, "augmented graph" means the sparsity pattern of the augmented matrix `H = [0 Jᵀ; J 0]`.
 - `edge_to_index::Vector{T}`: A vector mapping each nonzero of `S` to a unique edge index (ignoring diagonal and accounting for symmetry, so that `(i, j)` and `(j, i)` get the same index)
 
 # References
