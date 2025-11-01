@@ -14,7 +14,15 @@ include("utils.jl")
     if get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
         @testset "CUDA" begin
             using CUDA
-            include("cuda.jl")
+            if CUDA.functional()
+                include("cuda.jl")
+            end
+        end
+        @testset "ROCm" begin
+            using AMDGPU
+            if AMDGPU.functional()
+                include("rocm.jl")
+            end
         end
     else
         @testset verbose = true "Code quality" begin

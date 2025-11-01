@@ -12,6 +12,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [weakdeps]
+AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CliqueTrees = "60701a23-6482-424a-84db-faee86b9b1f8"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
@@ -19,6 +20,7 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [extensions]
+SparseMatrixColoringsAMDGPUExt = "AMDGPU"
 SparseMatrixColoringsCUDAExt = "CUDA"
 SparseMatrixColoringsCliqueTreesExt = "CliqueTrees"
 SparseMatrixColoringsColorsExt = "Colors"
@@ -26,14 +28,15 @@ SparseMatrixColoringsJuMPExt = ["JuMP", "MathOptInterface"]
 
 [compat]
 ADTypes = "1.2.1"
+AMDGPU = "2.1.2"
 CUDA = "5.8.2"
 CliqueTrees = "1"
 Colors = "0.12.11, 0.13"
 DocStringExtensions = "0.8,0.9"
 JuMP = "1.29.1"
-LinearAlgebra = "<0.0.1, 1"
 MathOptInterface = "1.45.0"
+LinearAlgebra = "1.10"
 PrecompileTools = "1.2.1"
-Random = "<0.0.1, 1"
-SparseArrays = "<0.0.1, 1"
+Random = "1.10"
+SparseArrays = "1.10"
 julia = "1.10"
