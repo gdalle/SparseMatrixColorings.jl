@@ -209,7 +209,7 @@ function postprocess_star_bicoloring!(
 
     # Process the trivial stars (if any)
     if nb_trivial_stars > 0
-        occurrences .= 0
+        fill!(occurrences, 0)
         all_trivial_stars_treated = true
 
         rvS = rowvals(S)
@@ -338,7 +338,7 @@ function postprocess_acyclic_coloring!(
 
     # Process the trivial trees (if any)
     if nb_trivial_trees > 0
-        occurrences .= 0
+        fill!(occurrences, 0)
         all_trivial_trees_treated = true
 
         for k in 1:nt
@@ -453,7 +453,7 @@ function postprocess_acyclic_bicoloring!(
 
     # Process the trivial trees (if any)
     if nb_trivial_trees > 0
-        occurrences .= 0
+        fill!(occurrences, 0)
         all_trivial_trees_treated = true
 
         for k in 1:nt
