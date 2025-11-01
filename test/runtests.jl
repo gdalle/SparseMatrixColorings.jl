@@ -19,16 +19,16 @@ include("utils.jl")
     else
         @testset verbose = true "Code quality" begin
             @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
+                Aqua.test_all(SparseMatrixColorings; stale_deps = (; ignore = [:Requires]))
             end
             @testset "JET" begin
-                JET.test_package(SparseMatrixColorings; target_defined_modules=true)
+                JET.test_package(SparseMatrixColorings; target_defined_modules = true)
             end
             # @testset "JuliaFormatter" begin
-                # TODO: switch to Runic (temporarily deactivated)
-                # @test JuliaFormatter.format(
-                #     SparseMatrixColorings; verbose=false, overwrite=false
-                # )
+            # TODO: switch to Runic (temporarily deactivated)
+            # @test JuliaFormatter.format(
+            #     SparseMatrixColorings; verbose=false, overwrite=false
+            # )
             # end
             @testset "Doctests" begin
                 Documenter.doctest(SparseMatrixColorings)
@@ -88,7 +88,10 @@ include("utils.jl")
         end
         @testset verbose = true "Performance" begin
             @testset "Type stability" begin
-                include("type_stability.jl")
+                if VERSION < v"1.12"
+                    # TODO: fix JET misbehaving
+                    include("type_stability.jl")
+                end
             end
             @testset "Allocations" begin
                 include("allocations.jl")
