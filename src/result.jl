@@ -411,7 +411,7 @@ function TreeSetColoringResult(
     diagonal_nzind = T[]
     ndiag = 0
 
-    if has_diagonal(ag)
+    if !augmented_graph(ag)
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rv[k]

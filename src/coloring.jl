@@ -124,7 +124,7 @@ function star_coloring(
 
     for v in vertices_in_order
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             forbidden_colors[color_w] = v
@@ -139,7 +139,7 @@ function star_coloring(
             else
                 first_neighbor[color[w]] = (v, w, index_vw)
                 for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                    !has_diagonal(g) || (w == x && continue)
+                    augmented_graph(g) || (w == x && continue)
                     color_x = color[x]
                     (x == v || iszero(color_x)) && continue
                     if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
@@ -184,7 +184,7 @@ function _treat!(
     color::AbstractVector{<:Integer},
 )
     for x in neighbors(g, w)
-        !has_diagonal(g) || (w == x && continue)
+        augmented_graph(g) || (w == x && continue)
         color_x = color[x]
         iszero(color_x) && continue
         forbidden_colors[color_x] = v
@@ -204,12 +204,12 @@ function _update_stars!(
     first_neighbor::AbstractVector{<:Tuple},
 )
     for (w, index_vw) in neighbors_with_edge_indices(g, v)
-        !has_diagonal(g) || (v == w && continue)
+        augmented_graph(g) || (v == w && continue)
         color_w = color[w]
         iszero(color_w) && continue
         x_exists = false
         for (x, index_wx) in neighbors_with_edge_indices(g, w)
-            !has_diagonal(g) || (w == x && continue)
+            augmented_graph(g) || (w == x && continue)
             if x != v && color[x] == color[v]  # vw, wx ∈ E
                 star_wx = star[index_wx]
                 hub[star_wx] = w  # this may already be true
@@ -286,16 +286,16 @@ function acyclic_coloring(
 
     for v in vertices_in_order
         for w in neighbors(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             forbidden_colors[color_w] = v
         end
         for w in neighbors(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                !has_diagonal(g) || (w == x && continue)
+                augmented_graph(g) || (w == x && continue)
                 color_x = color[x]
                 iszero(color_x) && continue
                 if forbidden_colors[color_x] != v
@@ -320,16 +320,16 @@ function acyclic_coloring(
             end
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             _grow_star!(v, w, index_vw, color_w, first_neighbor, forest)
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                !has_diagonal(g) || (w == x && continue)
+                augmented_graph(g) || (w == x && continue)
                 color_x = color[x]
                 (x == v || iszero(color_x)) && continue
                 if color_x == color[v]
