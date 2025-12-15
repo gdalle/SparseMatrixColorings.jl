@@ -271,9 +271,8 @@ function show_colors!(
     A_ccolor_indices = mod1.(column_colors(res), length(colorscheme))
     A_rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme))
     B_ccolor_indices = mod1.(1:maximum(column_colors(res)), length(colorscheme))
-    B_rcolor_indices = mod1.(
-        (row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme)
-    )
+    B_rcolor_indices =
+        mod1.((row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme))
     A_ccolors = colorscheme[A_ccolor_indices]
     A_rcolors = colorscheme[A_rcolor_indices]
     B_ccolors = colorscheme[B_ccolor_indices]
