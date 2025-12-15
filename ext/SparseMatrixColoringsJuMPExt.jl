@@ -3,7 +3,7 @@ module SparseMatrixColoringsJuMPExt
 using ADTypes: ADTypes
 using JuMP:
     Model,
-    is_solved_and_feasible,
+    assert_is_solved_and_feasible,
     optimize!,
     primal_status,
     set_silent,
@@ -44,7 +44,7 @@ function optimal_distance2_coloring(
     optimize!(model)
     if assert_solved
         # assert feasibility and optimality
-        @assert is_solved_and_feasible(model)
+        assert_is_solved_and_feasible(model)
     else
         # only assert feasibility
         @assert primal_status(model) == MOI.FEASIBLE_POINT
