@@ -1,7 +1,6 @@
 using Aqua
 using Documenter
 using JET
-using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
@@ -26,12 +25,6 @@ include("utils.jl")
                     SparseMatrixColorings; target_modules=(SparseMatrixColorings,)
                 )
             end
-            # @testset "JuliaFormatter" begin
-            # TODO: switch to Runic (temporarily deactivated)
-            # @test JuliaFormatter.format(
-            #     SparseMatrixColorings; verbose=false, overwrite=false
-            # )
-            # end
             @testset "Doctests" begin
                 Documenter.doctest(SparseMatrixColorings)
             end
