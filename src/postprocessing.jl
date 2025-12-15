@@ -109,9 +109,7 @@ function postprocess_with_star_set!(
 end
 
 function postprocess_with_tree_set!(
-    color_used::Vector{Bool},
-    color::AbstractVector{<:Integer},
-    tree_set::TreeSet,
+    color_used::Vector{Bool}, color::AbstractVector{<:Integer}, tree_set::TreeSet
 )
     # only the colors of non-leaf vertices are used
     (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
