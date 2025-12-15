@@ -19,10 +19,12 @@ include("utils.jl")
     else
         @testset verbose = true "Code quality" begin
             @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings; stale_deps = (; ignore = [:Requires]))
+                Aqua.test_all(SparseMatrixColorings; undocumented_names=true)
             end
             @testset "JET" begin
-                JET.test_package(SparseMatrixColorings; target_defined_modules = true)
+                JET.test_package(
+                    SparseMatrixColorings; target_modules=(SparseMatrixColorings,)
+                )
             end
             # @testset "JuliaFormatter" begin
             # TODO: switch to Runic (temporarily deactivated)
