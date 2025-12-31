@@ -769,10 +769,22 @@ end
 function decompress!(
     A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
+    (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
+    R = eltype(A)
+    fill!(A, zero(R))
+    nzval = Vector{R}(undef, length(large_rowval))
+    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, nzval)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
-    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
-    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    rvA = rowvals(A_and_noAᵀ)
+    nzA = nonzeros(A_and_noAᵀ)
+    for j in 1:n
+        for k in nzrange(A_and_noAᵀ, j)
+            i = rvA[k]
+            A[i - n, j] = nzA[k]
+        end
+    end
     return A
 end
 
@@ -781,10 +793,10 @@ function decompress!(
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
     decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     return A
 end
