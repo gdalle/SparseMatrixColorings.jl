@@ -772,10 +772,11 @@ function decompress!(
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
     R = eltype(A)
+    fill!(A, zero(R))
     nzval = Vector{R}(undef, length(large_rowval))
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, nzval)
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
     decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     rvA = rowvals(A_and_noAᵀ)
     nzA = nonzeros(A_and_noAᵀ)
@@ -793,10 +794,10 @@ function decompress!(
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
     decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     return A
 end
