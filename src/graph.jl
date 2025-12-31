@@ -227,6 +227,7 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 struct AdjacencyGraph{T<:Integer,augmented_graph}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
+    original_size::Tuple{Int,Int}
 end
 
 Base.eltype(::AdjacencyGraph{T}) where {T} = T
@@ -235,15 +236,20 @@ function AdjacencyGraph(
     S::SparsityPatternCSC{T},
     edge_to_index::Vector{T}=build_edge_to_index(S);
     augmented_graph::Bool=false,
+    original_size::Tuple{Int,Int}=size(S),
 ) where {T}
-    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index)
+    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, original_size)
 end
 
-function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
+function AdjacencyGraph(
+    A::SparseMatrixCSC; augmented_graph::Bool=false, original_size::Tuple{Int,Int}=size(A)
+)
     return AdjacencyGraph(SparsityPatternCSC(A); augmented_graph)
 end
 
-function AdjacencyGraph(A::AbstractMatrix; augmented_graph::Bool=false)
+function AdjacencyGraph(
+    A::AbstractMatrix; augmented_graph::Bool=false, original_size::Tuple{Int,Int}=size(A)
+)
     return AdjacencyGraph(SparseMatrixCSC(A); augmented_graph)
 end
 
