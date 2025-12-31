@@ -782,7 +782,7 @@ function decompress!(
     for j in 1:n
         for k in nzrange(A_and_noAᵀ, j)
             i = rvA[k]
-            A[i-n, j] = nzA[k]
+            A[i - n, j] = nzA[k]
         end
     end
     return A
