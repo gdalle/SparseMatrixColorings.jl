@@ -776,7 +776,7 @@ function decompress!(
     R = eltype(A)
     nzval = Vector{R}(undef, length(large_rowval))
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, nzval)
-    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result)
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     rvA = rowvals(A_and_noAᵀ)
     nzA = nonzeros(A_and_noAᵀ)
     for j in 1:n
