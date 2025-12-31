@@ -534,7 +534,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -548,10 +548,8 @@ function decompress!(
 
     # Recover the diagonal coefficients of A
     if !augmented_graph(ag)
-        for i in axes(S, 1)
-            if !iszero(S[i, i])
-                A[i, i] = B[i, color[i]]
-            end
+        for i in diagonal_indices
+            A[i, i] = B[i, color[i]]
         end
     end
 
