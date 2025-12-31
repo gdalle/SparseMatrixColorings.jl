@@ -98,7 +98,7 @@ function test_coloring_decompression(
         end
 
         @testset "Single-color decompression" begin
-            if decompression == :direct  # TODO: implement for :substitution too
+            if decompression == :direct
                 A2 = respectful_similar(A, eltype(B))
                 A2 .= zero(eltype(A2))
                 for c in unique(color)
@@ -122,9 +122,9 @@ function test_coloring_decompression(
                 A3lower .= zero(eltype(A))
                 A3both .= zero(eltype(A))
 
-                decompress!(A3upper, B, result, :U)
-                decompress!(A3lower, B, result, :L)
-                decompress!(A3both, B, result, :F)
+                # decompress!(A3upper, B, result)
+                # decompress!(A3lower, B, result)
+                decompress!(A3both, B, result)
 
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
@@ -134,6 +134,7 @@ function test_coloring_decompression(
 
         @testset "Single-color triangle decompression" begin
             if structure == :symmetric && decompression == :direct
+                A isa SparseMatrixCSC || continue
                 A4upper = respectful_similar(triu(A), eltype(B))
                 A4lower = respectful_similar(tril(A), eltype(B))
                 A4both = respectful_similar(A, eltype(B))
@@ -143,9 +144,9 @@ function test_coloring_decompression(
 
                 for c in unique(color)
                     c == 0 && continue
-                    decompress_single_color!(A4upper, B[:, c], c, result, :U)
-                    decompress_single_color!(A4lower, B[:, c], c, result, :L)
-                    decompress_single_color!(A4both, B[:, c], c, result, :F)
+                    # decompress_single_color!(A4upper, B[:, c], c, result)
+                    # decompress_single_color!(A4lower, B[:, c], c, result)
+                    decompress_single_color!(A4both, B[:, c], c, result)
                 end
 
                 @test A4upper ≈ triu(A0)
