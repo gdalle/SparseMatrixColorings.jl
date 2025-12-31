@@ -534,7 +534,8 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) = result
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
+        result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
