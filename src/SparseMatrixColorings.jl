@@ -26,7 +26,9 @@ using LinearAlgebra:
     issymmetric,
     ldiv!,
     parent,
-    transpose
+    transpose,
+    tril,
+    triu
 using PrecompileTools: @compile_workload
 using Random: Random, AbstractRNG, default_rng, randperm
 using SparseArrays:

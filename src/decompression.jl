@@ -175,19 +175,32 @@ function decompress(B::AbstractMatrix, result::AbstractColoringResult)
     return decompress!(A, B, result)
 end
 
+function decompress(B::AbstractMatrix, result::AbstractColoringResult{:symmetric,:column})
+    A = respectful_similar(result.A, eltype(B))
+    if A isa SparseMatrixCSC && result.uplo != :F
+        (result.uplo == :L) && (A = tril(A))
+        (result.uplo == :U) && (A = triu(A))
+    end
+    return decompress!(A, B, result)
+end
+
 function decompress(
     Br::AbstractMatrix,
     Bc::AbstractMatrix,
     result::AbstractColoringResult{structure,:bidirectional},
 ) where {structure}
     A = respectful_similar(result.A, Base.promote_eltype(Br, Bc))
+    if A isa SparseMatrixCSC && result.symmetric_result.uplo != :F
+        (result.symmetric_result.uplo == :L) && (A = tril(A))
+        (result.symmetric_result.uplo == :U) && (A = triu(A))
+    end
     return decompress!(A, Br, Bc, result)
 end
 
 """
     decompress!(
         A::AbstractMatrix, B::AbstractMatrix,
-        result::AbstractColoringResult{_,:column/:row}, [uplo=:F]
+        result::AbstractColoringResult{_,:column/:row},
     )
 
     decompress!(
@@ -203,9 +216,6 @@ The out-of-place alternative is [`decompress`](@ref).
 
 Compression means summing either the columns or the rows of `A` which share the same color.
 It is done by calling [`compress`](@ref).
-
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
-When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
 
 !!! warning
     For some coloring variants, the `result` object is mutated during decompression.
@@ -260,7 +270,7 @@ function decompress! end
 """
     decompress_single_color!(
         A::AbstractMatrix, b::AbstractVector, c::Integer,
-        result::AbstractColoringResult, [uplo=:F]
+        result::AbstractColoringResult,
     )
 
 Decompress the vector `b` corresponding to color `c` in-place into `A`, given a `:direct` coloring `result` of the sparsity pattern of `A` (it will not work with a `:substitution` coloring).
@@ -271,9 +281,6 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
 
 !!! warning
     This function will only update some coefficients of `A`, without resetting the rest to zero.
-
-For `:symmetric` coloring results (and for those only), an optional positional argument `uplo in (:U, :L, :F)` can be passed to specify which part of the matrix `A` should be updated: the Upper triangle, the Lower triangle, or the Full matrix.
-When `A isa SparseMatrixCSC`, using the `uplo` argument requires a target matrix which only stores the relevant triangle(s).
 
 !!! warning
     For some coloring variants, the `result` object is mutated during decompression.
@@ -445,20 +452,20 @@ end
 
 ## StarSetColoringResult
 
-function decompress!(
-    A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
-)
-    (; ag, compressed_indices) = result
+function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult)
+    (; ag, compressed_indices, uplo) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     fill!(A, zero(eltype(A)))
 
-    rvS = rowvals(S)
+    l = 0
+    rvS = rowvals(A)
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
             if in_triangle(i, j, uplo)
-                A[i, j] = B[compressed_indices[k]]
+                l += 1
+                A[i, j] = B[compressed_indices[l]]
             end
         end
     end
@@ -466,76 +473,45 @@ function decompress!(
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix,
-    b::AbstractVector,
-    c::Integer,
-    result::StarSetColoringResult,
-    uplo::Symbol=:F,
+    A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::StarSetColoringResult
 )
-    (; ag, compressed_indices, group) = result
+    (; ag, compressed_indices, group, uplo) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
 
     lower_index = (c - 1) * S.n + 1
     upper_index = c * S.n
-    rvS = rowvals(S)
+    rvA = rowvals(A)
+    nzA = nonzeros(A)
     for j in group[c]
-        for k in nzrange(S, j)
-            # Check if the color c is used to recover A[i,j] / A[j,i]
+        for k in nzrange(A, j)
+            # Check if the color c is used to recover A[i,j]
             if lower_index <= compressed_indices[k] <= upper_index
-                i = rvS[k]
-                if i == j
-                    # Recover the diagonal coefficients of A
-                    A[i, i] = b[i]
-                else
-                    # Recover the off-diagonal coefficients of A
-                    if in_triangle(i, j, uplo)
-                        A[i, j] = b[i]
-                    end
-                    if in_triangle(j, i, uplo)
-                        A[j, i] = b[i]
-                    end
-                end
+                i = rvA[k]
+                nzA[k] = b[i]
             end
         end
     end
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
-)
-    (; ag, compressed_indices) = result
+function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult)
+    (; ag, compressed_indices, uplo) = result
     (; S) = ag
     nzA = nonzeros(A)
-    if uplo == :F
-        check_same_pattern(A, S)
-        for k in eachindex(nzA, compressed_indices)
-            nzA[k] = B[compressed_indices[k]]
-        end
-    else
-        rvS = rowvals(S)
-        l = 0  # assume A has the same pattern as the triangle
-        for j in axes(S, 2)
-            for k in nzrange(S, j)
-                i = rvS[k]
-                if in_triangle(i, j, uplo)
-                    l += 1
-                    nzA[l] = B[compressed_indices[k]]
-                end
-            end
-        end
+    uplo == :F && check_same_pattern(A, S)
+    for k in eachindex(nzA, compressed_indices)
+        nzA[k] = B[compressed_indices[k]]
     end
     return A
 end
 
 ## TreeSetColoringResult
 
-function decompress!(
-    A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
-)
-    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
-        result
+function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult)
+    (;
+        ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer, uplo
+    ) = result
     (; S) = ag
     uplo == :F && check_same_pattern(A, S)
     R = eltype(A)
@@ -586,10 +562,7 @@ function decompress!(
 end
 
 function decompress!(
-    A::SparseMatrixCSC{R},
-    B::AbstractMatrix{R},
-    result::TreeSetColoringResult,
-    uplo::Symbol=:F,
+    A::SparseMatrixCSC{R}, B::AbstractMatrix{R}, result::TreeSetColoringResult
 ) where {R<:Real}
     (;
         ag,
@@ -602,6 +575,7 @@ function decompress!(
         lower_triangle_offsets,
         upper_triangle_offsets,
         buffer,
+        uplo,
     ) = result
     (; S) = ag
     A_colptr = A.colptr
@@ -702,12 +676,10 @@ end
 ## MatrixInverseColoringResult
 
 function decompress!(
-    A::AbstractMatrix,
-    B::AbstractMatrix,
-    result::LinearSystemColoringResult,
-    uplo::Symbol=:F,
+    A::AbstractMatrix, B::AbstractMatrix, result::LinearSystemColoringResult
 )
-    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
+    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A, uplo) =
+        result
     S = result.ag.S
     uplo == :F && check_same_pattern(A, S)
 
@@ -776,7 +748,7 @@ function decompress!(
     nzval = Vector{R}(undef, length(large_rowval))
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, nzval)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
-    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result)
     rvA = rowvals(A_and_noAᵀ)
     nzA = nonzeros(A_and_noAᵀ)
     for j in 1:n
@@ -797,6 +769,6 @@ function decompress!(
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
     Br_and_Bc = _join_compressed!(result, Br, Bc)
-    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result)
     return A
 end

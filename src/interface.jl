@@ -69,13 +69,14 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors)
-    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct)
+    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression_uplo=:F)
+    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct, decompression_uplo=:F)
 
 - `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices. This option does not affect row or column colorings.
 - `postprocessing_minimizes::Symbol`: which number of distinct colors is heuristically minimized by postprocessing, either `:all_colors`, `:row_colors` or `:column_colors`. This option only affects bidirectional colorings.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
+- `decompression_uplo::Symbol`: either `:L` (lower triangle), `:U` (upper triangle), or `:F` (full matrix). This option only affects symmetric colorings.
 
 !!! warning
     The second constructor (based on keyword arguments) is type-unstable.
@@ -100,11 +101,13 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
     orders::O
     postprocessing::Bool
     postprocessing_minimizes::Symbol
+    decompression_uplo::Symbol
 
     function GreedyColoringAlgorithm{decompression}(
         order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
         postprocessing::Bool=false,
         postprocessing_minimizes::Symbol=:all_colors,
+        decompression_uplo::Symbol=:F,
     ) where {decompression}
         check_valid_algorithm(decompression)
         if order_or_orders isa AbstractOrder
@@ -113,7 +116,7 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
             orders = order_or_orders
         end
         return new{decompression,length(orders),typeof(orders)}(
-            orders, postprocessing, postprocessing_minimizes
+            orders, postprocessing, postprocessing_minimizes, decompression_uplo
         )
     end
 end
@@ -121,11 +124,12 @@ end
 function GreedyColoringAlgorithm(
     order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
     postprocessing::Bool=false,
-    decompression::Symbol=:direct,
     postprocessing_minimizes::Symbol=:all_colors,
+    decompression::Symbol=:direct,
+    decompression_uplo::Symbol=:F,
 )
     return GreedyColoringAlgorithm{decompression}(
-        order_or_orders; postprocessing, postprocessing_minimizes
+        order_or_orders; postprocessing, postprocessing_minimizes, decompression_uplo
     )
 end
 
@@ -294,7 +298,7 @@ function _coloring(
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set)
+        return StarSetColoringResult(A, ag, color, star_set, algo.decompression_uplo)
     else
         return color
     end
@@ -315,7 +319,7 @@ function _coloring(
     end
     color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, R)
+        return TreeSetColoringResult(A, ag, color, tree_set, algo.decompression_uplo, R)
     else
         return color
     end
@@ -360,7 +364,7 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
+        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set, :L)
         return BicoloringResult(
             A,
             ag,
@@ -410,7 +414,7 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
+        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, :L, R)
         return BicoloringResult(
             A,
             ag,

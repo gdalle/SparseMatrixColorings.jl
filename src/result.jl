@@ -309,6 +309,7 @@ struct StarSetColoringResult{
     color::CT
     group::GT
     compressed_indices::VT
+    uplo::Symbol
     additional_info::A
 end
 
@@ -317,43 +318,69 @@ function StarSetColoringResult(
     ag::AdjacencyGraph{T},
     color::Vector{<:Integer},
     star_set::StarSet{<:Integer},
+    decompression_uplo::Symbol,
 ) where {T<:Integer}
     group = group_by_color(T, color)
-    compressed_indices = star_csc_indices(ag, color, star_set)
-    return StarSetColoringResult(A, ag, color, group, compressed_indices, nothing)
+    compressed_indices = star_csc_indices(ag, color, star_set, decompression_uplo)
+    return StarSetColoringResult(
+        A, ag, color, group, compressed_indices, decompression_uplo, nothing
+    )
 end
 
 function star_csc_indices(
-    ag::AdjacencyGraph{T}, color::Vector{<:Integer}, star_set
+    ag::AdjacencyGraph{T},
+    color::Vector{<:Integer},
+    star_set::StarSet{<:Integer},
+    uplo::Symbol,
 ) where {T}
     (; star, hub) = star_set
     S = pattern(ag)
     edge_to_index = edge_indices(ag)
     n = S.n
     rvS = rowvals(S)
-    compressed_indices = zeros(T, nnz(S))  # needs to be independent from the storage in the graph, in case the graph gets reused
+    l = 0
+    nnzS = nnz(S)
+    if uplo != :F
+        ndiag = 0
+        if !augmented_graph(ag)
+            for j in axes(S, 2)
+                for k in nzrange(S, j)
+                    i = rvS[k]
+                    if i == j
+                        ndiag += 1
+                    end
+                end
+            end
+        end
+        nnzS = (nnzS - ndiag) ÷ 2 + ndiag
+    end
+    compressed_indices = zeros(T, nnzS)
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
             if i == j
                 # diagonal coefficients
+                l += 1
                 c = color[i]
-                compressed_indices[k] = (c - 1) * n + i
+                compressed_indices[l] = (c - 1) * n + i
             else
-                # off-diagonal coefficients
-                index_ij = edge_to_index[k]
-                s = star[index_ij]
-                h = abs(hub[s])
+                if in_triangle(i, j, uplo)
+                    # off-diagonal coefficients
+                    l += 1
+                    index_ij = edge_to_index[k]
+                    s = star[index_ij]
+                    h = abs(hub[s])
 
-                # Assign the non-hub vertex (spoke) to the correct position in spokes
-                if i == h
-                    # i is the hub and j is the spoke
-                    c = color[i]
-                    compressed_indices[k] = (c - 1) * n + j
-                else  # j == h
-                    # j is the hub and i is the spoke
-                    c = color[j]
-                    compressed_indices[k] = (c - 1) * n + i
+                    # Assign the non-hub vertex (spoke) to the correct position in spokes
+                    if i == h
+                        # i is the hub and j is the spoke
+                        c = color[i]
+                        compressed_indices[l] = (c - 1) * n + j
+                    else  # j == h
+                        # j is the hub and i is the spoke
+                        c = color[j]
+                        compressed_indices[l] = (c - 1) * n + i
+                    end
                 end
             end
         end
@@ -391,6 +418,7 @@ struct TreeSetColoringResult{
     lower_triangle_offsets::Vector{T}
     upper_triangle_offsets::Vector{T}
     buffer::Vector{R}
+    uplo::Symbol
 end
 
 function TreeSetColoringResult(
@@ -398,27 +426,42 @@ function TreeSetColoringResult(
     ag::AdjacencyGraph{T},
     color::Vector{<:Integer},
     tree_set::TreeSet{<:Integer},
+    decompression_uplo::Symbol,
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
     (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
     (; S) = ag
     nvertices = length(color)
     group = group_by_color(T, color)
-    rv = rowvals(S)
+    rvS = rowvals(S)
 
-    # Vector for the decompression of the diagonal coefficients
-    diagonal_indices = T[]
-    diagonal_nzind = T[]
     ndiag = 0
-
     if !augmented_graph(ag)
         for j in axes(S, 2)
             for k in nzrange(S, j)
-                i = rv[k]
+                i = rvS[k]
                 if i == j
-                    push!(diagonal_indices, i)
-                    push!(diagonal_nzind, k)
                     ndiag += 1
+                end
+            end
+        end
+    end
+
+    # Vector for the decompression of the diagonal coefficients
+    diagonal_indices = Vector{T}(undef, ndiag)
+    diagonal_nzind = decompression_uplo == :F ? Vector{T}(undef, ndiag) : T[]
+
+    if !augmented_graph(ag)
+        l = 0
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                if i == j
+                    l += 1
+                    diagonal_indices[l] = i
+                    if decompression_uplo == :F
+                        diagonal_nzind[l] = k
+                    end
                 end
             end
         end
@@ -426,8 +469,8 @@ function TreeSetColoringResult(
 
     # Vectors for the decompression of the off-diagonal coefficients
     nedges = (nnz(S) - ndiag) ÷ 2
-    lower_triangle_offsets = Vector{T}(undef, nedges)
-    upper_triangle_offsets = Vector{T}(undef, nedges)
+    lower_triangle_offsets = decompression_uplo == :U ? T[] : Vector{T}(undef, nedges)
+    upper_triangle_offsets = decompression_uplo == :L ? T[] : Vector{T}(undef, nedges)
 
     # Index in lower_triangle_offsets and upper_triangle_offsets
     index_offsets = 0
@@ -442,8 +485,8 @@ function TreeSetColoringResult(
             # Update lower_triangle_offsets and upper_triangle_offsets
             i = leaf
             j = neighbor
-            col_i = view(rv, nzrange(S, i))
-            col_j = view(rv, nzrange(S, j))
+            col_i = view(rvS, nzrange(S, i))
+            col_j = view(rvS, nzrange(S, j))
             index_offsets += 1
 
             #! format: off
@@ -451,21 +494,29 @@ function TreeSetColoringResult(
             if in_triangle(i, j, :L)
                 # uplo = :L or uplo = :F
                 # S[i,j] is stored at index_ij = (S.colptr[j+1] - offset_L) in S.nzval
-                lower_triangle_offsets[index_offsets] = length(col_j) - searchsortedfirst(col_j, i) + 1
+                if decompression_uplo != :U
+                    lower_triangle_offsets[index_offsets] = length(col_j) - searchsortedfirst(col_j, i) + 1
+                end
 
                 # uplo = :U or uplo = :F
                 # S[j,i] is stored at index_ji = (S.colptr[i] + offset_U) in S.nzval
-                upper_triangle_offsets[index_offsets] = searchsortedfirst(col_i, j)::Int - 1
+                if decompression_uplo != :L
+                    upper_triangle_offsets[index_offsets] = searchsortedfirst(col_i, j)::Int - 1
+                end
 
             # S[i,j] is in the upper triangular part of S
             else
                 # uplo = :U or uplo = :F
                 # S[i,j] is stored at index_ij = (S.colptr[j] + offset_U) in S.nzval
-                upper_triangle_offsets[index_offsets] = searchsortedfirst(col_j, i)::Int - 1
+                if decompression_uplo != :L
+                    upper_triangle_offsets[index_offsets] = searchsortedfirst(col_j, i)::Int - 1
+                end
 
                 # uplo = :L or uplo = :F
                 # S[j,i] is stored at index_ji = (S.colptr[i+1] - offset_L) in S.nzval
-                lower_triangle_offsets[index_offsets] = length(col_i) - searchsortedfirst(col_i, j) + 1
+                if decompression_uplo != :U
+                    lower_triangle_offsets[index_offsets] = length(col_i) - searchsortedfirst(col_i, j) + 1
+                end
             end
             #! format: on
         end
@@ -488,6 +539,7 @@ function TreeSetColoringResult(
         lower_triangle_offsets,
         upper_triangle_offsets,
         buffer,
+        decompression_uplo,
     )
 end
 
@@ -518,12 +570,14 @@ struct LinearSystemColoringResult{
     strict_upper_nonzero_inds::Vector{Tuple{T,T}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
     M_factorization::F  # TODO: adjust type
+    uplo::Symbol
 end
 
 function LinearSystemColoringResult(
     A::AbstractMatrix,
     ag::AdjacencyGraph{T},
     color::Vector{<:Integer},
+    decompression_uplo::Symbol,
     decompression_eltype::Type{R},
 ) where {T<:Integer,R<:Real}
     group = group_by_color(T, color)
@@ -569,6 +623,7 @@ function LinearSystemColoringResult(
         strict_upper_nonzero_inds,
         strict_upper_nonzeros_A,
         M_factorization,
+        decompression_uplo,
     )
 end
 
