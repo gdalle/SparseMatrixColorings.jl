@@ -47,8 +47,8 @@ function SMC.StarSetColoringResult(
     A::CuSparseMatrixCSC,
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
-    star_set::SMC.StarSet{<:Integer};
-    decompression_uplo::Symbol=:F,
+    star_set::SMC.StarSet{<:Integer},
+    decompression_uplo::Symbol,
 ) where {T<:Integer}
     @assert decompression_uplo == :F
     group = SMC.group_by_color(T, color)
@@ -87,8 +87,8 @@ function SMC.StarSetColoringResult(
     A::CuSparseMatrixCSR,
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
-    star_set::SMC.StarSet{<:Integer};
-    decompression_uplo::Symbol=:F,
+    star_set::SMC.StarSet{<:Integer},
+    decompression_uplo::Symbol,
 ) where {T<:Integer}
     @assert decompression_uplo == :F
     group = SMC.group_by_color(T, color)
