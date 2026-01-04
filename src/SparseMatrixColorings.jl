@@ -73,4 +73,5 @@ export column_groups, row_groups
 export sparsity_pattern
 export compress, decompress, decompress!, decompress_single_color!
 
+
 end
