@@ -454,12 +454,18 @@ function decompress!(
     check_compatible_pattern(A, ag, uplo)
     fill!(A, zero(eltype(A)))
 
+    l = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
             if in_triangle(i, j, uplo)
-                A[i, j] = B[compressed_indices[k]]
+                if result.decompression_uplo == :F
+                    A[i, j] = B[compressed_indices[k]]
+                else
+                    l += 1
+                    A[i, j] = B[compressed_indices[l]]
+                end
             end
         end
     end
@@ -525,6 +531,44 @@ function decompress!(
                 if in_triangle(i, j, uplo)
                     l += 1
                     nzA[l] = B[compressed_indices[k]]
+                end
+            end
+        end
+    end
+    return A
+end
+
+function decompress_single_color!(
+    A::SparseMatrixCSC,
+    b::AbstractVector,
+    c::Integer,
+    result::StarSetColoringResult,
+    uplo::Symbol=:F,
+)
+    (; ag, compressed_indices) = result
+    (; S) = ag
+    lower_index = (c - 1) * S.n + 1
+    upper_index = c * S.n
+    nzA = nonzeros(A)
+    if result.decompression_uplo == uplo
+        uplo == :F && check_same_pattern(A, S)
+        for k in eachindex(nzA, compressed_indices)
+            if lower_index <= compressed_indices[k] <= upper_index
+                nzA[k] = b[compressed_indices[k] - lower_index + 1]
+            end
+        end
+    else
+        @assert result.decompression_uplo == :F
+        rvS = rowvals(S)
+        l = 0  # assume A has the same pattern as the triangle
+        for j in axes(S, 2)
+            for k in nzrange(S, j)
+                i = rvS[k]
+                if in_triangle(i, j, uplo)
+                    l += 1
+                    if lower_index <= compressed_indices[k] <= upper_index
+                        nzA[l] = b[i]
+                    end
                 end
             end
         end
