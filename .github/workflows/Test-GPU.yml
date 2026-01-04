@@ -24,7 +24,7 @@ jobs:
       JULIA_SMC_TEST_GROUP: 'GPU'
     strategy:
       matrix:
-        julia-version: ['1.10', '1.11']
+        julia-version: ['lts', '1']
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
@@ -32,7 +32,7 @@ jobs:
           version: ${{ matrix.julia-version }}
           arch: x64
       - uses: julia-actions/julia-downgrade-compat@v2
-        if: ${{ matrix.version == '1.10' }}
+        if: ${{ matrix.version == 'lts' }}
         with:
           skip: LinearAlgebra, Random, SparseArrays
       - uses: julia-actions/cache@v2
