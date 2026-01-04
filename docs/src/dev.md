@@ -58,7 +58,7 @@ SparseMatrixColorings.valid_dynamic_order
 ```@docs
 SparseMatrixColorings.respectful_similar
 SparseMatrixColorings.matrix_versions
-SparseMatrixColorings.same_pattern
+SparseMatrixColorings.compatible_pattern
 ```
 
 ## Visualization

@@ -323,7 +323,7 @@ function _coloring(
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; augmented_graph=true)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index, 0; augmented_graph=true)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _star_set = star_coloring(
@@ -370,7 +370,7 @@ function _coloring(
     symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; augmented_graph=true)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index, 0; augmented_graph=true)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)

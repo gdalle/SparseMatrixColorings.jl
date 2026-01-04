@@ -62,24 +62,59 @@ function respectful_similar(A::Union{Symmetric,Hermitian}, ::Type{T}) where {T}
 end
 
 """
-    same_pattern(A, B)
+    compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph)
+    compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
 
-Perform a partial equality check on the sparsity patterns of `A` and `B`:
+Perform a coarse compatibility check between the sparsity pattern of `A`
+and the reference sparsity pattern encoded in a graph structure.
 
-- if the return is `true`, they might have the same sparsity pattern but we're not sure
-- if the return is `false`, they definitely don't have the same sparsity pattern
+This function only checks necessary conditions for the two sparsity patterns to match.
+In particular, it may return `true` even if the patterns are not identical.
+
+When A is a `SparseMatrixCSC`, additional checks on the sparsity structure are performed.
+
+# Return value
+- `true`  : the sparsity patterns are potentially compatible
+- `false` : the sparsity patterns are definitely incompatible
 """
-same_pattern(A, B) = size(A) == size(B)
-
-function same_pattern(
-    A::Union{SparseMatrixCSC,SparsityPatternCSC},
-    B::Union{SparseMatrixCSC,SparsityPatternCSC},
-)
-    return size(A) == size(B) && nnz(A) == nnz(B)
+compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph) = size(A) == size(bg.S2)
+function compatible_pattern(A::SparseMatrixCSC, bg::BipartiteGraph)
+    size(A) == size(bg.S2) && nnz(A) == nnz(bg.S2)
 end
 
-function check_same_pattern(A, S)
-    if !same_pattern(A, S)
-        throw(DimensionMismatch("`A` and `S` must have the same sparsity pattern."))
+function compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
+    size(A) == size(ag.S)
+end
+function compatible_pattern(A::SparseMatrixCSC, ag::AdjacencyGraph, uplo::Symbol)
+    if uplo == :L || uplo == :U
+        return size(A) == size(ag.S) && nnz(A) == (nb_edges(ag) + ag.nb_self_loops)
+    else
+        return size(A) == size(ag.S) && nnz(A) == nnz(ag.S)
+    end
+end
+
+function check_compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph)
+    if !compatible_pattern(A, bg)
+        throw(DimensionMismatch("`A` and `bg.S2` must have the same sparsity pattern."))
+    end
+end
+
+function check_compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
+    if !compatible_pattern(A, ag, uplo)
+        if uplo == :L
+            throw(
+                DimensionMismatch(
+                    "`A` and `tril(ag.S)` must have the same sparsity pattern."
+                ),
+            )
+        elseif uplo == :U
+            throw(
+                DimensionMismatch(
+                    "`A` and `triu(ag.S)` must have the same sparsity pattern."
+                ),
+            )
+        else  # uplo == :F
+            throw(DimensionMismatch("`A` and `ag.S` must have the same sparsity pattern."))
+        end
     end
 end
