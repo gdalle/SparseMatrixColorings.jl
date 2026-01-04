@@ -79,15 +79,16 @@ When A is a `SparseMatrixCSC`, additional checks on the sparsity structure are p
 """
 compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph) = size(A) == size(bg.S2)
 function compatible_pattern(A::SparseMatrixCSC, bg::BipartiteGraph)
-    size(A) == size(bg.S2) && nnz(A) == nnz(bg.S2)
+    return size(A) == size(bg.S2) && nnz(A) == nnz(bg.S2)
 end
 
 function compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
-    size(A) == size(ag.S)
+    return size(A) == size(ag.S)
 end
+
 function compatible_pattern(A::SparseMatrixCSC, ag::AdjacencyGraph, uplo::Symbol)
     nnzS = (uplo == :L || uplo == :U) ? (nb_edges(ag) + ag.nb_self_loops) : nnz(ag.S)
-    size(A) == size(ag.S) && nnz(A) == nnzS
+    return size(A) == size(ag.S) && nnz(A) == nnzS
 end
 
 function check_compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph)
