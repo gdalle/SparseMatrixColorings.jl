@@ -401,31 +401,31 @@ function TreeSetColoringResult(
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
     (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
-    (; S) = ag
+    (; S, nb_self_loops) = ag
     nvertices = length(color)
     group = group_by_color(T, color)
     rv = rowvals(S)
 
     # Vector for the decompression of the diagonal coefficients
-    diagonal_indices = T[]
-    diagonal_nzind = T[]
-    ndiag = 0
+    diagonal_indices = Vector{T}(undef, nb_self_loops)
+    diagonal_nzind = Vector{T}(undef, nb_self_loops)
 
     if !augmented_graph(ag)
+        l = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rv[k]
                 if i == j
-                    push!(diagonal_indices, i)
-                    push!(diagonal_nzind, k)
-                    ndiag += 1
+                    l += 1
+                    diagonal_indices[l] = i
+                    diagonal_nzind[l] = k
                 end
             end
         end
     end
 
     # Vectors for the decompression of the off-diagonal coefficients
-    nedges = (nnz(S) - ndiag) ÷ 2
+    nedges = nb_edges(ag)
     lower_triangle_offsets = Vector{T}(undef, nedges)
     upper_triangle_offsets = Vector{T}(undef, nedges)
 

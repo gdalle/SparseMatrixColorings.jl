@@ -179,6 +179,7 @@ function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
     # edge_to_index gives an index for each edge
     edge_to_index = Vector{T}(undef, nnz(S))
     offsets = zeros(T, S.n)
+    nb_self_loops = 0
     counter = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -193,10 +194,11 @@ function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
             elseif i == j
                 # this should never be used, make sure it errors
                 edge_to_index[k] = 0
+                nb_self_loops += 1
             end
         end
     end
-    return edge_to_index
+    return edge_to_index, nb_self_loops
 end
 
 ## Adjacency graph
@@ -227,16 +229,23 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 struct AdjacencyGraph{T<:Integer,augmented_graph}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
+    nb_self_loops::Int
 end
 
 Base.eltype(::AdjacencyGraph{T}) where {T} = T
 
 function AdjacencyGraph(
     S::SparsityPatternCSC{T},
-    edge_to_index::Vector{T}=build_edge_to_index(S);
+    edge_to_index::Vector{T},
+    nb_self_loops::Int;
     augmented_graph::Bool=false,
 ) where {T}
-    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index)
+    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, nb_self_loops)
+end
+
+function AdjacencyGraph(S::SparsityPatternCSC; augmented_graph::Bool=false)
+    edge_to_index, nb_self_loops = build_edge_to_index(S)
+    return AdjacencyGraph(S, edge_to_index, nb_self_loops; augmented_graph)
 end
 
 function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
@@ -275,15 +284,7 @@ function degree(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     return g.S.colptr[v + 1] - g.S.colptr[v] - has_selfloop
 end
 
-nb_edges(g::AdjacencyGraph{T,true}) where {T} = nnz(g.S) ÷ 2
-
-function nb_edges(g::AdjacencyGraph{T,false}) where {T}
-    ne = 0
-    for v in vertices(g)
-        ne += degree(g, v)
-    end
-    return ne ÷ 2
-end
+nb_edges(g::AdjacencyGraph) = (nnz(g.S) - g.nb_self_loops) ÷ 2
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))

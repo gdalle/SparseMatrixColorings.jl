@@ -1,7 +1,12 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings:
-    check_same_pattern, matrix_versions, respectful_similar, same_pattern
+    BipartiteGraph,
+    AdjacencyGraph,
+    matrix_versions,
+    respectful_similar,
+    compatible_pattern,
+    check_compatible_pattern
 using StableRNGs
 using Test
 
@@ -33,7 +38,7 @@ same_view(::Adjoint, ::Adjoint) = true
     end
 end
 
-@testset "Sparsity pattern" begin
+@testset "Compatible sparsity pattern -- BipartiteGraph" begin
     S = sparse([
         0 1 1
         0 1 0
@@ -44,9 +49,33 @@ end
     A2 = copy(S)
     A2[1, 1] = 1
 
-    @test same_pattern(A1, S)
-    @test !same_pattern(A2, S)
-    @test same_pattern(Matrix(A2), S)
+    bg1 = BipartiteGraph(A1)
+    bg2 = BipartiteGraph(A2)
+    @test compatible_pattern(S, bg1)
+    @test !compatible_pattern(S, bg2)
+    @test compatible_pattern(Matrix(S), bg1)
 
-    @test_throws DimensionMismatch check_same_pattern(A2, S)
+    @test_throws DimensionMismatch check_compatible_pattern(S, bg2)
+end
+
+@testset "Compatible sparsity pattern -- AdjacencyGraph" begin
+    S = sparse([
+        1 0 1
+        0 1 1
+        1 1 0
+    ])
+
+    A1 = copy(S)
+    A2 = copy(S)
+    A2[3, 3] = 1
+
+    ag1 = AdjacencyGraph(A1)
+    ag2 = AdjacencyGraph(A2)
+    for (op, uplo) in ((tril, :L), (triu, :U), (identity, :F))
+        @test compatible_pattern(op(S), ag1, uplo)
+        @test !compatible_pattern(op(S), ag2, uplo)
+        @test compatible_pattern(Matrix(op(S)), ag1, uplo)
+
+        @test_throws DimensionMismatch check_compatible_pattern(op(S), ag2, uplo)
+    end
 end
