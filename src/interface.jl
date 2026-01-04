@@ -286,7 +286,7 @@ function _coloring(
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set)
+        return StarSetColoringResult(A, ag, color, star_set, :F)
     else
         return color
     end
@@ -307,7 +307,7 @@ function _coloring(
     end
     color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, R)
+        return TreeSetColoringResult(A, ag, color, tree_set, R, :F)
     else
         return color
     end
@@ -345,7 +345,7 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
+        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set, :L)
         return BicoloringResult(
             A,
             ag,
@@ -390,7 +390,7 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
+        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R, :L)
         return BicoloringResult(
             A,
             ag,

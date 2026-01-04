@@ -47,13 +47,15 @@ function SMC.StarSetColoringResult(
     A::CuSparseMatrixCSC,
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
-    star_set::SMC.StarSet{<:Integer},
+    star_set::SMC.StarSet{<:Integer};
+    decompression_uplo::Symbol=:F,
 ) where {T<:Integer}
+    @assert decompression_uplo == :F
     group = SMC.group_by_color(T, color)
-    compressed_indices = SMC.star_csc_indices(ag, color, star_set)
+    compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
     additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A, ag, color, group, compressed_indices, decompression_uplo, additional_info
     )
 end
 
@@ -85,13 +87,15 @@ function SMC.StarSetColoringResult(
     A::CuSparseMatrixCSR,
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
-    star_set::SMC.StarSet{<:Integer},
+    star_set::SMC.StarSet{<:Integer};
+    decompression_uplo::Symbol=:F,
 ) where {T<:Integer}
+    @assert decompression_uplo == :F
     group = SMC.group_by_color(T, color)
-    compressed_indices = SMC.star_csc_indices(ag, color, star_set)
+    compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
     additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A, ag, color, group, compressed_indices, decompression_uplo, additional_info
     )
 end
 
