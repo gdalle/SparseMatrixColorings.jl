@@ -190,10 +190,11 @@ function coloring(
     A::AbstractMatrix,
     problem::ColoringProblem,
     algo::GreedyColoringAlgorithm;
-    decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
+    decompression_eltype::Type{R}=Float64,
+    decompression_uplo::Symbol=:F,
 ) where {R}
-    return _coloring(WithResult(), A, problem, algo, R, symmetric_pattern)
+    return _coloring(WithResult(), A, problem, algo, symmetric_pattern, R, decompression_uplo)
 end
 
 """
@@ -229,8 +230,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:column},
     algo::GreedyColoringAlgorithm,
+    symmetric_pattern::Bool,
     decompression_eltype::Type,
-    symmetric_pattern::Bool;
+    decompression_uplo::Symbol;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
@@ -252,8 +254,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:row},
     algo::GreedyColoringAlgorithm,
+    symmetric_pattern::Bool,
     decompression_eltype::Type,
-    symmetric_pattern::Bool;
+    decompression_uplo::Symbol;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
@@ -275,8 +278,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct},
+    symmetric_pattern::Bool,
     decompression_eltype::Type,
-    symmetric_pattern::Bool;
+    decompression_uplo::Symbol;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
     ag = AdjacencyGraph(A; augmented_graph=false)
@@ -286,7 +290,7 @@ function _coloring(
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set)
+        return StarSetColoringResult(A, ag, color, star_set; decompression_uplo)
     else
         return color
     end
@@ -297,8 +301,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution},
-    decompression_eltype::Type{R},
     symmetric_pattern::Bool,
+    decompression_eltype::Type{R},
+    decompression_uplo::Symbol,
 ) where {R}
     ag = AdjacencyGraph(A; augmented_graph=false)
     color_and_tree_set_by_order = map(algo.orders) do order
@@ -307,7 +312,7 @@ function _coloring(
     end
     color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, R)
+        return TreeSetColoringResult(A, ag, color, tree_set, R; decompression_uplo)
     else
         return color
     end
@@ -318,8 +323,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
+    symmetric_pattern::Bool,
     decompression_eltype::Type{R},
-    symmetric_pattern::Bool;
+    decompression_uplo::Symbol;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
@@ -345,7 +351,9 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
+        symmetric_result = StarSetColoringResult(
+            A_and_Aᵀ, ag, color, star_set; decompression_uplo=:L
+        )
         return BicoloringResult(
             A,
             ag,
@@ -366,8 +374,9 @@ function _coloring(
     A::AbstractMatrix,
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:substitution},
-    decompression_eltype::Type{R},
     symmetric_pattern::Bool,
+    decompression_eltype::Type{R},
+    decompression_uplo::Symbol,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index, 0; augmented_graph=true)
@@ -390,7 +399,9 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
+        symmetric_result = TreeSetColoringResult(
+            A_and_Aᵀ, ag, color, tree_set, R; decompression_uplo=:L
+        )
         return BicoloringResult(
             A,
             ag,
