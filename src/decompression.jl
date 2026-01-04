@@ -448,6 +448,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
 )
+    @assert result.decompression_uplo == :F
     (; ag, compressed_indices) = result
     (; S) = ag
     check_compatible_pattern(A, ag, uplo)
@@ -472,6 +473,7 @@ function decompress_single_color!(
     result::StarSetColoringResult,
     uplo::Symbol=:F,
 )
+    @assert result.decompression_uplo == :F
     (; ag, compressed_indices, group) = result
     (; S) = ag
     check_compatible_pattern(A, ag, uplo)
@@ -509,11 +511,12 @@ function decompress!(
     (; S) = ag
     nzA = nonzeros(A)
     check_compatible_pattern(A, ag, uplo)
-    if uplo == :F
+    if result.decompression_uplo == uplo
         for k in eachindex(nzA, compressed_indices)
             nzA[k] = B[compressed_indices[k]]
         end
     else
+        @assert result.decompression_uplo == :F
         rvS = rowvals(S)
         l = 0  # assume A has the same pattern as the triangle
         for j in axes(S, 2)
@@ -534,6 +537,7 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
+    @assert result.decompression_uplo == :F
     (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
         result
     (; S) = ag
