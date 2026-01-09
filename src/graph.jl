@@ -230,6 +230,7 @@ struct AdjacencyGraph{T<:Integer,augmented_graph}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
     nb_self_loops::Int
+    original_size::Tuple{Int,Int}
 end
 
 Base.eltype(::AdjacencyGraph{T}) where {T} = T
@@ -239,21 +240,30 @@ function AdjacencyGraph(
     edge_to_index::Vector{T},
     nb_self_loops::Int;
     augmented_graph::Bool=false,
+    original_size::Tuple{Int,Int}=size(S),
 ) where {T}
-    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, nb_self_loops)
+    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, nb_self_loops, original_size)
 end
 
-function AdjacencyGraph(S::SparsityPatternCSC; augmented_graph::Bool=false)
+function AdjacencyGraph(
+    S::SparsityPatternCSC;
+    augmented_graph::Bool=false,
+    original_size::Tuple{Int,Int}=size(S),
+)
     edge_to_index, nb_self_loops = build_edge_to_index(S)
-    return AdjacencyGraph(S, edge_to_index, nb_self_loops; augmented_graph)
+    return AdjacencyGraph(S, edge_to_index, nb_self_loops; augmented_graph, original_size)
 end
 
-function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
-    return AdjacencyGraph(SparsityPatternCSC(A); augmented_graph)
+function AdjacencyGraph(
+    A::SparseMatrixCSC; augmented_graph::Bool=false, original_size::Tuple{Int,Int}=size(A)
+)
+    return AdjacencyGraph(SparsityPatternCSC(A); augmented_graph, original_size)
 end
 
-function AdjacencyGraph(A::AbstractMatrix; augmented_graph::Bool=false)
-    return AdjacencyGraph(SparseMatrixCSC(A); augmented_graph)
+function AdjacencyGraph(
+    A::AbstractMatrix; augmented_graph::Bool=false, original_size::Tuple{Int,Int}=size(A)
+)
+    return AdjacencyGraph(SparseMatrixCSC(A); augmented_graph, original_size)
 end
 
 pattern(g::AdjacencyGraph) = g.S

@@ -240,11 +240,12 @@ function test_bicoloring_decompression(
     @testset "More orders is better" begin
         more_orders = (algo.orders..., _ALL_ORDERS...)
         better_algo = GreedyColoringAlgorithm{decompression}(
-            more_orders; algo.postprocessing
+            more_orders; algo.postprocessing, algo.postprocessing_minimizes
         )
         all_algos = [
-            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
-            order in more_orders
+            GreedyColoringAlgorithm{decompression}(
+                order; algo.postprocessing, algo.postprocessing_minimizes
+            ) for order in more_orders
         ]
         result = coloring(A0, problem, algo)
         better_result = coloring(A0, problem, better_algo)
@@ -267,10 +268,6 @@ function test_structured_coloring_decompression(A::AbstractMatrix)
     @test D == A
     @test nameof(typeof(D)) == nameof(typeof(A))
     @test structurally_orthogonal_columns(A, color)
-    if VERSION >= v"1.10" || A isa Union{Diagonal,Bidiagonal,Tridiagonal}
-        # banded matrices not supported by ArrayInterface on Julia 1.6
-        # @test color == ArrayInterface.matrix_colors(A)  # TODO: uncomment
-    end
 
     # Row
     result = coloring(A, row_problem, algo)
