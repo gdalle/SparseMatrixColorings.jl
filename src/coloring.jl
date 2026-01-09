@@ -302,7 +302,6 @@ function acyclic_coloring(
                     _prevent_cycle!(
                         v,
                         w,
-                        x,
                         index_wx,
                         color_x,
                         first_visit_to_tree,
@@ -333,7 +332,7 @@ function acyclic_coloring(
                 color_x = color[x]
                 (x == v || iszero(color_x)) && continue
                 if color_x == color[v]
-                    _merge_trees!(v, w, x, index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                    _merge_trees!(index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
@@ -354,7 +353,6 @@ function _prevent_cycle!(
     # not modified
     v::Integer,
     w::Integer,
-    x::Integer,
     index_wx::Integer,
     color_x::Integer,
     # modified
@@ -396,9 +394,6 @@ end
 
 function _merge_trees!(
     # not modified
-    v::Integer,
-    w::Integer,
-    x::Integer,
     index_vw::Integer,
     index_wx::Integer,
     # modified
