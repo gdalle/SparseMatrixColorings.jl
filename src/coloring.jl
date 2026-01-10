@@ -441,7 +441,7 @@ function TreeSet(
     g::AdjacencyGraph{T},
     forest::Forest{T},
     buffer::AbstractVector{T},
-    # The value of `reverse_bfs_orders` is ignored, we just reuse its memory
+    # The value of `reverse_bfs_orders` is ignored, we just provide the storage for it (or reuse memory allocated during acyclic coloring)
     reverse_bfs_orders::Vector{Tuple{T,T}},
     ne::Integer,
 ) where {T}
