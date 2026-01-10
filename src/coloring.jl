@@ -417,9 +417,21 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 $TYPEDFIELDS
 """
 struct TreeSet{T}
+    """
+    contains the reverse breadth first (BFS) traversal order for each tree in the forest.
+    More precisely, given an edge `(u, v)` of index `i`,
+    `reverse_bfs_order[i]` is either `(u, v)` or `(v, u)`.
+    The first node of the tuple is the leaf in the reverse BFS order.
+    """
     reverse_bfs_orders::Vector{Tuple{T,T}}
+    "For a tree index `1 <= k <= nt`, `is_star[k]` indicates whether the `k`th three is a star."
     is_star::Vector{Bool}
+    """
+    `tree_edge_indices[1]` is one and `tree_edge_indices[k+1] - tree_edge_indices[k]` is the number of edges in the `k`th tree.
+    One can think of it as a kind of fused vector of offsets (similar to the `colptr` field of `SparseMatrixCSC`) of all trees together.
+    """
     tree_edge_indices::Vector{T}
+    "numbers of 2-colored trees for which trees sharing the same 2 colors have disjoint vertices"
     nt::T
 end
 
@@ -427,6 +439,7 @@ function TreeSet(
     g::AdjacencyGraph{T},
     forest::Forest{T},
     buffer::AbstractVector{T},
+    # The value of `reverse_bfs_orders` is ignored, we just provide the storage for it (or reuse memory allocated during acyclic coloring)
     reverse_bfs_orders::Vector{Tuple{T,T}},
     ne::Integer,
 ) where {T}
@@ -561,7 +574,6 @@ function TreeSet(
     # Number of edges treated
     num_edges_treated = zero(T)
 
-    # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
     for k in 1:nt
         # Initialize the queue to store the leaves
         queue_start = 1
