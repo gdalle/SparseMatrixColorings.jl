@@ -95,6 +95,9 @@ using Colors: Colors
                     include("type_stability.jl")
                 end
             end
+            @testset "Static compilation" begin
+                include("static_compilation.jl")
+            end
             @testset "Allocations" begin
                 include("allocations.jl")
             end
