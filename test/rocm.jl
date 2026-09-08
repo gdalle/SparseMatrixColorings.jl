@@ -1,4 +1,4 @@
-using cuSPARSE: CuSparseMatrixCSC, CuSparseMatrixCSR
+using AMDGPU.rocSPARSE: ROCSparseMatrixCSC, ROCSparseMatrixCSR
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
@@ -25,7 +25,7 @@ symmetric_params = vcat(
 @testset verbose = true "Column coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+    @testset for T in (ROCSparseMatrixCSC, ROCSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
             test_coloring_decompression(A0, problem, algo; gpu=true)
@@ -36,7 +36,7 @@ end;
 @testset verbose = true "Row coloring & decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
     algo = GreedyColoringAlgorithm(; decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+    @testset for T in (ROCSparseMatrixCSC, ROCSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
             test_coloring_decompression(A0, problem, algo; gpu=true)
@@ -47,7 +47,7 @@ end;
 @testset verbose = true "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct)
-    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+    @testset for T in (ROCSparseMatrixCSC, ROCSparseMatrixCSR)
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = T(sparse(Symmetric(sprand(rng, n, n, p))))
             test_coloring_decompression(A0, problem, algo; gpu=true)
