@@ -88,111 +88,267 @@ end;
 end;
 
 @testset "Bidirectional coloring" begin
-    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
-    order = RandomOrder(StableRNG(0), 0)
+    color_stats = Dict(
+        "Anti-diagonal" => Dict(
+            :direct => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+            :substitution => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+        ),
+        "Triangle" => Dict(
+            :direct => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+            :substitution => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+        ),
+        "Rectangle" => Dict(
+            :direct => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+            :substitution => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+        ),
+        "Arrowhead" => Dict(
+            :direct => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+            :substitution => Dict(
+                :all_colors => (0, 0),
+                :row_colors => (0, 0),
+                :column_colors => (0, 0),
+            ),
+        ),
+    )
 
-    @testset "Anti-diagonal" begin
-        A = sparse([0 0 0 1; 0 0 1 0; 0 1 0 0; 1 0 0 0])
-
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=false)
+    @testset "coverage postprocessing for acyclic bicoloring" begin
+        problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+        order = RandomOrder(StableRNG(4), 4)
+        algo = GreedyColoringAlgorithm(
+            order; decompression=:substitution, postprocessing=true
         )
-        @test ncolors(result) == 2
-
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=true)
-        )
-        @test ncolors(result) == 1
-
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=false)
-        )
-        @test ncolors(result) == 2
-
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=true)
-        )
-        @test ncolors(result) == 1
+        A = sparse([1 1 0; 0 0 1; 0 1 0])
+        result = coloring(A, problem, algo)
     end
 
-    @testset "Triangle" begin
-        A = sparse([1 1 0; 0 1 1; 1 0 1])
+    @testset "postprocessing_minimizes = :sym_colors" begin
+        problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+        order = NaturalOrder()
+        A = sparse([1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1])
 
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=true)
+        star_bicoloring_algorithm = GreedyColoringAlgorithm{:direct}(;
+            postprocessing=true, postprocessing_minimizes=:sym_colors
         )
-        @test ncolors(result) == 3
+        @test_throws "The value postprocessing_minimizes = :sym_colors is not supported." coloring(
+            A, problem, star_bicoloring_algorithm
+        )
 
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=true)
+        acyclic_bicoloring_algorithm = GreedyColoringAlgorithm{:substitution}(;
+            postprocessing=true, postprocessing_minimizes=:sym_colors
         )
-        @test ncolors(result) == 3
+        @test_throws "The value postprocessing_minimizes = :sym_colors is not supported." coloring(
+            A, problem, acyclic_bicoloring_algorithm
+        )
     end
 
-    @testset "Rectangle" begin
-        A = spzeros(Bool, 10, 20)
-        A[:, 1] .= 1
-        A[:, end] .= 1
-        A[1, :] .= 1
-        A[end, :] .= 1
+    @testset "postprocessing_minimizes = $target" for target in (
+        :all_colors, :row_colors, :column_colors
+    )
+        problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+        order = RandomOrder(StableRNG(0), 0)
 
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=false)
-        )
-        @test ncolors(result) == 6  # two more than necessary
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
-        )
-        @test ncolors(result) == 4  # optimal number
+        @testset "Anti-diagonal" begin
+            A = sparse([0 0 0 1; 0 0 1 0; 0 1 0 0; 1 0 0 0])
 
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=false)
-        )
-        @test ncolors(result) == 6  # two more than necessary
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:substitution}(order; postprocessing=true)
-        )
-        @test ncolors(result) == 4  # optimal number
-    end
+            result = coloring(
+                A, problem, GreedyColoringAlgorithm{:direct}(; postprocessing=false)
+            )
+            @test ncolors(result) == 2
 
-    @testset "Arrowhead" begin
-        A = spzeros(Bool, 10, 10)
-        for i in axes(A, 1)
-            A[1, i] = 1
-            A[i, 1] = 1
-            A[i, i] = 1
-        end
-
-        result = coloring(
-            A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
-        )
-        @test ncolors(coloring(A, problem, GreedyColoringAlgorithm{:substitution}(order))) <
-            ncolors(coloring(A, problem, GreedyColoringAlgorithm{:direct}(order)))
-
-        @test ncolors(
-            coloring(
+            result = coloring(
                 A,
                 problem,
-                GreedyColoringAlgorithm{:substitution}(order; postprocessing=true),
-            ),
-        ) < ncolors(
-            coloring(
-                A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=true)
-            ),
-        )
+                GreedyColoringAlgorithm{:direct}(;
+                    postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 1
+            color_stats["Anti-diagonal"][:direct][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
 
-        test_bicoloring_decompression(
-            A,
-            problem,
-            GreedyColoringAlgorithm{:direct}(order; postprocessing=true);
-            test_fast=true,
-        )
+            result = coloring(
+                A, problem, GreedyColoringAlgorithm{:substitution}(; postprocessing=false)
+            )
+            @test ncolors(result) == 2
 
-        test_bicoloring_decompression(
-            A,
-            problem,
-            GreedyColoringAlgorithm{:substitution}(order; postprocessing=true);
-            test_fast=true,
-        )
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(;
+                    postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 1
+            color_stats["Anti-diagonal"][:substitution][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
+        end
+
+        @testset "Triangle" begin
+            A = sparse([1 1 0; 0 1 1; 1 0 1])
+
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:direct}(;
+                    postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 3
+            color_stats["Triangle"][:direct][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
+
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(;
+                    postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 3
+            color_stats["Triangle"][:substitution][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
+        end
+
+        @testset "Rectangle" begin
+            A = spzeros(Bool, 10, 20)
+            A[:, 1] .= 1
+            A[:, end] .= 1
+            A[1, :] .= 1
+            A[end, :] .= 1
+
+            result = coloring(
+                A, problem, GreedyColoringAlgorithm{:direct}(order; postprocessing=false)
+            )
+            @test ncolors(result) == 6  # two more than necessary
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:direct}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 4  # optimal number
+            color_stats["Rectangle"][:direct][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
+
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(order; postprocessing=false),
+            )
+            @test ncolors(result) == 6  # two more than necessary
+            result = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            @test ncolors(result) == 4  # optimal number
+            color_stats["Rectangle"][:substitution][target] = (
+                maximum(row_colors(result)), maximum(column_colors(result))
+            )
+        end
+
+        @testset "Arrowhead" begin
+            A = spzeros(Bool, 10, 10)
+            for i in axes(A, 1)
+                A[1, i] = 1
+                A[i, 1] = 1
+                A[i, i] = 1
+            end
+
+            @test ncolors(
+                coloring(A, problem, GreedyColoringAlgorithm{:substitution}(order))
+            ) < ncolors(coloring(A, problem, GreedyColoringAlgorithm{:direct}(order)))
+
+            result_direct = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:direct}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            color_stats["Arrowhead"][:direct][target] = (
+                maximum(row_colors(result_direct)), maximum(column_colors(result_direct))
+            )
+
+            result_substitution = coloring(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                ),
+            )
+            color_stats["Arrowhead"][:substitution][target] = (
+                maximum(row_colors(result_substitution)),
+                maximum(column_colors(result_substitution)),
+            )
+
+            @test ncolors(result_substitution) < ncolors(result_direct)
+
+            test_bicoloring_decompression(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:direct}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                );
+                test_fast=true,
+            )
+
+            test_bicoloring_decompression(
+                A,
+                problem,
+                GreedyColoringAlgorithm{:substitution}(
+                    order; postprocessing=true, postprocessing_minimizes=target
+                );
+                test_fast=true,
+            )
+        end
+    end
+
+    @testset "Variants of post-processing" begin
+        for problem in ("Anti-diagonal", "Triangle", "Rectangle", "Arrowhead")
+            for mode in (:direct, :substitution)
+                (num_row_colors1, num_column_colors1) = color_stats[problem][mode][:row_colors]
+                (num_row_colors2, num_column_colors2) = color_stats[problem][mode][:all_colors]
+                (num_row_colors3, num_column_colors3) = color_stats[problem][mode][:column_colors]
+                @test num_row_colors1 ≤ num_row_colors2 ≤ num_row_colors3
+                @test num_column_colors3 ≤ num_column_colors2 ≤ num_column_colors1
+            end
+        end
     end
 end;

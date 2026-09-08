@@ -84,7 +84,22 @@ end;
             RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:direct
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:direct
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:all_colors,
+            decompression=:direct,
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:row_colors,
+            decompression=:direct,
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:column_colors,
+            decompression=:direct,
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
@@ -105,7 +120,22 @@ end;
             RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:substitution
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:substitution
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:all_colors,
+            decompression=:substitution,
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:row_colors,
+            decompression=:substitution,
+        ),
+        GreedyColoringAlgorithm(
+            RandomOrder(StableRNG(0), 0);
+            postprocessing=true,
+            postprocessing_minimizes=:column_colors,
+            decompression=:substitution,
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
