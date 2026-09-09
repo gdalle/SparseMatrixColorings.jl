@@ -12,6 +12,7 @@ rng = StableRNG(63)
 @testset "Sparse coloring" begin
     n = 10
     A = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
+    decompression_eltype = Float64
 
     # ADTypes
     @testset "ADTypes" begin
@@ -38,22 +39,26 @@ rng = StableRNG(63)
             @test_opt coloring(
                 A,
                 ColoringProblem(; structure, partition),
-                GreedyColoringAlgorithm(order; decompression),
+                GreedyColoringAlgorithm(order; decompression);
+                decompression_eltype,
             )
             @test_opt coloring(
                 A,
                 ColoringProblem(; structure, partition),
-                GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
+                GreedyColoringAlgorithm((NaturalOrder(), order); decompression);
+                decompression_eltype,
             )
             @inferred coloring(
                 A,
                 ColoringProblem(; structure, partition),
-                GreedyColoringAlgorithm(order; decompression),
+                GreedyColoringAlgorithm(order; decompression);
+                decompression_eltype,
             )
             @inferred coloring(
                 A,
                 ColoringProblem(; structure, partition),
-                GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
+                GreedyColoringAlgorithm((NaturalOrder(), order); decompression);
+                decompression_eltype,
             )
         end
     end
