@@ -1,0 +1,237 @@
+name: Release libsmc binaries
+
+# Triggered by the version tag that TagBot pushes for each new release.
+# Builds a self-contained libsmc bundle (library + Julia runtime) for all
+# supported platforms and uploads the archives to the matching GitHub Release.
+#
+# We trigger on the tag push rather than on `release: published` because TagBot
+# publishes the GitHub Release with the default GITHUB_TOKEN, and GitHub does not
+# start new workflow runs from events emitted by GITHUB_TOKEN (anti-recursion).
+# TagBot pushes the tag through the SSH DOCUMENTER_KEY instead, and deploy-key
+# pushes DO trigger workflows (this is how Documentation.yml runs on release).
+#
+# workflow_dispatch lets you re-run or test against any existing tag.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to upload (like vX.Y.Z)'
+        required: true
+
+# Needed by `gh release upload`.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - label: linux-x86_64
+            runner: ubuntu-22.04
+            container: ""
+            juliac: juliac
+            lib: libsmc.so
+            libdir: lib
+            archive: libsmc-linux-x86_64.tar.gz
+            cpu_target: x86-64
+            deployment_target: ""
+
+          - label: linux-aarch64
+            runner: ubuntu-22.04-arm
+            container: ""
+            juliac: juliac
+            lib: libsmc.so
+            libdir: lib
+            archive: libsmc-linux-aarch64.tar.gz
+            cpu_target: generic
+            deployment_target: ""
+
+          - label: macos-arm64
+            runner: macos-latest
+            container: ""
+            juliac: juliac
+            lib: libsmc.dylib
+            libdir: lib
+            archive: libsmc-macos-arm64.tar.gz
+            cpu_target: generic
+            deployment_target: "11.0"
+
+          - label: macos-x86_64
+            runner: macos-15-intel
+            container: ""
+            juliac: juliac
+            lib: libsmc.dylib
+            libdir: lib
+            archive: libsmc-macos-x86_64.tar.gz
+            cpu_target: x86-64
+            deployment_target: "10.13"
+
+          - label: windows-x86_64
+            runner: windows-latest
+            container: ""
+            juliac: juliac.bat
+            lib: libsmc.dll
+            libdir: bin
+            archive: libsmc-windows-x86_64.zip
+            cpu_target: x86-64
+            deployment_target: ""
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
+      JULIA_CPU_TARGET: ${{ matrix.cpu_target }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.12'
+
+      # -----------------------------------------------------------------------
+      # Install JuliaC.jl as a Julia app (provides the juliac CLI). The revision
+      # is pinned to the same one the test workflow uses, so what we ship is
+      # produced by exactly the toolchain that was tested.
+      # -----------------------------------------------------------------------
+      - name: Install JuliaC.jl
+        shell: bash
+        run: |
+          julia --startup-file=no -e "
+            import Pkg
+            Pkg.Registry.add(\"General\")
+            Pkg.Apps.add(url=\"https://github.com/JuliaLang/JuliaC.jl\", rev=\"v0.3.8\")
+          "
+
+      - name: Add juliac to PATH
+        shell: bash
+        run: |
+          JULIAC_BIN=$(julia --startup-file=no -e "print(joinpath(DEPOT_PATH[1], \"bin\"))")
+          echo "$JULIAC_BIN" >> "$GITHUB_PATH"
+
+      # -----------------------------------------------------------------------
+      # Show CPU information used for compilation
+      # -----------------------------------------------------------------------
+      - name: Show CPU target
+        shell: bash
+        run: |
+          julia --startup-file=no -e '
+            println("Sys.CPU_NAME = ", Sys.CPU_NAME)
+            println("JULIA_CPU_TARGET = ", get(ENV, "JULIA_CPU_TARGET", "<unset>"))
+          '
+
+      # -----------------------------------------------------------------------
+      # Instantiate the SparseMatrixColorings.jl project.
+      #
+      # NOTE: unlike libkrylov there is deliberately no "strip SparseArrays"
+      # step. SMC is built on SparseMatrixCSC, so SparseArrays is load-bearing,
+      # not dead weight. SuiteSparse_jll therefore stays in the image and its
+      # dlopen'd libraries must be copied into the bundle by hand -- juliac
+      # cannot trace a dlopen. See the step after the build, and
+      # the note in interfaces/README.md.
+      # -----------------------------------------------------------------------
+      - name: Instantiate Julia project
+        shell: bash
+        run: |
+          julia --startup-file=no --project=. -e "
+            import Pkg
+            Pkg.instantiate()
+          "
+
+      # -----------------------------------------------------------------------
+      # Build libsmc
+      # -----------------------------------------------------------------------
+      - name: Build libsmc
+        shell: bash
+        run: |
+          OUTLIB="interfaces/build/${{ matrix.libdir }}/${{ matrix.lib }}"
+          mkdir -p "$(dirname "$OUTLIB")"
+
+          ${{ matrix.juliac }} \
+            --project . \
+            --compile-ccallable \
+            --trim=safe \
+            --bundle interfaces/build \
+            --output-lib "$OUTLIB" \
+            interfaces/src/LibSMC.jl
+
+      # -----------------------------------------------------------------------
+      # Copy the SuiteSparse shared libraries into the bundle. SparseArrays
+      # pulls in SuiteSparse_jll, whose __init__ dlopens libamd & friends;
+      # juliac cannot trace a dlopen, so without this the shipped bundle aborts
+      # on the first call with a SuiteSparse_jll InitError. The destination is
+      # discovered from libjulia-internal so it works on Unix and Windows alike.
+      # -----------------------------------------------------------------------
+      - name: Bundle SuiteSparse libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST=$(dirname "$(find interfaces/build -name 'libjulia-internal.*' | head -n 1)")
+          [ -n "$DEST" ] || { echo "::error::could not locate the bundle's Julia library directory"; exit 1; }
+          BINDIR=$(julia --startup-file=no -e 'print(Sys.BINDIR)')
+          copied=0
+          for name in amd btf camd ccolamd cholmod colamd klu ldl rbio spqr suitesparseconfig umfpack; do
+            for src in "$BINDIR"/../lib/julia "$BINDIR"/../lib "$BINDIR"; do
+              [ -d "$src" ] || continue
+              for f in "$src"/lib${name}.so* "$src"/lib${name}*.dylib "$src"/lib${name}*.dll; do
+                [ -e "$f" ] || continue
+                cp -a "$f" "$DEST/" && copied=$((copied + 1))
+              done
+            done
+          done
+          echo "copied $copied SuiteSparse files into $DEST"
+          [ "$copied" -gt 0 ] || { echo "::error::no SuiteSparse libraries found; the bundle would abort at runtime"; exit 1; }
+
+      # -----------------------------------------------------------------------
+      # Generate smc.h and smc.f90 (one run emits both)
+      # -----------------------------------------------------------------------
+      - name: Generate smc.h and smc.f90
+        shell: bash
+        run: |
+          julia --startup-file=no --project=. \
+            interfaces/scripts/generate_header.jl
+
+      - name: Copy headers into bundle
+        shell: bash
+        run: |
+          mkdir -p interfaces/build/include
+          cp interfaces/include/smc.h interfaces/build/include/
+          cp interfaces/include/smc.f90 interfaces/build/include/
+
+      # -----------------------------------------------------------------------
+      # Package bundle
+      # -----------------------------------------------------------------------
+      - name: Package bundle (Unix — tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          tar -czf "${{ matrix.archive }}" -C interfaces/build .
+
+      - name: Package bundle (Windows — zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path interfaces/build/* `
+            -DestinationPath "${{ matrix.archive }}"
+
+      # -----------------------------------------------------------------------
+      # Upload release asset
+      # -----------------------------------------------------------------------
+      - name: Upload release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          gh release upload "$TAG" "${{ matrix.archive }}" --clobber
