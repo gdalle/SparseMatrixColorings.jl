@@ -9,6 +9,15 @@ using Test
 
 rng = StableRNG(63)
 
+# `@inferred` and `@test_opt` build their keyword arguments with `typeof`, which erases
+# `Type{Float64}` down to `DataType`. Passing `decompression_eltype` straight to them would
+# therefore hide the eltype from inference and make every result type unresolvable. Positional
+# arguments go through `Core.Typeof` instead, which keeps `Type{R}` intact, so this wrapper is
+# what lets us check that `coloring` stays inferrable when the eltype is given explicitly.
+function coloring_with_eltype(A, problem, algo, ::Type{R}) where {R}
+    return coloring(A, problem, algo; decompression_eltype=R)
+end
+
 @testset "Sparse coloring" begin
     n = 10
     A = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
@@ -55,6 +64,36 @@ rng = StableRNG(63)
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
             )
+        end
+    end
+
+    @testset "Explicit decompression_eltype" begin
+        @testset "$structure - $partition - $decompression - $R" for (
+                structure, partition, decompression
+            ) in [
+                (:nonsymmetric, :column, :direct),
+                (:nonsymmetric, :row, :direct),
+                (:symmetric, :column, :direct),
+                (:symmetric, :column, :substitution),
+                (:nonsymmetric, :bidirectional, :direct),
+                (:nonsymmetric, :bidirectional, :substitution),
+            ],
+            R in (Float64, Float32)
+
+            @testset for order in all_orders()
+                @test_opt coloring_with_eltype(
+                    A,
+                    ColoringProblem(; structure, partition),
+                    GreedyColoringAlgorithm(order; decompression),
+                    R,
+                )
+                @inferred coloring_with_eltype(
+                    A,
+                    ColoringProblem(; structure, partition),
+                    GreedyColoringAlgorithm(order; decompression),
+                    R,
+                )
+            end
         end
     end
 end;
